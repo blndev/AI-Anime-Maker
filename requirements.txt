@@ -1,0 +1,5 @@
+gradio
+diffusers       # for stable diffusion general
+transformers    # for image generation
+accelerate      #for low cpu
+torch           # for gpu support and ai operations
