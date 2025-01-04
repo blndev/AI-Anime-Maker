@@ -1,0 +1,1 @@
+load a proper model (savetensor - file) from https://civitai.com/models
