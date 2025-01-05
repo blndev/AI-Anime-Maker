@@ -1,1 +1,5 @@
 load a proper model (savetensor - file) from https://civitai.com/models
+* the app was tested with this models:
+- https://civitai.com/models/1077426/wwtoon-mix?modelVersionId=1209528
+- https://civitai.com/models/65203/disney-pixar-cartoon-type-a
+- https://civitai.com/models/36281/toonify?modelVersionId=244831

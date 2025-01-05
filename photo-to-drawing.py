@@ -11,12 +11,8 @@ DEBUG = True
 
 # TODO: load from config
 #modelname = "./models/SD1.5/SFW/wildcardxRealistic_wildcardxV2.safetensors
-CURRENT_IMAGE_2_IMAGE_MODEL_NAME = "./models/wwtoonMix_v10.safetensors"
-
-# "runwayml/stable-diffusion-inpainting"
-# "CompVis/stable-diffusion-v1-4"
-# "instruction-tuning-sd/cartoonizer",
-# "pt-sk/stable-diffusion-1.5"
+#CURRENT_IMAGE_2_IMAGE_MODEL_NAME = "./models/wwtoonMix_v10.safetensors"
+CURRENT_IMAGE_2_IMAGE_MODEL_NAME = "lavaman131/cartoonify"
 
 models_folder = './models/'
 
@@ -47,7 +43,7 @@ def save_input_file(image):
         os.makedirs("cache")
     
     # deactivate the start buttons
-    if image is None: return [gr.update(interactive=False), gr.update(interactive=False)]
+    if image is None: return [gr.update(interactive=False), gr.update(interactive=False), ""]
     # if we use imageEditor from Gradio:
     # try:
     #     image = image['background'] # if we use editor field
@@ -70,7 +66,7 @@ def save_input_file(image):
     except Exception as e:
         print(f"Error while saving image:\n{e}")
 
-    # there is an image, activate teh start buttons
+    # there is an image, activate the start buttons
     return [gr.update(interactive=True), gr.update(interactive=True), ""]
 
 
@@ -120,13 +116,24 @@ def load_model(model=CURRENT_IMAGE_2_IMAGE_MODEL_NAME):
         #pipeline = StableDiffusionPipeline.from_pretrained(
         #pipeline = StableDiffusionImg2ImgPipeline.from_pretrained(
         if DEBUG: print(f"create pipeline for model {model}")
-        pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
-            model,
-            torch_dtype=torch.float16 if device == "cuda" else torch.float32,
-            safety_checker = None, requires_safety_checker = False
-            #use_safetensors=True
-            #revision="fp16" if device == "cuda" else "",
-        )
+
+        pipeline = None
+        if model.endswith("safetensors"):
+            if DEBUG: print("use 'from_single_file' to load model from local folder")
+            pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
+                model,
+                torch_dtype=torch.float16 if device == "cuda" else torch.float32,
+                safety_checker = None, requires_safety_checker = False
+                #use_safetensors=True
+                #revision="fp16" if device == "cuda" else "",
+            )
+        else:
+            if DEBUG: print("use 'from_pretrained' option to load model from hugging face")
+            pipeline = StableDiffusionImg2ImgPipeline.from_pretrained(
+                model,
+                torch_dtype=torch.float16 if device == "cuda" else torch.float32,
+                safety_checker = None, requires_safety_checker = False)
+            
         if DEBUG: print(f"- pipeline initiated")
         pipeline = pipeline.to(device)
         pipeline.enable_xformers_memory_efficient_attention()
@@ -181,7 +188,7 @@ def stylize(image, style, strength, steps, image_description):
             negative_prompt = "realistic photo"
             strength = 0.5
         elif style == "Painting":
-            prompt = "modern oil painting of smiling"
+            prompt = "modern oil painting, smiling"
             strength = 0.5
             negative_prompt = "realistic photo"
         elif style == "Fantasy":
@@ -245,8 +252,8 @@ with gr.Blocks() as app:
             with gr.Column():
                 model_dropdown = gr.Dropdown(choices=get_all_local_models(), value=CURRENT_IMAGE_2_IMAGE_MODEL_NAME, label="Models")
             with gr.Column():
-                refresh_model_list_button = gr.Button("reload model list")
-                reload_button = gr.Button("reload model")
+                refresh_model_list_button = gr.Button("refresh model list")
+                reload_button = gr.Button("load model")
                 reload_button.click(
                     fn=debug_reload_model,
                     inputs=[model_dropdown],
@@ -273,12 +280,12 @@ with gr.Blocks() as app:
                 "Old",
                 "Young"
             ]
+            output_image = gr.Image(label="Output Image", type="pil", height=512)
             if DEBUG: styles.append("Open Style")
             style_dropdown = gr.Radio(styles, label="Style", value="Anime")
             strength_slider = gr.Slider(label="Strength", minimum=0.1, maximum=1, value=0.4, step=0.1)
             steps_slider = gr.Slider(label="Steps", minimum=10, maximum=100, value=75, step=5)
 
-            output_image = gr.Image(label="Output Image", type="pil", height=512)
             start_button = gr.Button("Create", interactive=False)
 
     # Save input image immediately on change
