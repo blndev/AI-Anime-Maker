@@ -6,11 +6,32 @@ from diffusers import StableDiffusionPipeline, StableDiffusionImg2ImgPipeline
 from PIL import Image, ImageDraw
 from transformers import pipeline # for captioning
 
-modelname = "./models/photon_v1.safetensors"
+DEBUG = True
+
+# TODO: load from config
+#modelname = "./models/SD1.5/SFW/wildcardxRealistic_wildcardxV2.safetensors
+modelname = "./models/wwtoonMix_v10.safetensors"
+
 # "runwayml/stable-diffusion-inpainting"
 # "CompVis/stable-diffusion-v1-4"
 # "instruction-tuning-sd/cartoonizer",
 # "pt-sk/stable-diffusion-1.5"
+
+models_folder = './models/'
+
+def get_all_local_models():
+    """read all local models to the system"""
+    safetensors_files = []
+    try:
+        for root, _, files in os.walk(models_folder,followlinks=True):
+            for file in files:
+                if file.endswith('.safetensors'):
+                    relative_path = "./" + os.path.relpath(os.path.join(root, file))
+                    safetensors_files.append(relative_path)
+        print (safetensors_files)
+    except Exception as e:
+        print(e)
+    return safetensors_files
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print (f"running on {device}")
@@ -39,11 +60,13 @@ def save_input_file(image):
         if not os.path.exists(file_path):
             image.save(file_path, format="JPEG")
 
+        if DEBUG: print(f"Image saved to \"{file_path}\"")
+
     except Exception as e:
         print(f"Error while saving image:\n{e}")
 
     # there is an image, activate teh start buttons
-    return [gr.update(interactive=True), gr.update(interactive=True)]
+    return [gr.update(interactive=True), gr.update(interactive=True), ""]
 
 
 def check_safety(x_image):
@@ -51,23 +74,20 @@ def check_safety(x_image):
     # all images are SFW ;)
     return x_image, False 
 
-IMG_TO_TEXT_PIPELINE = None
+IMAGE_TO_TEXT_PIPELINE = None
 def load_captioner():
     """Load and return a image to text model."""
-    if (IMG_TO_TEXT_PIPELINE!= None): return IMG_TO_TEXT_PIPELINE
+    if (IMAGE_TO_TEXT_PIPELINE!= None): return IMAGE_TO_TEXT_PIPELINE
 
     captioner = pipeline("image-to-text", model="Salesforce/blip-image-captioning-base")
     # TODO: change to this pipeline to query details about the image in Version 2
     #captioner = pipeline("image-text-to-text", model="Salesforce/blip-image-captioning-base")
-
-
-    #value = captioner("https://huggingface.co/datasets/Narsil/image_dummy/resolve/main/parrots.png")
-    #print (value[0]['generated_text'])
     return captioner
 
 def describe_image(image):
-    """describe an image based."""
+    """describe an image for better inpaint results."""
     captioner = load_captioner()
+    #TODO V3: add propmpt to captioner to ask for details like how many people, background etc.
     # messages = [
     # {
     #     "role": "user",
@@ -79,18 +99,23 @@ def describe_image(image):
     # prompt = captioner.apply_chat_template(messages)
     #value = captioner(image, text=prompt, return_full_text=False)
     value = captioner(image)
-    #print (value)
+    if DEBUG: print(f"Image description: {value}")
     return value[0]['generated_text']
 
-CACHED_MODEL = None
-def load_model(style):
+IMAGE_TO_IMAGE_PIPELINE = None
+def load_model(model=modelname):
     """Load and return the Stable Diffusion model based on style."""
-    if (CACHED_MODEL!= None): return CACHED_MODEL
+    global IMAGE_TO_IMAGE_PIPELINE
+    if (IMAGE_TO_IMAGE_PIPELINE!= None): 
+        if DEBUG: print ("using cached model")
+        return IMAGE_TO_IMAGE_PIPELINE
 
+    #TODO V3: support SDXL or FLux
     #pipeline = StableDiffusionPipeline.from_pretrained(
     #pipeline = StableDiffusionImg2ImgPipeline.from_pretrained(
+    if DEBUG: print(f"create pipeline for model {model}")
     pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
-        modelname,
+        model,
         torch_dtype=torch.float16 if device == "cuda" else torch.float32,
         safety_checker = None, requires_safety_checker = False
         #revision="fp16" if device == "cuda" else "",
@@ -98,77 +123,93 @@ def load_model(style):
     pipeline = pipeline.to(device)
     return pipeline
 
+def debug_reload_model(model):
+    if not DEBUG: return
+    global IMAGE_TO_IMAGE_PIPELINE
+    print (f"Reload model {model}")
+    try:
+        IMAGE_TO_IMAGE_PIPELINE = None
+        if device=="cuda": torch.cuda.empty_cache()
+        IMAGE_TO_IMAGE_PIPELINE = load_model(model)
+        gr.Info(message=f"Model {model} loaded.")
+    except Exception as e:
+        gr.Error(message=f"Loading Model {model} failed. \n\n {e}")
 
 def stylize(image, style, strength, steps, image_description):
     """Convert the entire input image to the selected style."""
     try:
-        model = load_model(style)
+        if image is None: return None, "no image"
+
+        if DEBUG: print("start stylize")
+
+        model = load_model()
+        if image_description is None or image_description == "": image_description = describe_image(image)
+
+        # TODO V2: write statistics about the used styles (how much used)
         negative_prompt = ""
         # Adjust the prompt based on style
+        # TODO: load prompts and styles fdrom config
         if style == "Anime":
-            prompt = "anime-style painting of "
+            prompt = "Perfect anime quality, modern, colorful, anime style, flowers, Japanese objects, smiling"
+            negative_prompt = "realistic photo, asian"
+            strength = 0.5
+        elif style == "Pixar":
+            prompt = "A beautiful scene from a pixar cartoon, perfect drawing, many details, smiling, perfect eyes"
             negative_prompt = "realistic photo"
-        elif style == "Disney":
-            prompt = "In a castle, A scene from a Walt Disney movie, perfect drawing in the style of Walt Disney, many details:"
+            strength = 0.5
+        elif style == "Manga":
+            prompt = "manga style"
             negative_prompt = "realistic photo"
-            strength = 0.4
+            strength = 0.5
         elif style == "Painting":
             prompt = "modern oil painting of"
             strength = 0.5
             negative_prompt = "realistic photo"
         elif style == "Fantasy":
-            prompt = "fantasy art style"
+            prompt = "A detailed digital illustration in the style of Dimitry Roulland, The animation illustration style combines realistic details with a whimsical touch, characteristic of Roulland's style"
         elif style == "Old":
             prompt = "photo of very old "
             strength = 0.6
             if (image_description.startswith("a ")): image_description = image_description[2:]
             negative_prompt = "young people"
         elif style == "Young":
-            prompt = "photo of child "  
+            prompt = "very detailed modern photo from childhood with perfect faces and shy smiles"  
             if (image_description.startswith("a ")): image_description = image_description[2:]
             strength = 0.6
             negative_prompt = "old people"
-
-
         else:
+            # just use description for creativity purpose 
             prompt = ""
         
-        #image_description = describe_image(image)
-        if image_description is None: image_description = "existing image"
         prompt += f": {image_description}"
 
         print (prompt)
 
-        # TODO Previews in Version 2
-        # previews = []
-        # def preview_callback(step, timestep, latents):
-        #         """Callback function to store previews every 5 steps."""
-        #         if step % 5 == 0:
-        #             with torch.no_grad():
-        #                 preview_image = model.decode_latents(latents)
-        #                 preview_pil = model.numpy_to_pil(preview_image)[0]
-        #                 previews.append(preview_pil)
+        # TODO Render previews in Version 2
 
-        #steps = 60 if device == "cuda" else 30
-        if not image is None: 
-            #image = image.resize((512,512))
-            image.thumbnail((1024,1024))
-            mask = Image.new("L", image.size, 255)  # Create a white mask
+        # TODO: load from config
+        image.thumbnail((1024,1024))
+        #image.thumbnail((768,768))
 
-            # Generate new picture
-            result = model(
-                prompt=prompt, 
-                negative_prompt=negative_prompt,
-                num_inference_steps=steps, 
-                image=image, 
-                mask_image=mask, 
-                strength=strength,
-                ).images[0]
-            return result
-        else:
-            return None
+        # create a mask which covers the whole image
+        mask = Image.new("L", image.size, 255) 
+        if DEBUG:
+            print(f"Strength: {strength}, Steps: {steps}, Model: unkown")
+        # Generate new picture
+        result_image = model(
+            prompt=prompt, 
+            negative_prompt=negative_prompt,
+            num_inference_steps=steps, 
+            image=image, 
+            mask_image=mask, 
+            strength=strength,
+            ).images[0]
+        # TODO: save file first (config option to tun it of)
+        return result_image, image_description
     except RuntimeError as e:
         print(f"RuntimeError: {e}")
+        gr.Error(e)
+        return None, image_description
 
 # Gradio Starts
 #---------------------------------------------------------------------------
@@ -176,35 +217,48 @@ def stylize(image, style, strength, steps, image_description):
 #--------------------------------------------------------------
 with gr.Blocks() as app:
     with gr.Row():
+        #TODO: load from Config
         gr.Markdown("### Stable Diffusion Stylization")
-
+    if DEBUG:
+        gr.Markdown("*DEBUG enabled*")
+        with gr.Row():
+            with gr.Column():
+                model_dropdown = gr.Dropdown(choices=get_all_local_models(), value=modelname, label="Models")
+            with gr.Column():
+                reload_button = gr.Button("reload model")
+                reload_button.click(
+                    fn=debug_reload_model,
+                    inputs=[model_dropdown],
+                    outputs=[]
+                )
     with gr.Row():
         with gr.Column():
             image_input = gr.Image(label="Input Image", type="pil", height=512)
             describe_button = gr.Button("Describe", interactive=False)
             text_description = gr.Textbox(label="Image description for better results")
-            style_dropdown = gr.Radio([
+            #TODO: load from config
+            styles = [
                 "Anime",
-                "Disney",
+                "Manga",
+                "Pixar",
                 "Painting",
                 "Fantasy",
                 "Old",
-                "Young",
-                "Debug"
-            ], label="Style", value="Anime")
+                "Young"
+            ]
+            if DEBUG: styles.append("Open Style")
+            style_dropdown = gr.Radio(styles, label="Style", value="Anime")
             strength_slider = gr.Slider(label="Strength", minimum=0.1, maximum=1, value=0.4, step=0.1)
             steps_slider = gr.Slider(label="Steps", minimum=10, maximum=100, value=75, step=5)
-            start_button = gr.Button("Start", interactive=False)
-
         with gr.Column():
             output_image = gr.Image(label="Output Image", type="pil", height=512)
-
+            start_button = gr.Button("Start", interactive=False)
 
     # Save input image immediately on change
     image_input.change(
          fn=save_input_file,
          inputs=[image_input],
-         outputs=[start_button, describe_button]
+         outputs=[start_button, describe_button, text_description]
     )
 
     describe_button.click(
@@ -216,10 +270,10 @@ with gr.Blocks() as app:
     start_button.click(
         fn=stylize,
         inputs=[image_input, style_dropdown, strength_slider, steps_slider, text_description],
-        outputs=[output_image]
+        outputs=[output_image, text_description]
     )
 
 if __name__ == "__main__":
-    #CACHED_MODEL = load_model("none")
-    IMG_TO_TEXT_PIPELINE = load_captioner()
+    IMAGE_TO_IMAGE_PIPELINE = load_model()
+    IMAGE_TO_TEXT_PIPELINE = load_captioner()
     app.launch()
