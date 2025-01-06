@@ -6,21 +6,18 @@ from diffusers import StableDiffusionPipeline, StableDiffusionImg2ImgPipeline
 from PIL import Image, ImageDraw
 from transformers import pipeline # for captioning
 from xformers.ops import MemoryEfficientAttentionFlashAttentionOp
+import config
+import utils
 
 DEBUG = True
 
-# TODO: load from config
-#modelname = "./models/SD1.5/SFW/wildcardxRealistic_wildcardxV2.safetensors
-#CURRENT_IMAGE_2_IMAGE_MODEL_NAME = "./models/wwtoonMix_v10.safetensors"
-CURRENT_IMAGE_2_IMAGE_MODEL_NAME = "lavaman131/cartoonify"
-
-models_folder = './models/'
+device = "cuda" # will be checked and set in main functions
 
 def get_all_local_models():
     """read all local models to the system"""
     safetensors_files = []
     try:
-        for root, _, files in os.walk(models_folder,followlinks=True):
+        for root, _, files in os.walk(config.get_model_folder(),followlinks=True):
             for file in files:
                 if file.endswith('.safetensors'):
                     relative_path = "./" + os.path.relpath(os.path.join(root, file))
@@ -34,37 +31,35 @@ def update_all_local_models():
     """updates the list of available models in the ui"""
     return gr.update(choices=get_all_local_models())
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print (f"running on {device}")
-
 def save_input_file(image):
     """Save the input image in a cache directory using its SHA-1 hash."""
-    if not os.path.exists("cache"):
-        os.makedirs("cache")
-    
     # deactivate the start buttons
     if image is None: return [gr.update(interactive=False), gr.update(interactive=False), ""]
-    # if we use imageEditor from Gradio:
-    # try:
-    #     image = image['background'] # if we use editor field
-    # except:
-    #     print("seems no background in image dict")
-    #     print (image)
-    try:
-        #print (image)
-        # Convert the image to bytes and compute the SHA-1 hash
-        image_bytes = image.tobytes()
-        filetype = "jpg"
-        filename_hash = sha1(image_bytes).hexdigest() + "."+filetype
-        file_path = os.path.join("cache", filename_hash)
 
-        if not os.path.exists(file_path):
-            image.save(file_path, format="JPEG")
+    if config.is_cache_enabled():
+        dir = config.get_cache_folder()
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        # if we use imageEditor from Gradio:
+        # try:
+        #     image = image['background'] # if we use editor field
+        # except:
+        #     print("seems no background in image dict")
+        #     print (image)
+        try:
+            # Convert the image to bytes and compute the SHA-1 hash
+            image_bytes = image.tobytes()
+            filetype = "jpg"
+            filename_hash = sha1(image_bytes).hexdigest() + "."+filetype
+            file_path = os.path.join(dir, filename_hash)
 
-        if DEBUG: print(f"Image saved to \"{file_path}\"")
+            if not os.path.exists(file_path):
+                image.save(file_path, format="JPEG")
 
-    except Exception as e:
-        print(f"Error while saving image:\n{e}")
+            if DEBUG: print(f"Image saved to \"{file_path}\"")
+
+        except Exception as e:
+            print(f"Error while saving image:\n{e}")
 
     # there is an image, activate the start buttons
     return [gr.update(interactive=True), gr.update(interactive=True), ""]
@@ -81,14 +76,14 @@ def load_captioner():
     if (IMAGE_TO_TEXT_PIPELINE!= None): return IMAGE_TO_TEXT_PIPELINE
 
     captioner = pipeline("image-to-text", model="Salesforce/blip-image-captioning-base")
-    # TODO: change to this pipeline to query details about the image in Version 2
+    # TODO V3: change to this pipeline to query details about the image in Version 2
     #captioner = pipeline("image-text-to-text", model="Salesforce/blip-image-captioning-base")
     return captioner
 
 def describe_image(image):
     """describe an image for better inpaint results."""
     captioner = load_captioner()
-    #TODO V3: add propmpt to captioner to ask for details like how many people, background etc.
+    #TODO V3: add prompt to captioner to ask for details like how many people, background etc.
     # messages = [
     # {
     #     "role": "user",
@@ -104,7 +99,7 @@ def describe_image(image):
     return value[0]['generated_text']
 
 IMAGE_TO_IMAGE_PIPELINE = None
-def load_model(model=CURRENT_IMAGE_2_IMAGE_MODEL_NAME):
+def load_model(model=config.get_model()):
     """Load and return the Stable Diffusion model based on style."""
     global IMAGE_TO_IMAGE_PIPELINE
     if (IMAGE_TO_IMAGE_PIPELINE!= None): 
@@ -113,8 +108,6 @@ def load_model(model=CURRENT_IMAGE_2_IMAGE_MODEL_NAME):
 
     try:
         #TODO V3: support SDXL or FLux
-        #pipeline = StableDiffusionPipeline.from_pretrained(
-        #pipeline = StableDiffusionImg2ImgPipeline.from_pretrained(
         if DEBUG: print(f"create pipeline for model {model}")
 
         pipeline = None
@@ -134,34 +127,33 @@ def load_model(model=CURRENT_IMAGE_2_IMAGE_MODEL_NAME):
                 torch_dtype=torch.float16 if device == "cuda" else torch.float32,
                 safety_checker = None, requires_safety_checker = False)
             
-        if DEBUG: print(f"- pipeline initiated")
+        if DEBUG: print(f"--> pipeline initiated")
         pipeline = pipeline.to(device)
         pipeline.enable_xformers_memory_efficient_attention()
-        if DEBUG: print("-->pipeline created")
+        if DEBUG: print("--> pipeline created")
         return pipeline
     except Exception as e:
         print(f"pipeline not created. Error in load_model: {e}")
         if not gr is None:
-            gr.Warning(message="Error while loading the model. See logfile for details.")
+            gr.Error(message="Error while loading the model.\nSee logfile for details.")
 
 
-def debug_reload_model(model):
+def action_reload_model(model):
     if not DEBUG: return
     global IMAGE_TO_IMAGE_PIPELINE
-    global CURRENT_IMAGE_2_IMAGE_MODEL_NAME
     print (f"Reload model {model}")
     try:
+        # TODO: check better ways to unload a model!
         IMAGE_TO_IMAGE_PIPELINE = None
         if device=="cuda": torch.cuda.empty_cache()
+        # load new model
         IMAGE_TO_IMAGE_PIPELINE = load_model(model)
         if IMAGE_TO_IMAGE_PIPELINE is None: raise Exception("Pipeline is none")
         gr.Info(message=f"Model {model} loaded.", title="Model changed")
-        CURRENT_IMAGE_2_IMAGE_MODEL_NAME = model
     except Exception as e:
         print(f"model not loaded. {e}")
-        gr.Warning(message=f"Loading Model {model} failed. \n\n {e}")
 
-def stylize(image, style, strength, steps, image_description):
+def action_generate_image(image, style, strength, steps, image_description):
     """Convert the entire input image to the selected style."""
     try:
         if image is None: return None, "no image"
@@ -197,7 +189,7 @@ def stylize(image, style, strength, steps, image_description):
             prompt = "photo of very old "
             strength = 0.6
             if (image_description.startswith("a ")): image_description = image_description[2:]
-            negative_prompt = "young people"
+            #negative_prompt = "young people"
         elif style == "Young":
             prompt = "very detailed modern photo from childhood with perfect faces and shy smiles"  
             if (image_description.startswith("a ")): image_description = image_description[2:]
@@ -214,14 +206,13 @@ def stylize(image, style, strength, steps, image_description):
 
         # TODO Render previews in Version 2
 
-        # TODO: load from config
-        image.thumbnail((1024,1024))
-        #image.thumbnail((768,768))
+        max_size = config.get_max_size()
+        image.thumbnail((max_size,max_size))
 
         # create a mask which covers the whole image
         mask = Image.new("L", image.size, 255) 
         if DEBUG:
-            print(f"Strength: {strength}, Steps: {steps}, Model: unkown")
+            print(f"Strength: {strength}, Steps: {steps}")
         # Generate new picture
         result_image = model(
             prompt=prompt, 
@@ -232,6 +223,9 @@ def stylize(image, style, strength, steps, image_description):
             strength=strength,
             ).images[0]
         # TODO: save file first (config option to tun it of)
+        if config.is_save_output_enabled():
+            utils.save_image_with_timestamp(result_image,config.get_output_folder(), ignore_errors=True)
+
         return result_image, image_description
     except RuntimeError as e:
         print(f"RuntimeError: {e}")
@@ -242,20 +236,20 @@ def stylize(image, style, strength, steps, image_description):
 #---------------------------------------------------------------------------
 # Render UI
 #--------------------------------------------------------------
-with gr.Blocks() as app:
+with gr.Blocks(title=config.get_app_title()) as app:
     with gr.Row():
-        #TODO: load from Config
-        gr.Markdown("### Stable Diffusion Stylization")
+        gr.Markdown("###" + config.get_app_title()+"\n\n" + config.get_user_message())
+        
     if DEBUG:
         gr.Markdown("*DEBUG enabled*")
         with gr.Row():
             with gr.Column():
-                model_dropdown = gr.Dropdown(choices=get_all_local_models(), value=CURRENT_IMAGE_2_IMAGE_MODEL_NAME, label="Models")
+                model_dropdown = gr.Dropdown(choices=get_all_local_models(), value=config.get_model(), label="Models", allow_custom_value=True)
             with gr.Column():
                 refresh_model_list_button = gr.Button("refresh model list")
                 reload_button = gr.Button("load model")
                 reload_button.click(
-                    fn=debug_reload_model,
+                    fn=action_reload_model,
                     inputs=[model_dropdown],
                     outputs=[]
                 )
@@ -302,12 +296,27 @@ with gr.Blocks() as app:
     )
 
     start_button.click(
-        fn=stylize,
+        fn=action_generate_image,
         inputs=[image_input, style_dropdown, strength_slider, steps_slider, text_description],
         outputs=[output_image, text_description]
     )
 
 if __name__ == "__main__":
-    IMAGE_TO_IMAGE_PIPELINE = load_model()
-    IMAGE_TO_TEXT_PIPELINE = load_captioner()
-    app.launch()
+    try:
+        if config.read_configuration() == None: print("read configuration failed")
+        model = config.get_model()
+        if model.endswith("safetensors"):
+            utils.download_file(url=config.get_model_url(), local_path=model)
+
+        print ("initializing ai models")
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        print (f"running on {device}")
+
+        IMAGE_TO_IMAGE_PIPELINE = load_model()
+        IMAGE_TO_TEXT_PIPELINE = load_captioner()
+        print ("starting " + config.get_app_title())
+        app.launch(share = config.is_gradio_shared)
+    except Exception as e:
+        print (e)
+        print ("app closed")
