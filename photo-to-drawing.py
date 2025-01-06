@@ -34,7 +34,7 @@ def update_all_local_models():
 def save_input_file(image):
     """Save the input image in a cache directory using its SHA-1 hash."""
     # deactivate the start buttons
-    if image is None: return [gr.update(interactive=False), gr.update(interactive=False), ""]
+    if image is None or load_model()==None: return [gr.update(interactive=False), gr.update(interactive=False), ""]
 
     if config.is_cache_enabled():
         dir = config.get_cache_folder()
@@ -116,8 +116,8 @@ def load_model(model=config.get_model()):
             pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
                 model,
                 torch_dtype=torch.float16 if device == "cuda" else torch.float32,
-                safety_checker = None, requires_safety_checker = False
-                #use_safetensors=True
+                safety_checker = None, requires_safety_checker = False,
+                use_safetensors=True
                 #revision="fp16" if device == "cuda" else "",
             )
         else:
@@ -129,13 +129,14 @@ def load_model(model=config.get_model()):
             
         if DEBUG: print(f"--> pipeline initiated")
         pipeline = pipeline.to(device)
-        pipeline.enable_xformers_memory_efficient_attention()
+        if device=="cuda": pipeline.enable_xformers_memory_efficient_attention()
         if DEBUG: print("--> pipeline created")
         return pipeline
     except Exception as e:
         print(f"pipeline not created. Error in load_model: {e}")
         if not gr is None:
             gr.Error(message="Error while loading the model.\nSee logfile for details.")
+        return None
 
 
 def action_reload_model(model):
@@ -161,8 +162,12 @@ def action_generate_image(image, style, strength, steps, image_description):
         if DEBUG: print("start stylize")
 
         model = load_model()
-        if image_description is None or image_description == "": image_description = describe_image(image)
+        if image_description == None or image_description == "": image_description = describe_image(image)
 
+        if (model == None): 
+            gr.Error(message="No model loaded. Generation not available")
+            return None, ""
+        
         # TODO V2: write statistics about the used styles (how much used)
         negative_prompt = ""
         # Adjust the prompt based on style
