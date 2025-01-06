@@ -4,8 +4,9 @@ __pycache__/
 *$py.class
 *.safetensors
 /models/SD*
-
-cache
+/output/**
+/cache/**
+dev.config
 
 # C extensions
 *.so
