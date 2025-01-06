@@ -237,74 +237,77 @@ def action_generate_image(image, style, strength, steps, image_description):
         gr.Error(e)
         return None, image_description
 
-# Gradio Starts
-#---------------------------------------------------------------------------
-# Render UI
-#--------------------------------------------------------------
-with gr.Blocks(title=config.get_app_title()) as app:
-    with gr.Row():
-        gr.Markdown("###" + config.get_app_title()+"\n\n" + config.get_user_message())
-        
-    if DEBUG:
-        gr.Markdown("*DEBUG enabled*")
+def create_gradio_interface():
+    # Gradio Starts
+    #---------------------------------------------------------------------------
+    # Render UI
+    #--------------------------------------------------------------
+    with gr.Blocks(title=config.get_app_title()) as app:
+        with gr.Row():
+            gr.Markdown("### " + config.get_app_title()+"\n\n" + config.get_user_message())
+            
+        if DEBUG:
+            gr.Markdown("*DEBUG enabled*")
+            with gr.Row():
+                with gr.Column():
+                    model_dropdown = gr.Dropdown(choices=get_all_local_models(), value=config.get_model(), label="Models", allow_custom_value=True)
+                with gr.Column():
+                    refresh_model_list_button = gr.Button("refresh model list")
+                    reload_button = gr.Button("load model")
+                    reload_button.click(
+                        fn=action_reload_model,
+                        inputs=[model_dropdown],
+                        outputs=[]
+                    )
+                    refresh_model_list_button.click(
+                        fn=update_all_local_models,
+                        inputs=[],
+                        outputs=[model_dropdown]
+                    )
         with gr.Row():
             with gr.Column():
-                model_dropdown = gr.Dropdown(choices=get_all_local_models(), value=config.get_model(), label="Models", allow_custom_value=True)
+                image_input = gr.Image(label="Input Image", type="pil", height=512)
+                describe_button = gr.Button("Describe", interactive=False)
+                text_description = gr.Textbox(label="Image description for better results")
             with gr.Column():
-                refresh_model_list_button = gr.Button("refresh model list")
-                reload_button = gr.Button("load model")
-                reload_button.click(
-                    fn=action_reload_model,
-                    inputs=[model_dropdown],
-                    outputs=[]
-                )
-                refresh_model_list_button.click(
-                    fn=update_all_local_models,
-                    inputs=[],
-                    outputs=[model_dropdown]
-                )
-    with gr.Row():
-        with gr.Column():
-            image_input = gr.Image(label="Input Image", type="pil", height=512)
-            describe_button = gr.Button("Describe", interactive=False)
-            text_description = gr.Textbox(label="Image description for better results")
-        with gr.Column():
-            #TODO: load from config
-            styles = [
-                "Anime",
-                "Manga",
-                "Pixar",
-                "Painting",
-                "Fantasy",
-                "Old",
-                "Young"
-            ]
-            output_image = gr.Image(label="Output Image", type="pil", height=512)
-            if DEBUG: styles.append("Open Style")
-            style_dropdown = gr.Radio(styles, label="Style", value="Anime")
-            strength_slider = gr.Slider(label="Strength", minimum=0.1, maximum=1, value=0.4, step=0.1)
-            steps_slider = gr.Slider(label="Steps", minimum=10, maximum=100, value=75, step=5)
+                #TODO: load from config
+                styles = [
+                    "Anime",
+                    "Manga",
+                    "Pixar",
+                    "Painting",
+                    "Fantasy",
+                    "Old",
+                    "Young"
+                ]
+                output_image = gr.Image(label="Output Image", type="pil", height=512)
+                if DEBUG: styles.append("Open Style")
+                style_dropdown = gr.Radio(styles, label="Style", value="Anime")
+                strength_slider = gr.Slider(label="Strength", minimum=0.1, maximum=1, value=config.get_default_strengths(), step=0.1,  visible=config.UI_show_stengths_slider())
+                steps_slider = gr.Slider(label="Steps", minimum=10, maximum=100, value=config.get_default_steps(), step=5, visible=config.UI_show_steps_slider())
 
-            start_button = gr.Button("Create", interactive=False)
+                start_button = gr.Button("Create", interactive=False)
 
-    # Save input image immediately on change
-    image_input.change(
-         fn=save_input_file,
-         inputs=[image_input],
-         outputs=[start_button, describe_button, text_description]
-    )
+        # Save input image immediately on change
+        image_input.change(
+            fn=save_input_file,
+            inputs=[image_input],
+            outputs=[start_button, describe_button, text_description]
+        )
 
-    describe_button.click(
-        fn=describe_image,
-        inputs=[image_input],
-        outputs=[text_description]
-    )
+        describe_button.click(
+            fn=describe_image,
+            inputs=[image_input],
+            outputs=[text_description]
+        )
 
-    start_button.click(
-        fn=action_generate_image,
-        inputs=[image_input, style_dropdown, strength_slider, steps_slider, text_description],
-        outputs=[output_image, text_description]
-    )
+        start_button.click(
+            fn=action_generate_image,
+            inputs=[image_input, style_dropdown, strength_slider, steps_slider, text_description],
+            outputs=[output_image, text_description]
+        )
+
+        return app
 
 if __name__ == "__main__":
     try:
@@ -321,6 +324,7 @@ if __name__ == "__main__":
         IMAGE_TO_IMAGE_PIPELINE = load_model()
         IMAGE_TO_TEXT_PIPELINE = load_captioner()
         print ("starting " + config.get_app_title())
+        app = create_gradio_interface()
         app.launch(share = config.is_gradio_shared())
     except Exception as e:
         print (e)
