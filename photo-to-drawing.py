@@ -316,7 +316,7 @@ if __name__ == "__main__":
         IMAGE_TO_IMAGE_PIPELINE = load_model()
         IMAGE_TO_TEXT_PIPELINE = load_captioner()
         print ("starting " + config.get_app_title())
-        app.launch(share = config.is_gradio_shared)
+        app.launch(share = config.is_gradio_shared())
     except Exception as e:
         print (e)
         print ("app closed")
