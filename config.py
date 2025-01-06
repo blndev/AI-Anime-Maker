@@ -105,9 +105,13 @@ def get_general_negative_prompt():
     """The prompt for the specified style"""
     return get_config_value(f"Styles","general_negative_prompt", "")
 
+def get_style_name(style: int):
+    """The name for the specified style"""
+    return get_config_value(f"Styles","style_{style}_prompt", f"Style {style}")
+
 def get_style_prompt(style: int):
     """The prompt for the specified style"""
-    return get_config_value(f"Styles","style_{style}_prompt", "yellow colored picture")
+    return get_config_value(f"Styles","style_{style}_prompt", "")
 
 def get_style_negative_prompt(style: int):
     """The negative prompt for the specified style including the general negative prompt"""
