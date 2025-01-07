@@ -99,27 +99,27 @@ def UI_show_steps_slider():
 #-----------------------------------------------------------------
 def get_style_count():
     """The numbers of available styles"""
-    return int(get_config_value(f"Styles","style_count", 0))
+    return int(get_config_value("Styles","style_count", 0))
 
 def get_general_negative_prompt():
     """The prompt for the specified style"""
-    return get_config_value(f"Styles","general_negative_prompt", "")
+    return get_config_value("Styles","general_negative_prompt", "")
 
 def get_style_name(style: int):
     """The name for the specified style"""
-    return get_config_value(f"Styles","style_{style}_prompt", f"Style {style}")
+    return get_config_value("Styles",f"style_{style}_name", f"Style {style}")
 
 def get_style_prompt(style: int):
     """The prompt for the specified style"""
-    return get_config_value(f"Styles","style_{style}_prompt", "")
+    return get_config_value("Styles",f"style_{style}_prompt", "")
 
 def get_style_negative_prompt(style: int):
     """The negative prompt for the specified style including the general negative prompt"""
-    return get_general_negative_prompt() + ","  + get_config_value(f"Styles","style_{style}_negative_prompt", "")
+    return get_general_negative_prompt() + ","  + get_config_value("Styles",f"style_{style}_negative_prompt", "")
 
 def get_style_strengths(style: int):
-    """The prompt for the specified style or teh default value"""
-    return get_float_config_value(f"Styles","style_{style}_strengths", get_default_strengths())
+    """The prompt for the specified style or the default value"""
+    return get_float_config_value("Styles",f"style_{style}_strengths", get_default_strengths())
 
 #-----------------------------------------------------------------
 # section GenAI
