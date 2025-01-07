@@ -9,9 +9,10 @@ from xformers.ops import MemoryEfficientAttentionFlashAttentionOp
 import config
 import utils
 
-DEBUG = True
+DEBUG = False
 
 device = "cuda" # will be checked and set in main functions
+style_details = {}
 
 def get_all_local_models():
     """read all local models to the system"""
@@ -133,7 +134,7 @@ def load_model(model=config.get_model()):
         if DEBUG: print("--> pipeline created")
         return pipeline
     except Exception as e:
-        print(f"pipeline not created. Error in load_model: {e}")
+        print(f"pipeline not be created. Error in load_model: {e}")
         if not gr is None:
             gr.Error(message="Error while loading the model.\nSee logfile for details.")
         return None
@@ -156,6 +157,7 @@ def action_reload_model(model):
 
 def action_generate_image(image, style, strength, steps, image_description):
     """Convert the entire input image to the selected style."""
+    global style_details
     try:
         if image is None: return None, "no image"
 
@@ -168,46 +170,21 @@ def action_generate_image(image, style, strength, steps, image_description):
             gr.Error(message="No model loaded. Generation not available")
             return None, ""
         
-        # TODO V2: write statistics about the used styles (how much used)
-        negative_prompt = ""
-        # Adjust the prompt based on style
-        # TODO: load prompts and styles fdrom config
-        if style == "Anime":
-            prompt = "Perfect anime quality, modern, colorful, anime style, flowers, Japanese objects, smiling"
-            negative_prompt = "realistic photo, asian"
-            strength = 0.5
-        elif style == "Pixar":
-            prompt = "A beautiful scene from a pixar cartoon, perfect drawing, many details, smiling, perfect eyes"
-            negative_prompt = "realistic photo"
-            strength = 0.5
-        elif style == "Manga":
-            prompt = "manga style, perfect drawing,smiling"
-            negative_prompt = "realistic photo"
-            strength = 0.5
-        elif style == "Painting":
-            prompt = "modern oil painting, smiling"
-            strength = 0.5
-            negative_prompt = "realistic photo"
-        elif style == "Fantasy":
-            prompt = "A detailed digital illustration in the style of Dimitry Roulland, The animation illustration style combines realistic details with a whimsical touch, characteristic of Roulland's style"
-        elif style == "Old":
-            prompt = "photo of very old "
-            strength = 0.6
-            if (image_description.startswith("a ")): image_description = image_description[2:]
-            #negative_prompt = "young people"
-        elif style == "Young":
-            prompt = "very detailed modern photo from childhood with perfect faces and shy smiles"  
-            if (image_description.startswith("a ")): image_description = image_description[2:]
-            strength = 0.6
-            negative_prompt = "old people"
-        else:
-            # just use description for creativity purpose 
-            prompt = ""
-            negative_prompt = ""
-        
-        prompt += f": {image_description}"
+        sd = style_details.get(style)
+        if sd == None:
+            sd = {
+                "prompt": "",
+                "negative_prompt": config.get_style_negative_prompt(99),
+                "strength": config.get_default_strengths(),
+                "steps": config.get_default_steps()
+            }
+            # add to gloabel list for caching
+            style_details[style] = sd
 
-        print (prompt)
+        # TODO V2: write statistics about the used styles (how much used)
+        prompt = f"{sd["prompt"]}: {image_description}"
+        if DEBUG: print (prompt)
+        else: print (image_description)
 
         # TODO Render previews in Version 2
 
@@ -216,18 +193,23 @@ def action_generate_image(image, style, strength, steps, image_description):
 
         # create a mask which covers the whole image
         mask = Image.new("L", image.size, 255) 
+        if not config.UI_show_stengths_slider(): strength = sd["strength"]
+        if not config.UI_show_steps_slider(): steps = sd["steps"]
+
         if DEBUG:
             print(f"Strength: {strength}, Steps: {steps}")
+        
         # Generate new picture
         result_image = model(
             prompt=prompt, 
-            negative_prompt=negative_prompt,
+            negative_prompt=sd["negative_prompt"],
             num_inference_steps=steps, 
             image=image,
             mask_image=mask, 
             strength=strength,
             ).images[0]
-        # TODO: save file first (config option to tun it of)
+        
+        # save generated file if enabled
         if config.is_save_output_enabled():
             utils.save_image_with_timestamp(result_image,config.get_output_folder(), ignore_errors=True)
 
@@ -237,12 +219,12 @@ def action_generate_image(image, style, strength, steps, image_description):
         gr.Error(e)
         return None, image_description
 
+#--------------------------------------------------------------
+# Gradio - Render UI
+#--------------------------------------------------------------
 def create_gradio_interface():
-    # Gradio Starts
-    #---------------------------------------------------------------------------
-    # Render UI
-    #--------------------------------------------------------------
-    with gr.Blocks(title=config.get_app_title()) as app:
+    global style_details
+    with gr.Blocks(title=config.get_app_title(), css="footer {visibility: hidden}") as app:
         with gr.Row():
             gr.Markdown("### " + config.get_app_title()+"\n\n" + config.get_user_message())
             
@@ -268,25 +250,26 @@ def create_gradio_interface():
             with gr.Column():
                 image_input = gr.Image(label="Input Image", type="pil", height=512)
                 describe_button = gr.Button("Describe", interactive=False)
-                text_description = gr.Textbox(label="Image description for better results")
+                text_description = gr.Textbox(label="use good image description for better results")
             with gr.Column():
-                #TODO: load from config
-                styles = [
-                    "Anime",
-                    "Manga",
-                    "Pixar",
-                    "Painting",
-                    "Fantasy",
-                    "Old",
-                    "Young"
-                ]
                 output_image = gr.Image(label="Output Image", type="pil", height=512)
+                start_button = gr.Button("Create", interactive=False)
+                
+                styles = []
+                for i in range(1,config.get_style_count()+1):
+                    name = config.get_style_name(i)
+                    styles.append(name)
+                    style_details[name] = {
+                        "prompt": config.get_style_prompt(i),
+                        "negative_prompt":config.get_style_negative_prompt(i),
+                        "strength": config.get_style_strengths(i),
+                        "steps": config.get_default_steps()
+                    }
                 if DEBUG: styles.append("Open Style")
                 style_dropdown = gr.Radio(styles, label="Style", value="Anime")
                 strength_slider = gr.Slider(label="Strength", minimum=0.1, maximum=1, value=config.get_default_strengths(), step=0.1,  visible=config.UI_show_stengths_slider())
                 steps_slider = gr.Slider(label="Steps", minimum=10, maximum=100, value=config.get_default_steps(), step=5, visible=config.UI_show_steps_slider())
 
-                start_button = gr.Button("Create", interactive=False)
 
         # Save input image immediately on change
         image_input.change(
