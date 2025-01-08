@@ -1,0 +1,28 @@
+# Release Notes
+
+## Version 1.0.0 - 2023-10-20
+
+### New Features
+- Initial release of AI-Anime-Maker! 🎉
+- Transform photos into anime using Stable Diffusion.
+- Support for Hugging Face models and safetensor files.
+- Customizable styles for different artistic outputs.
+- User-friendly configuration via `app.config` file.
+
+### Improvements
+- Enhanced user interface for better usability.
+
+### Bug Fixes
+- Initial release, no bugs to fix yet!
+
+
+## Version 1.1.0 - Upcoming
+
+### New Features
+- ,,,
+
+### Improvements
+- Optimize model loading on CPUs.
+
+### Bug Fixes
+- ...
