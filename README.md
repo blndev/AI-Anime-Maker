@@ -21,6 +21,8 @@ Our mission (and the mission of our future tools) is to provide simple, dedicate
 
 Just imagine! A world where converting photos to anime is as easy as pie. 🥧
 
+To make the generation results even better, we implemented a local image-to-text conversion, which describes the input of your source image automaticaly. 
+
 ## 🎨 Model Support
 AI-Anime-Maker supports a variety of models, from Hugging Face models to safetensor files. You can download these models from multiple websites like https://civit.ai for free. This flexibility allows you to experiment with different models to find the perfect one for your needs.
 
