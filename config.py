@@ -81,7 +81,7 @@ def is_cache_enabled():
 
 def get_cache_folder():
     """The folder where the cached files should be stored"""
-    return get_config_value("General","output_folder", "./cache/")
+    return get_config_value("General","cache_folder", "./cache/")
 
 #-----------------------------------------------------------------
 # section UI
