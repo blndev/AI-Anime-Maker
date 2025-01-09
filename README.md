@@ -3,21 +3,24 @@ Transform your photos into stunning anime art using the power of Stable Diffusio
 
 Status: V1 - Stable and rocking! 🎉
 
-1. [Goal](#goal)
-2. [Installation](#installation)
-3. [Configuration](#configuration)
-4. [Model Support](#model-support)
-5. [Expanding Your Artistic Horizons](#expanding-your-artistic-horizons)
-6. [Examples](#examples)
-7. [Troubleshooting](#troubleshooting)
-8. [Development](#development)
-9. [License](#license)
-10. [Contributing](#contributing)
+- [🎨 AI-Anime-Maker - Turn Your Photos into Anime with a Dash of AI Magic! 🌟](#-ai-anime-maker---turn-your-photos-into-anime-with-a-dash-of-ai-magic-)
+  - [🎯 Goal](#-goal)
+  - [🎨 Model Support](#-model-support)
+  - [🖌️ Expanding Your Artistic Horizons](#️-expanding-your-artistic-horizons)
+  - [🛠️ Installation](#️-installation)
+    - [Prerequisites](#prerequisites)
+    - [Now](#now)
+  - [⚙️ Configuration](#️-configuration)
+  - [🛠️ Development](#️-development)
+  - [📜 License](#-license)
+  - [🤝 Contributing](#-contributing)
+  - [🌟 Outlook (Planned Features)](#-outlook-planned-features)
+    - [More Ideas](#more-ideas)
 
 ## 🎯 Goal
 Our mission (and the mission of our future tools) is to provide simple, dedicated solutions for specific purposes. Unlike the complex and convoluted atomic0000, our tools are designed to be user-friendly for everyone, not just tech wizards!
 
-![Example Image](example.jpg)
+![Example Image](examples/restaurant_anime.png)
 
 Just imagine! A world where converting photos to anime is as easy as pie. 🥧
 
