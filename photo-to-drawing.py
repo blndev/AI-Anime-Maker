@@ -250,7 +250,7 @@ def create_gradio_interface():
             with gr.Column():
                 image_input = gr.Image(label="Input Image", type="pil", height=512)
                 describe_button = gr.Button("Describe", interactive=False)
-                text_description = gr.Textbox(label="use good image description for better results")
+                text_description = gr.Textbox(label="use good but short image description for better results")
             with gr.Column():
                 output_image = gr.Image(label="Output Image", type="pil", height=512)
                 start_button = gr.Button("Create", interactive=False)
