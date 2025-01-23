@@ -84,6 +84,17 @@ output_folder=./output/
 # The folder where the cached files should be saved if cache is activated.
 #cache_folder=./cache/
 
+# With this feature enabled, you can determine which style is mostly used and much more
+# be aware of data privacy and regulations
+analytics_enabled=false
+
+# Path to the analytics database (will be created if not existing)
+analytics_db_path=./analytics.db
+
+# if available it will be used to determine country and city in analytics
+# official source: https://dev.maxmind.com/geoip/geoip2/geolite2/
+analytics_city_db=./GeoLite2-City.mmdb
+
 [GenAI]
 # A local savetensors file or a Huggingface Model (will be downloaded).
 default_model=./models/toonify.safetensors

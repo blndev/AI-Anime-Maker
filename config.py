@@ -83,6 +83,19 @@ def get_cache_folder():
     """The folder where the cached files should be stored"""
     return get_config_value("General","cache_folder", "./cache/")
 
+def is_analytics_enabled():
+    """true = advanced analytics is activated"""
+    return get_boolean_config_value("General","analytics_enabled", False)
+
+def get_analytics_db_path():
+    """The path and filename of teh analytics database (will be created if not existing)"""
+    return get_config_value("General","analytics_db_path", "./analytics.db")
+
+def get_analytics_city_db():
+    """The path and filename of the ip 2 city database"""
+    return get_config_value("General","analytics_city_db", "./GeoLite2-City.mmdb")
+
+
 #-----------------------------------------------------------------
 # section UI
 #-----------------------------------------------------------------
