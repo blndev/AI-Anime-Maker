@@ -10,6 +10,8 @@ dev.config
 .local/
 # C extensions
 *.so
+analytics.db
+GeoLite2-City.mmdb
 
 # Distribution / packaging
 .Python
