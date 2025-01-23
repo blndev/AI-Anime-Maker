@@ -8,8 +8,11 @@ from transformers import pipeline # for captioning
 from xformers.ops import MemoryEfficientAttentionFlashAttentionOp
 import config
 import utils
+import analytics
 
-DEBUG = False
+DEBUG = True
+# if active the system is not using any AI, just simulating the funcion
+FAKE_AI = True
 
 device = "cuda" # will be checked and set in main functions
 style_details = {}
@@ -28,11 +31,11 @@ def get_all_local_models():
         print(e)
     return safetensors_files
 
-def update_all_local_models():
+def action_update_all_local_models():
     """updates the list of available models in the ui"""
     return gr.update(choices=get_all_local_models())
 
-def save_input_file(image):
+def action_save_input_file(image):
     """Save the input image in a cache directory using its SHA-1 hash."""
     # deactivate the start buttons
     if image is None or load_model()==None: return [gr.update(interactive=False), gr.update(interactive=False), ""]
@@ -74,6 +77,7 @@ def check_safety(x_image):
 IMAGE_TO_TEXT_PIPELINE = None
 def load_captioner():
     """Load and return a image to text model."""
+    if FAKE_AI: return
     if (IMAGE_TO_TEXT_PIPELINE!= None): return IMAGE_TO_TEXT_PIPELINE
 
     captioner = pipeline("image-to-text", model="Salesforce/blip-image-captioning-base")
@@ -81,9 +85,10 @@ def load_captioner():
     #captioner = pipeline("image-text-to-text", model="Salesforce/blip-image-captioning-base")
     return captioner
 
-def describe_image(image):
+def action_describe_image(image):
     """describe an image for better inpaint results."""
     captioner = load_captioner()
+
     #TODO V3: add prompt to captioner to ask for details like how many people, background etc.
     # messages = [
     # {
@@ -95,13 +100,17 @@ def describe_image(image):
     # }]
     # prompt = captioner.apply_chat_template(messages)
     #value = captioner(image, text=prompt, return_full_text=False)
+    if FAKE_AI: return "ai deactivated"
     value = captioner(image)
+
     if DEBUG: print(f"Image description: {value}")
     return value[0]['generated_text']
 
 IMAGE_TO_IMAGE_PIPELINE = None
 def load_model(model=config.get_model()):
     """Load and return the Stable Diffusion model based on style."""
+    if FAKE_AI: return
+
     global IMAGE_TO_IMAGE_PIPELINE
     if (IMAGE_TO_IMAGE_PIPELINE!= None): 
         if DEBUG: print ("using cached model")
@@ -141,7 +150,7 @@ def load_model(model=config.get_model()):
 
 
 def action_reload_model(model):
-    if not DEBUG: return
+    if FAKE_AI: return
     global IMAGE_TO_IMAGE_PIPELINE
     print (f"Reload model {model}")
     try:
@@ -155,21 +164,25 @@ def action_reload_model(model):
     except Exception as e:
         print(f"model not loaded. {e}")
 
-def action_generate_image(image, style, strength, steps, image_description):
+def action_generate_image(request: gr.Request, image, style, strength, steps, image_description):
     """Convert the entire input image to the selected style."""
     global style_details
     try:
         if image is None: return None, "no image"
 
         if DEBUG: print("start stylize")
-
         model = load_model()
-        if image_description == None or image_description == "": image_description = describe_image(image)
+        if image_description == None or image_description == "": image_description = action_describe_image(image)
 
-        if (model == None): 
+        if (not FAKE_AI and model == None): 
+            print("error: no model loaded")
             gr.Error(message="No model loaded. Generation not available")
             return None, ""
         
+        print("Client IP: ", request.client.host)
+        print("Client Type: ", request.headers["user-agent"])
+        print("Languages: ", request.headers["accept-language"])
+
         sd = style_details.get(style)
         if sd == None:
             sd = {
@@ -199,15 +212,18 @@ def action_generate_image(image, style, strength, steps, image_description):
         if DEBUG:
             print(f"Strength: {strength}, Steps: {steps}")
         
-        # Generate new picture
-        result_image = model(
-            prompt=prompt, 
-            negative_prompt=sd["negative_prompt"],
-            num_inference_steps=steps, 
-            image=image,
-            mask_image=mask, 
-            strength=strength,
-            ).images[0]
+        if FAKE_AI:
+            result_image = utils.image_convert_to_sepia(image)
+        else:
+            # Generate new picture
+            result_image = model(
+                prompt=prompt, 
+                negative_prompt=sd["negative_prompt"],
+                num_inference_steps=steps, 
+                image=image,
+                mask_image=mask, 
+                strength=strength,
+                ).images[0]
         
         # save generated file if enabled
         if config.is_save_output_enabled():
@@ -229,7 +245,7 @@ def create_gradio_interface():
             gr.Markdown("### " + config.get_app_title()+"\n\n" + config.get_user_message())
             
         if DEBUG:
-            gr.Markdown("*DEBUG enabled*")
+            gr.Markdown("*DEBUG enabled*" + ("__Fake AI__" if FAKE_AI else ""))
             with gr.Row():
                 with gr.Column():
                     model_dropdown = gr.Dropdown(choices=get_all_local_models(), value=config.get_model(), label="Models", allow_custom_value=True)
@@ -242,7 +258,7 @@ def create_gradio_interface():
                         outputs=[]
                     )
                     refresh_model_list_button.click(
-                        fn=update_all_local_models,
+                        fn=action_update_all_local_models,
                         inputs=[],
                         outputs=[model_dropdown]
                     )
@@ -273,13 +289,13 @@ def create_gradio_interface():
 
         # Save input image immediately on change
         image_input.change(
-            fn=save_input_file,
+            fn=action_save_input_file,
             inputs=[image_input],
             outputs=[start_button, describe_button, text_description]
         )
 
         describe_button.click(
-            fn=describe_image,
+            fn=action_describe_image,
             inputs=[image_input],
             outputs=[text_description]
         )
@@ -303,9 +319,12 @@ if __name__ == "__main__":
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
         print (f"running on {device}")
+        if FAKE_AI:
+            print ("ai deactivated")
+        else:
+            IMAGE_TO_IMAGE_PIPELINE = load_model()
+            IMAGE_TO_TEXT_PIPELINE = load_captioner()
 
-        IMAGE_TO_IMAGE_PIPELINE = load_model()
-        IMAGE_TO_TEXT_PIPELINE = load_captioner()
         print ("starting " + config.get_app_title())
         app = create_gradio_interface()
         app.launch(share = config.is_gradio_shared())

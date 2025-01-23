@@ -1,6 +1,8 @@
 import os
 import requests
 from datetime import datetime
+import numpy as np # for image manipulation
+from PIL import Image
 
 def download_file(url, local_path):
     # Check if the file already exists
@@ -39,3 +41,17 @@ def save_image_with_timestamp(image, folder_path, ignore_errors=False):
     except Exception as e:
         print (f"save image failed: {e}")
         if not ignore_errors: raise e
+
+def image_convert_to_sepia(input: Image):
+    """converts a image to a sepia ton image"""
+
+    img = np.array(input)
+    sepia_filter = np.array([
+        [0.393, 0.769, 0.189],
+        [0.349, 0.686, 0.168],
+        [0.272, 0.534, 0.131]
+    ])
+    sepia_img = img @ sepia_filter.T
+    sepia_img = np.clip(sepia_img,0,255)
+    sepia_img = sepia_img.astype(np.uint8)
+    return Image.fromarray(sepia_img)
