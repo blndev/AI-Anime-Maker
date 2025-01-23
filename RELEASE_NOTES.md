@@ -19,7 +19,7 @@
 ## Version 1.1.0 - Upcoming
 
 ### New Features
-- ,,,
+- Analytics allows you to determine which style is mostly used and much more
 
 ### Improvements
 - Optimize model loading on CPUs.
