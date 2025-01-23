@@ -35,10 +35,22 @@ def action_update_all_local_models():
     """updates the list of available models in the ui"""
     return gr.update(choices=get_all_local_models())
 
-def action_save_input_file(image):
+def action_save_input_file(request: gr.Request, image):
     """Save the input image in a cache directory using its SHA-1 hash."""
     # deactivate the start buttons
     if image is None or load_model()==None: return [gr.update(interactive=False), gr.update(interactive=False), ""]
+
+    if config.is_analytics_enabled:
+        try:
+            analytics.save_session(
+                session=request.session_hash, 
+                ip=request.client.host,
+                client=request.headers["user-agent"], 
+                languages=request.headers["accept-language"])
+            if DEBUG:
+                print("new image uploaded from: ", request.client.host)
+        except Exception as e:
+            print("Error for analytics", e)
 
     if config.is_cache_enabled():
         dir = config.get_cache_folder()
@@ -109,7 +121,7 @@ def action_describe_image(image):
 IMAGE_TO_IMAGE_PIPELINE = None
 def load_model(model=config.get_model()):
     """Load and return the Stable Diffusion model based on style."""
-    if FAKE_AI: return
+    if FAKE_AI: return False
 
     global IMAGE_TO_IMAGE_PIPELINE
     if (IMAGE_TO_IMAGE_PIPELINE!= None): 
@@ -179,9 +191,11 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
             gr.Error(message="No model loaded. Generation not available")
             return None, ""
         
-        print("Client IP: ", request.client.host)
-        print("Client Type: ", request.headers["user-agent"])
-        print("Languages: ", request.headers["accept-language"])
+        # print("Client IP: ", request.client.host)
+        # print("Session: ", request.session_hash)
+        # print("State: ", request.state)
+        # print("Client Type: ", request.headers["user-agent"])
+        # print("Languages: ", request.headers["accept-language"])
 
         sd = style_details.get(style)
         if sd == None:
@@ -325,9 +339,13 @@ if __name__ == "__main__":
             IMAGE_TO_IMAGE_PIPELINE = load_model()
             IMAGE_TO_TEXT_PIPELINE = load_captioner()
 
+        if config.is_analytics_enabled():
+            analytics.start()
+
         print ("starting " + config.get_app_title())
         app = create_gradio_interface()
         app.launch(share = config.is_gradio_shared())
+        analytics.stop()
     except Exception as e:
         print (e)
         print ("app closed")
