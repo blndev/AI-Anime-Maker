@@ -53,8 +53,8 @@ def action_save_input_file(request: gr.Request, image):
             analytics.save_session(
                 session=request.session_hash, 
                 ip=request.client.host,
-                client=request.headers["user-agent"], 
-                accept_languages=request.headers["accept-language"])
+                user_agent=request.headers["user-agent"], 
+                languages=request.headers["accept-language"])
             if DEBUG:
                 print("new image uploaded from: ", request.client.host)
         except Exception as e:
@@ -191,6 +191,7 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
         # TODO V2: write statistics about the used styles (how much used)
         prompt = f"{sd["prompt"]}: {image_description}"
         if DEBUG: print (prompt)
+        #TODO: add time to output (HH:mm)
         else: print (f"{request.client.host}: {style} - {image_description}")
 
         # must be before resizing, otherwise hash will not be same as from source image
@@ -254,6 +255,7 @@ def create_gradio_interface():
     with gr.Blocks(
         title=config.get_app_title(), 
         css="footer {visibility: hidden}",
+        analytics_enabled=False,
         theme=gr.themes.Soft()) as app:
         with gr.Row():
             gr.Markdown("### " + config.get_app_title()+"\n\n" + config.get_user_message())
