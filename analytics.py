@@ -8,11 +8,22 @@ import sqlite3          # as datastore
 import config           # to get configuration values
 import geoip2.database  # for ip to city
 import os               # to check if files exists
+from threading import Lock  # write to DB must be thread save
 
-_connection = None
+# read only database for getting location from IP
 _ip_geo_reader = None
 
-def _create_tables(connection):
+def _load_geo_db():
+    """loads the ip to city database if existing"""
+    global _ip_geo_reader
+    try:
+        db = config.get_analytics_city_db()
+        if not os.path.exists(db): return
+        _ip_geo_reader = geoip2.database.Reader(db)
+    except Exception as e:
+        print ("Error while loading geo ip database", e)
+
+def _create_tables():
 
     #every user creates a session, even if he is not creating any content
     create_table_session = """
@@ -51,44 +62,49 @@ def _create_tables(connection):
     # """
 
     try:
-        cursor = connection.cursor()
-        cursor.execute(create_table_generations)
-        cursor.execute(create_table_session)
-        #cursor.execute(create_table_blocked_source)
-        connection.commit()
+        lock = Lock()
+        with lock:
+            with sqlite3.connect(config.get_analytics_db_path()) as connection:
+                cursor = connection.cursor()
+                cursor.execute(create_table_generations)
+                cursor.execute(create_table_session)
+                #cursor.execute(create_table_blocked_source)
+                connection.commit()
     except sqlite3.Error as e:
         print(f"Error while creating tables: {e}")
 
-def _load_geo_db():
-    """loads the ip to city database if existing"""
-    global _ip_geo_reader
+def _write_thread_save_to_db(query, data):
     try:
-        db = config.get_analytics_city_db()
-        if not os.path.exists(db): return
-        _ip_geo_reader = geoip2.database.Reader(db)
-    except Exception as e:
-        print ("Error while loading geo ip database", e)
+        lock = Lock()
+        with lock:
+            with sqlite3.connect(config.get_analytics_db_path()) as connection:
+                cursor = connection.cursor()
+                cursor.execute(query, data)
+                connection.commit()
+    except sqlite3.Error as e:
+        print(f"Error while save session info {e}")
 
 def start():
     """this will open or create the database if analytics is enable"""
     global _connection
     if not config.is_analytics_enabled: return
     try:
-        print("Open analytics database")
-        _connection = sqlite3.connect(config.get_analytics_db_path())
-        _create_tables(_connection)
+        print("check analytics database...", end="")
+        _create_tables()
         _load_geo_db()
+        print("ready")
     except Exception as e:
         print (e)
 
 
 def stop():
-    if _connection!=None:
+    if _ip_geo_reader!=None:
         print("closing analytics database")
-        _connection.close()
+        _ip_geo_reader.close()
 
 def save_session(session, ip, client, languages):
     """creates an entry for the current user session if not existing"""
+    if not config.is_analytics_enabled: return
 
     #std query
     query = "insert or ignore into tblSessions (Session, Timestamp, Client, Languages) values (?,datetime('now'),?,?)"
@@ -97,22 +113,16 @@ def save_session(session, ip, client, languages):
     if _ip_geo_reader != None:
         try:
             ipinfo = _ip_geo_reader.city(ip)
-            query = "insert or ignore into tblSessions (Session, Timestamp, Client, Languages, Continent, Country, City) values (?,datetime('now'),?,?,?,?,?)"
-            data = (session, client, languages, 
-                    ipinfo.continent.name, 
-                    ipinfo.country.name,
-                    ipinfo.city.name)
+            if ip != None:
+                query = "insert or ignore into tblSessions (Session, Timestamp, Client, Languages, Continent, Country, City) values (?,datetime('now'),?,?,?,?,?)"
+                data = (session, client, languages, 
+                        ipinfo.continent.name, 
+                        ipinfo.country.name,
+                        ipinfo.city.name)
         except Exception as e:
             print("failed to determine country and city")
-    print (query, data)
-    try:
-        if _connection == None: start()
-        cursor = _connection.cursor()
-        cursor.execute(query, data)
-        _connection.commit()
-    except sqlite3.Error as e:
-        print(f"Error while save session info {e}")
-
+    #print (query, data)
+    _write_thread_save_to_db(query, data)
 
 # Simple Debug code
 if __name__ == "__main__":
