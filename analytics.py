@@ -1,8 +1,3 @@
-# Features provided by this file
-# * statistics about used styles and assoziated prompts
-# * if store output and analytics are activated, prompts used for the generated output are stored
-# * if cache, store output and analytics are activated, input and resulting images are connected 
-
 import gradio as gr
 import sqlite3          # as datastore
 import config           # to get configuration values
@@ -12,7 +7,7 @@ from threading import Lock  # write to DB must be thread save
 
 # read only database for getting location from IP
 _ip_geo_reader = None
-_DEBUG = False
+DEBUG = False
 
 def _load_geo_db():
     """loads the ip to city database if existing"""
@@ -26,7 +21,7 @@ def _load_geo_db():
 
 def _create_tables():
 
-    if _DEBUG: print ("check or create analytics tables")
+    if DEBUG: print ("check or create analytics tables")
     #every user creates a session, even if he is not creating any content
     create_table_session = """
     CREATE TABLE IF NOT EXISTS tblSessions (
@@ -78,7 +73,7 @@ def _create_tables():
 def _write_thread_save_to_db(query, data):
     """as we running multi threaded we need to avoid conflicts on the database"""
     # for bigger scaling usage suggestion is to use a dedicated database system
-    if _DEBUG: print("write to db", query, data)
+    if DEBUG: print("write to db", query, data)
     try:
         lock = Lock()
         with lock:
@@ -104,28 +99,35 @@ def start():
 
 def stop():
     if _ip_geo_reader!=None:
-        if _DEBUG: print("closing analytics database")
+        if DEBUG: print("closing analytics database")
         _ip_geo_reader.close()
 
-def save_session(session, ip, client, languages):
+def save_session(session, ip, client, accept_languages):
     """creates an entry for the current user session if not existing"""
     if not config.is_analytics_enabled: return
-
+    if accept_languages!=None: 
+        # get primary language only
+        try:
+            languages=accept_languages.split(',')
+            accept_languages = languages[0].split(";")[0].strip()
+        except Exception as e:
+            if DEBUG: print("split languages failed", e)
+    
     #std query
     query = "insert or ignore into tblSessions (Session, Timestamp, Client, Languages) values (?,datetime('now'),?,?)"
-    data = (session, client, languages)
+    data = (session, client, accept_languages)
 
     if _ip_geo_reader != None:
         try:
             ipinfo = _ip_geo_reader.city(ip)
             if ip != None:
                 query = "insert or ignore into tblSessions (Session, Timestamp, Client, Languages, Continent, Country, City) values (?,datetime('now'),?,?,?,?,?)"
-                data = (session, client, languages, 
+                data = (session, client, accept_languages, 
                         ipinfo.continent.name, 
                         ipinfo.country.name,
                         ipinfo.city.name)
         except Exception as e:
-            if _DEBUG: print("failed to determine country and city", e)
+            if DEBUG: print("failed to determine country and city", e)
     # save all data now
     _write_thread_save_to_db(query, data)
 

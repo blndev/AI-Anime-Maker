@@ -6,16 +6,24 @@ from diffusers import StableDiffusionPipeline, StableDiffusionImg2ImgPipeline
 from PIL import Image, ImageDraw
 from transformers import pipeline # for captioning
 from xformers.ops import MemoryEfficientAttentionFlashAttentionOp
+import time # for sleep in FAKE_AI
+
 import config
 import utils
 import analytics
 
-DEBUG = True
+# if active much more log output and ability to switch and select the used generation model 
+DEBUG = False
 # if active the system is not using any AI, just simulating the funcion
-FAKE_AI = True
+FAKE_AI = False
+FAKE_AI_DELAY = 5 # time how long the thread sleeps to simulate generation
 
 device = "cuda" # will be checked and set in main functions
 style_details = {}
+
+#TODO: Refactor and use logger instead
+utils.DEBUG = DEBUG
+analytics.DEBUG = DEBUG
 
 def get_all_local_models():
     """read all local models to the system"""
@@ -46,7 +54,7 @@ def action_save_input_file(request: gr.Request, image):
                 session=request.session_hash, 
                 ip=request.client.host,
                 client=request.headers["user-agent"], 
-                languages=request.headers["accept-language"])
+                accept_languages=request.headers["accept-language"])
             if DEBUG:
                 print("new image uploaded from: ", request.client.host)
         except Exception as e:
@@ -54,32 +62,10 @@ def action_save_input_file(request: gr.Request, image):
 
     if config.is_cache_enabled():
         dir = config.get_cache_folder()
-        if not os.path.exists(dir):
-            os.makedirs(dir)
-        # if we use imageEditor from Gradio:
-        # try:
-        #     image = image['background'] # if we use editor field
-        # except:
-        #     print("seems no background in image dict")
-        #     print (image)
-        try:
-            # Convert the image to bytes and compute the SHA-1 hash
-            image_bytes = image.tobytes()
-            filetype = "jpg"
-            filename_hash = sha1(image_bytes).hexdigest() + "."+filetype
-            file_path = os.path.join(dir, filename_hash)
-
-            if not os.path.exists(file_path):
-                image.save(file_path, format="JPEG")
-
-            if DEBUG: print(f"Image saved to \"{file_path}\"")
-
-        except Exception as e:
-            print(f"Error while saving image:\n{e}")
+        utils.save_image_as_file(image, dir)
 
     # there is an image, activate the start buttons
     return [gr.update(interactive=True), gr.update(interactive=True), ""]
-
 
 def check_safety(x_image):
     """Support function to check if the image is NSFW."""
@@ -190,18 +176,12 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
             print("error: no model loaded")
             gr.Error(message="No model loaded. Generation not available")
             return None, ""
-        
-        # print("Client IP: ", request.client.host)
-        # print("Session: ", request.session_hash)
-        # print("State: ", request.state)
-        # print("Client Type: ", request.headers["user-agent"])
-        # print("Languages: ", request.headers["accept-language"])
 
         sd = style_details.get(style)
         if sd == None:
             sd = {
                 "prompt": "",
-                "negative_prompt": config.get_style_negative_prompt(99),
+                "negative_prompt": config.get_style_negative_prompt(99),#99 means you will get back the default overall negative prompt if style 99 does not exist
                 "strength": config.get_default_strengths(),
                 "steps": config.get_default_steps()
             }
@@ -211,10 +191,13 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
         # TODO V2: write statistics about the used styles (how much used)
         prompt = f"{sd["prompt"]}: {image_description}"
         if DEBUG: print (prompt)
-        else: print (image_description)
+        else: print (f"{request.client.host}: {style} - {image_description}")
+
+        # must be before resizing, otherwise hash will not be same as from source image
+        # or adapt the source image saving with thumbnail property
+        image_sha1 = sha1(image.tobytes()).hexdigest()
 
         # TODO Render previews in Version 2
-
         max_size = config.get_max_size()
         image.thumbnail((max_size,max_size))
 
@@ -228,6 +211,7 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
         
         if FAKE_AI:
             result_image = utils.image_convert_to_sepia(image)
+            time.sleep(FAKE_AI_DELAY)
         else:
             # Generate new picture
             result_image = model(
@@ -240,9 +224,22 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
                 ).images[0]
         
         # save generated file if enabled
+        fn=None
         if config.is_save_output_enabled():
-            utils.save_image_with_timestamp(result_image,config.get_output_folder(), ignore_errors=True)
+            fn = utils.save_image_with_timestamp(
+                image=result_image,
+                folder_path=config.get_output_folder(),
+                reference=f"{image_sha1}-{style}",
+                ignore_errors=True)
 
+        if config.is_analytics_enabled():
+            analytics.save_generation_details(
+                request.session_hash,
+                sha1=image_sha1,
+                style=style,
+                prompt=image_description,
+                output_filename=fn
+                )
         return result_image, image_description
     except RuntimeError as e:
         print(f"RuntimeError: {e}")
@@ -254,12 +251,15 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
 #--------------------------------------------------------------
 def create_gradio_interface():
     global style_details
-    with gr.Blocks(title=config.get_app_title(), css="footer {visibility: hidden}") as app:
+    with gr.Blocks(
+        title=config.get_app_title(), 
+        css="footer {visibility: hidden}",
+        theme=gr.themes.Soft()) as app:
         with gr.Row():
             gr.Markdown("### " + config.get_app_title()+"\n\n" + config.get_user_message())
             
-        if DEBUG:
-            gr.Markdown("*DEBUG enabled*" + ("__Fake AI__" if FAKE_AI else ""))
+        if DEBUG and not FAKE_AI:
+            gr.Markdown("*DEBUG enabled*" + (" __Fake AI__" if FAKE_AI else ""))
             with gr.Row():
                 with gr.Column():
                     model_dropdown = gr.Dropdown(choices=get_all_local_models(), value=config.get_model(), label="Models", allow_custom_value=True)
@@ -305,19 +305,24 @@ def create_gradio_interface():
         image_input.change(
             fn=action_save_input_file,
             inputs=[image_input],
-            outputs=[start_button, describe_button, text_description]
+            outputs=[start_button, describe_button, text_description], 
+            concurrency_limit=None,
         )
 
         describe_button.click(
             fn=action_describe_image,
             inputs=[image_input],
-            outputs=[text_description]
+            outputs=[text_description],
+            concurrency_limit=4,
+            concurrency_id="describe"
         )
 
         start_button.click(
             fn=action_generate_image,
             inputs=[image_input, style_dropdown, strength_slider, steps_slider, text_description],
-            outputs=[output_image, text_description]
+            outputs=[output_image, text_description],
+            concurrency_limit=1,
+            concurrency_id="gpu_queue"
         )
 
         return app
@@ -327,7 +332,7 @@ if __name__ == "__main__":
         if config.read_configuration() == None: print("read configuration failed")
         model = config.get_model()
         if model.endswith("safetensors"):
-            utils.download_file(url=config.get_model_url(), local_path=model)
+            utils.download_file_if_not_existing(url=config.get_model_url(), local_path=model)
 
         print ("initializing ai models")
 
@@ -340,11 +345,15 @@ if __name__ == "__main__":
             IMAGE_TO_TEXT_PIPELINE = load_captioner()
 
         if config.is_analytics_enabled():
+            analytics._DEBUG = DEBUG
             analytics.start()
 
-        print ("starting " + config.get_app_title())
+        print (f"starting ""{config.get_app_title()}""")
         app = create_gradio_interface()
-        app.launch(share = config.is_gradio_shared())
+        app.launch(
+            share = config.is_gradio_shared(), 
+            max_file_size=8*gr.FileSize.MB
+            )
         analytics.stop()
     except Exception as e:
         print (e)
