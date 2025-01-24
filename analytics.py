@@ -19,7 +19,6 @@ def _create_tables(connection):
     CREATE TABLE IF NOT EXISTS tblSessions (
         Session TEXT NOT NULL PRIMARY KEY,
         Timestamp TEXT NOT NULL,
-        IP TEXT,
         Continent TEXT,
         Country TEXT,
         City TEXT,
@@ -92,14 +91,14 @@ def save_session(session, ip, client, languages):
     """creates an entry for the current user session if not existing"""
 
     #std query
-    query = "insert or ignore into tblSessions (Session, Timestamp, IP, Client, Languages) values (?,datetime('now'),?,?,?)"
-    data = (session, ip, client, languages)
+    query = "insert or ignore into tblSessions (Session, Timestamp, Client, Languages) values (?,datetime('now'),?,?)"
+    data = (session, client, languages)
 
     if _ip_geo_reader != None:
         try:
             ipinfo = _ip_geo_reader.city(ip)
-            query = "insert or ignore into tblSessions (Session, Timestamp, IP, Client, Languages, Continent, Country, City) values (?,datetime('now'),?,?,?,?,?,?)"
-            data = (session, ip, client, languages, 
+            query = "insert or ignore into tblSessions (Session, Timestamp, Client, Languages, Continent, Country, City) values (?,datetime('now'),?,?,?,?,?)"
+            data = (session, client, languages, 
                     ipinfo.continent.name, 
                     ipinfo.country.name,
                     ipinfo.city.name)
@@ -117,8 +116,15 @@ def save_session(session, ip, client, languages):
 
 # Simple Debug code
 if __name__ == "__main__":
+    import uuid 
+    import random
     start()
-    save_session("3334", "95.99.246.145", "client", "de")
+    for i in range(4):
+        save_session(
+            str(uuid.uuid4()),
+            f"{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}",
+            "client",
+            "de")
     cursor = _connection.cursor()
     cursor.execute("select * from tblSessions")
     rows = cursor.fetchall()
