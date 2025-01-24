@@ -347,8 +347,8 @@ if __name__ == "__main__":
         if config.is_analytics_enabled():
             analytics._DEBUG = DEBUG
             analytics.start()
-
-        print (f"starting ""{config.get_app_title()}""")
+        title = config.get_app_title()
+        print (f"starting Server ""{title}""")
         app = create_gradio_interface()
         app.launch(
             share = config.is_gradio_shared(), 
@@ -356,5 +356,7 @@ if __name__ == "__main__":
             )
         analytics.stop()
     except Exception as e:
-        print (e)
+        if DEBUG: print (e)
+    finally:
+        app.close()
         print ("app closed")
