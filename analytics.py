@@ -102,27 +102,28 @@ def stop():
         if DEBUG: print("closing analytics database")
         _ip_geo_reader.close()
 
-def save_session(session, ip, client, accept_languages):
+def save_session(session, ip, user_agent, languages):
     """creates an entry for the current user session if not existing"""
     if not config.is_analytics_enabled: return
-    if accept_languages!=None: 
+    if languages!=None: 
         # get primary language only
         try:
-            languages=accept_languages.split(',')
-            accept_languages = languages[0].split(";")[0].strip()
+            languages = languages.split(',')
+            languages = languages[0].split(";")[0].strip()
         except Exception as e:
             if DEBUG: print("split languages failed", e)
     
     #std query
     query = "insert or ignore into tblSessions (Session, Timestamp, Client, Languages) values (?,datetime('now'),?,?)"
-    data = (session, client, accept_languages)
-
+    data = (session, user_agent, languages)
+    #TODO: rename client to user-agent, languages to primary-language and extract OS & Browser directly
+    #TODO: check for private network like 172.31.1.253
     if _ip_geo_reader != None:
         try:
             ipinfo = _ip_geo_reader.city(ip)
-            if ip != None:
+            if ipinfo != None:
                 query = "insert or ignore into tblSessions (Session, Timestamp, Client, Languages, Continent, Country, City) values (?,datetime('now'),?,?,?,?,?)"
-                data = (session, client, accept_languages, 
+                data = (session, user_agent, languages, 
                         ipinfo.continent.name, 
                         ipinfo.country.name,
                         ipinfo.city.name)
