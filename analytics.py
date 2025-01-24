@@ -12,6 +12,7 @@ from threading import Lock  # write to DB must be thread save
 
 # read only database for getting location from IP
 _ip_geo_reader = None
+_DEBUG = False
 
 def _load_geo_db():
     """loads the ip to city database if existing"""
@@ -25,6 +26,7 @@ def _load_geo_db():
 
 def _create_tables():
 
+    if _DEBUG: print ("check or create analytics tables")
     #every user creates a session, even if he is not creating any content
     create_table_session = """
     CREATE TABLE IF NOT EXISTS tblSessions (
@@ -74,6 +76,9 @@ def _create_tables():
         print(f"Error while creating tables: {e}")
 
 def _write_thread_save_to_db(query, data):
+    """as we running multi threaded we need to avoid conflicts on the database"""
+    # for bigger scaling usage suggestion is to use a dedicated database system
+    if _DEBUG: print("write to db", query, data)
     try:
         lock = Lock()
         with lock:
@@ -99,7 +104,7 @@ def start():
 
 def stop():
     if _ip_geo_reader!=None:
-        print("closing analytics database")
+        if _DEBUG: print("closing analytics database")
         _ip_geo_reader.close()
 
 def save_session(session, ip, client, languages):
@@ -120,23 +125,29 @@ def save_session(session, ip, client, languages):
                         ipinfo.country.name,
                         ipinfo.city.name)
         except Exception as e:
-            print("failed to determine country and city")
-    #print (query, data)
+            if _DEBUG: print("failed to determine country and city", e)
+    # save all data now
     _write_thread_save_to_db(query, data)
 
-# Simple Debug code
-if __name__ == "__main__":
-    import uuid 
-    import random
-    start()
-    for i in range(4):
-        save_session(
-            str(uuid.uuid4()),
-            f"{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}",
-            "client",
-            "de")
-    cursor = _connection.cursor()
-    cursor.execute("select * from tblSessions")
-    rows = cursor.fetchall()
-    for row in rows:
-        print (row)
+def save_generation_details(session, sha1, style, prompt, output_filename, isBlocked=0, block_reason=None):
+    """creates an entry for the current user session if not existing"""
+    if not config.is_analytics_enabled: return
+ 
+    #std query
+    query = "insert or ignore into tblGenerations (Session, Timestamp, Input_SHA1, Style, Userprompt, Output,IsBlocked,BlockReason) values (?,datetime('now'),?,?,?,?,?,?)"
+    data = (session, sha1, style, prompt, output_filename, isBlocked, block_reason)
+
+    # save all data now
+    _write_thread_save_to_db(query, data)
+
+# # Simple Debug code
+# if __name__ == "__main__":
+#     import uuid 
+#     import random
+#     start()
+#     for i in range(4):
+#         save_session(
+#             str(uuid.uuid4()),
+#             f"{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}",
+#             "client",
+#             "de")
