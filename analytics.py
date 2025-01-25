@@ -1,3 +1,4 @@
+import ipaddress
 import gradio as gr
 import sqlite3          # as datastore
 import config           # to get configuration values
@@ -113,23 +114,28 @@ def save_session(session, ip, user_agent, languages):
         except Exception as e:
             if DEBUG: print("split languages failed", e)
     
-    #std query
-    query = "insert or ignore into tblSessions (Session, Timestamp, Client, Languages) values (?,datetime('now'),?,?)"
-    data = (session, user_agent, languages)
     #TODO: rename client to user-agent, languages to primary-language and extract OS & Browser directly
-    #TODO: check for private network like 172.31.1.253
-    if _ip_geo_reader != None:
+    continent = "n.a."
+    country = "n.a."
+    city = "private IP"
+    if not ipaddress.ip_address(ip).is_private and _ip_geo_reader != None:
         try:
             ipinfo = _ip_geo_reader.city(ip)
-            if ipinfo != None:
-                query = "insert or ignore into tblSessions (Session, Timestamp, Client, Languages, Continent, Country, City) values (?,datetime('now'),?,?,?,?,?)"
-                data = (session, user_agent, languages, 
-                        ipinfo.continent.name, 
-                        ipinfo.country.name,
-                        ipinfo.city.name)
+            if ipinfo:
+                continent = ipinfo.continent.name
+                country = ipinfo.country.name
+                city = ipinfo.city.name
         except Exception as e:
             if DEBUG: print("failed to determine country and city", e)
-    # save all data now
+
+    query = """
+    insert or ignore into tblSessions 
+    (Timestamp, Session, Client, Languages, Continent, Country, City)
+    values (datetime('now'),?,?,?,?,?,?)
+    """
+    data = (session, user_agent, languages, 
+            continent, country, city)
+# save all data now
     _write_thread_save_to_db(query, data)
 
 def save_generation_details(session, sha1, style, prompt, output_filename, isBlocked=0, block_reason=None):
