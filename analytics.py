@@ -144,7 +144,7 @@ def save_session(session, ip, user_agent, languages):
         ?,?,?)
     """
     ua = parse_user_agent(user_agent)
-    isMobile = 1 if ua.is_mobile else 0
+    isMobile = 1 if ua.is_mobile or ua.is_tablet else 0
     data = (session,
             ua.os.family, ua.browser.family, isMobile, 
             languages, user_agent,  
@@ -162,15 +162,3 @@ def save_generation_details(session, sha1, style, prompt, output_filename, isBlo
 
     # save all data now
     _write_thread_save_to_db(query, data)
-
-# # Simple Debug code
-# if __name__ == "__main__":
-#     import uuid 
-#     import random
-#     start()
-#     for i in range(4):
-#         save_session(
-#             str(uuid.uuid4()),
-#             f"{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}",
-#             "client",
-#             "de")
