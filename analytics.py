@@ -5,6 +5,7 @@ import config           # to get configuration values
 import geoip2.database  # for ip to city
 import os               # to check if files exists
 from threading import Lock  # write to DB must be thread save
+from user_agents import parse as parse_user_agent   # Split OS. Browser etc.
 
 # read only database for getting location from IP
 _ip_geo_reader = None
@@ -31,8 +32,11 @@ def _create_tables():
         Continent TEXT,
         Country TEXT,
         City TEXT,
-        Client TEXT,
-        Languages TEXT
+        OS TEXT,
+        Browser TEXT,
+        IsMobile INT,
+        UserAgent TEXT,
+        Language TEXT
     );
     """
     create_table_generations = """
@@ -114,7 +118,6 @@ def save_session(session, ip, user_agent, languages):
         except Exception as e:
             if DEBUG: print("split languages failed", e)
     
-    #TODO: rename client to user-agent, languages to primary-language and extract OS & Browser directly
     continent = "n.a."
     country = "n.a."
     city = "private IP"
@@ -130,10 +133,21 @@ def save_session(session, ip, user_agent, languages):
 
     query = """
     insert or ignore into tblSessions 
-    (Timestamp, Session, Client, Languages, Continent, Country, City)
-    values (datetime('now'),?,?,?,?,?,?)
+    (Timestamp, Session, 
+    OS, Browser, IsMobile,
+    Language, UserAgent,
+    Continent, Country, City)
+    values (
+        datetime('now'),?,
+        ?,?,?,
+        ?,?,
+        ?,?,?)
     """
-    data = (session, user_agent, languages, 
+    ua = parse_user_agent(user_agent)
+    isMobile = 1 if ua.is_mobile else 0
+    data = (session,
+            ua.os.family, ua.browser.family, isMobile, 
+            languages, user_agent,  
             continent, country, city)
 # save all data now
     _write_thread_save_to_db(query, data)
