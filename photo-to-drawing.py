@@ -1,3 +1,4 @@
+from datetime import datetime
 import gradio as gr
 import torch
 from hashlib import sha1
@@ -47,6 +48,9 @@ def action_save_input_file(request: gr.Request, image):
     """Save the input image in a cache directory using its SHA-1 hash."""
     # deactivate the start buttons
     if image is None or load_model()==None: return [gr.update(interactive=False), gr.update(interactive=False), ""]
+    
+    # API Users don't have a request (by documentation)
+    if not request: return
 
     if config.is_analytics_enabled:
         try:
@@ -78,6 +82,7 @@ def load_captioner():
     if FAKE_AI: return
     if (IMAGE_TO_TEXT_PIPELINE!= None): return IMAGE_TO_TEXT_PIPELINE
 
+    #TODO: check stop params like 
     captioner = pipeline("image-to-text", model="Salesforce/blip-image-captioning-base")
     # TODO V3: change to this pipeline to query details about the image in Version 2
     #captioner = pipeline("image-text-to-text", model="Salesforce/blip-image-captioning-base")
@@ -85,6 +90,8 @@ def load_captioner():
 
 def action_describe_image(image):
     """describe an image for better inpaint results."""
+    if FAKE_AI: return "ai deactivated"
+    
     captioner = load_captioner()
 
     #TODO V3: add prompt to captioner to ask for details like how many people, background etc.
@@ -98,7 +105,6 @@ def action_describe_image(image):
     # }]
     # prompt = captioner.apply_chat_template(messages)
     #value = captioner(image, text=prompt, return_full_text=False)
-    if FAKE_AI: return "ai deactivated"
     value = captioner(image)
 
     if DEBUG: print(f"Image description: {value}")
@@ -152,7 +158,7 @@ def action_reload_model(model):
     global IMAGE_TO_IMAGE_PIPELINE
     print (f"Reload model {model}")
     try:
-        # TODO: check better ways to unload a model!
+        # TODO (low prio): check better ways to unload a model!
         IMAGE_TO_IMAGE_PIPELINE = None
         if device=="cuda": torch.cuda.empty_cache()
         # load new model
@@ -167,11 +173,16 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
     global style_details
     try:
         if image is None: return None, "no image"
+        # API Users don't have a request (by documentation)
+        if request is None: 
+            print("Warning: no request object. API usage?")
+            return None,"API forbidden"
 
-        if DEBUG: print("start stylize")
+        if DEBUG: print("start image generation")
         model = load_model()
         if image_description == None or image_description == "": image_description = action_describe_image(image)
 
+        #TODO: check image_description
         if (not FAKE_AI and model == None): 
             print("error: no model loaded")
             gr.Error(message="No model loaded. Generation not available")
@@ -188,11 +199,9 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
             # add to gloabel list for caching
             style_details[style] = sd
 
-        # TODO V2: write statistics about the used styles (how much used)
         prompt = f"{sd["prompt"]}: {image_description}"
-        if DEBUG: print (prompt)
-        #TODO: add time to output (HH:mm)
-        else: print (f"{request.client.host}: {style} - {image_description}")
+        
+        print (f"{datetime.now().strftime("%H:%M")} - {request.client.host}: {style} - {image_description}")
 
         # must be before resizing, otherwise hash will not be same as from source image
         # or adapt the source image saving with thumbnail property
