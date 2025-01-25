@@ -12,6 +12,8 @@ dev.config
 *.so
 analytics.db
 GeoLite2-City.mmdb
+*.off
+unittests/tmp/**
 
 # Distribution / packaging
 .Python

@@ -1,6 +1,7 @@
 
 from configparser import ConfigParser
 
+# this variable is used from unittests to inject configuration values!
 current_config = None
 
 # Access values with default fallback
