@@ -100,9 +100,9 @@ def get_analytics_city_db():
 #-----------------------------------------------------------------
 # section UI
 #-----------------------------------------------------------------
-def UI_show_stengths_slider():
+def UI_show_stength_slider():
     """true = enables the slider in the UI"""
-    return get_boolean_config_value("UI","show_strengths", False)
+    return get_boolean_config_value("UI","show_strength", False)
 
 def UI_show_steps_slider():
     """true = enables the slider in the UI"""
@@ -133,7 +133,7 @@ def get_style_negative_prompt(style: int):
 
 def get_style_strengths(style: int):
     """The prompt for the specified style or the default value"""
-    return get_float_config_value("Styles",f"style_{style}_strengths", get_default_strengths())
+    return get_float_config_value("Styles",f"style_{style}_strength", get_default_strength())
 
 #-----------------------------------------------------------------
 # section GenAI
@@ -150,15 +150,19 @@ def get_model_url():
     """The URL of a safetensor file to be downloaded if 'model' file is not existing"""
     return get_config_value(f"GenAI","safetensor_url", "https://civitai.com/api/download/models/244831?type=Model&format=SafeTensor&size=pruned&fp=fp16")
 
-def get_default_strengths():
+def get_default_strength():
     """The default strengths if nothing is specified"""
-    v = get_float_config_value(f"GenAI","default_strengths", 0.5)
-    if v<=0 or v>=1: v=0.5
+    default = 0.5
+    v = get_float_config_value(f"GenAI","default_strength", 0.5)
+    if v<=0 or v>=1: v=default
     return v
 
 def get_default_steps():
     """The default steps if nothing is specified"""
-    return int(get_config_value(f"GenAI","default_steps", 40))
+    default = 50
+    v = int(get_config_value(f"GenAI","default_steps", 50))
+    if v<=10 or v>=100: v=default
+    return v
 
 def get_max_size():
     """the maximum width or height of the output image"""

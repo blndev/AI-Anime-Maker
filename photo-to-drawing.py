@@ -193,7 +193,7 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
             sd = {
                 "prompt": "",
                 "negative_prompt": config.get_style_negative_prompt(99),#99 means you will get back the default overall negative prompt if style 99 does not exist
-                "strength": config.get_default_strengths(),
+                "strength": config.get_default_strength(),
                 "steps": config.get_default_steps()
             }
             # add to gloabel list for caching
@@ -213,7 +213,7 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
 
         # create a mask which covers the whole image
         mask = Image.new("L", image.size, 255) 
-        if not config.UI_show_stengths_slider(): strength = sd["strength"]
+        if not config.UI_show_stength_slider(): strength = sd["strength"]
         if not config.UI_show_steps_slider(): steps = sd["steps"]
 
         if DEBUG:
@@ -308,7 +308,7 @@ def create_gradio_interface():
                     }
                 if DEBUG: styles.append("Open Style")
                 style_dropdown = gr.Radio(styles, label="Style", value="Anime")
-                strength_slider = gr.Slider(label="Strength", minimum=0.1, maximum=1, value=config.get_default_strengths(), step=0.1,  visible=config.UI_show_stengths_slider())
+                strength_slider = gr.Slider(label="Strength", minimum=0.1, maximum=1, value=config.get_default_strength(), step=0.1,  visible=config.UI_show_stength_slider())
                 steps_slider = gr.Slider(label="Steps", minimum=10, maximum=100, value=config.get_default_steps(), step=5, visible=config.UI_show_steps_slider())
 
 
