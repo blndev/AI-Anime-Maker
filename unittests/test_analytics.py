@@ -1,4 +1,5 @@
 from configparser import ConfigParser
+import random
 import unittest
 import sqlite3
 import uuid
@@ -42,8 +43,8 @@ class TestAnalytics(unittest.TestCase):
         # Beispielwert
         session = str(uuid.uuid4())
         ip = "1.1.1.1"
-        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.10240"
-        languages = "EN-US" #todo use accept langaues string
+        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/12.10240"
+        languages = "fr-CH, fr;q=0.9, en;q=0.8, de;q=0.7, *;q=0.5"
 
         src_analytics.save_session(session=session, ip=ip, user_agent=user_agent, languages=languages)
 
@@ -51,18 +52,19 @@ class TestAnalytics(unittest.TestCase):
         self.cursor.execute(
             """SELECT
               session,
-              Continent,
-              Country,
-              City,
-              Client,
-              Languages 
+              OS, Browser, IsMobile,
+              Language, UserAgent,
+              Continent, Country, City
               FROM tblSessions WHERE session = ?""", (session,))
 
         result = self.cursor.fetchone()
         self.assertIsNotNone(result)  # Sicherstellen, dass ein Ergebnis zurückkommt
         self.assertEqual(result[0], session)  
-        self.assertEqual(result[4], user_agent)  
-        self.assertEqual(result[5], languages)  
+        self.assertEqual(result[1], "Windows")  
+        self.assertEqual(result[2], "Edge") 
+        self.assertEqual(result[3], 0) 
+        self.assertEqual(result[4], "fr-CH")  
+        self.assertEqual(result[5], user_agent)  
 
     def test_save_session_private_ip(self):
         """Check if data is correctly stored into database."""
@@ -79,9 +81,7 @@ class TestAnalytics(unittest.TestCase):
               session,
               Continent,
               Country,
-              City,
-              Client,
-              Languages 
+              City
               FROM tblSessions WHERE session = ?""", (session,))
 
         result = self.cursor.fetchone()
@@ -106,9 +106,7 @@ class TestAnalytics(unittest.TestCase):
               session,
               Continent,
               Country,
-              City,
-              Client,
-              Languages 
+              City
               FROM tblSessions WHERE session = ?""", (session,))
 
         result = self.cursor.fetchone()
@@ -118,6 +116,49 @@ class TestAnalytics(unittest.TestCase):
         self.assertEqual(result[2], "United Kingdom")  
         self.assertEqual(result[3], "Neasden")  
 
+    def test_save_generation(self):
+        """Check if generation data is correctly stored into database."""
+        
+        #create 10 entries to check 
+        for i in range(1,10):
+            session = str(uuid.uuid4())
+            sha1 = str(uuid.uuid4())
+            style = str(uuid.uuid4())
+            prompt = str(uuid.uuid4())
+            ofn = str(uuid.uuid4())
+            isBlocked = random.choice([True, False])
+            br = str(uuid.uuid4())
+
+            src_analytics.save_generation_details(
+                session=session,
+                sha1=sha1,
+                style=style,
+                prompt=prompt,
+                output_filename=ofn,
+                isBlocked=isBlocked,
+                block_reason=br)
+
+
+            self.cursor.execute(
+                """SELECT
+                Session,
+                Input_SHA1,
+                Style,
+                Userprompt,
+                Output,
+                IsBlocked,
+                BlockReason
+                FROM tblGenerations WHERE session = ?""", (session,))
+
+            result = self.cursor.fetchone()
+            self.assertIsNotNone(result) 
+            self.assertEqual(result[0], session)  
+            self.assertEqual(result[1], sha1)  
+            self.assertEqual(result[2], style)  
+            self.assertEqual(result[3], prompt)  
+            self.assertEqual(result[4], ofn)  
+            self.assertEqual(result[5], isBlocked)  
+            self.assertEqual(result[6], br)  
 
 if __name__ == "__main__":
     unittest.main()
