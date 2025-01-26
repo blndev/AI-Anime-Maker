@@ -4,3 +4,6 @@ transformers    # for image generation
 accelerate      #for low cpu
 torch           # for gpu support and ai operations
 xformers        # memory optimization
+notebook        # for analytics in jupyter notebooks
+geoip2          # for analytics to determine country and city
+user-agents     # to parse user agents and split into 

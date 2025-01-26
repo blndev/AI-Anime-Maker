@@ -22,8 +22,8 @@ source .venv/bin/activate
 
 # Upgrade Python requirements
 echo "Upgrading Python requirements..."
-pip install --upgrade pip
-pip install -r requirements.txt
+pip install --quiet --upgrade pip
+pip install --quiet --require-virtualenv --requirement requirements.txt
 
 # Execute "photo-to-drawing.py" in the virtual environment
 echo "Starting app..."

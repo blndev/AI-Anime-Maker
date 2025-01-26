@@ -1,6 +1,7 @@
 
 from configparser import ConfigParser
 
+# this variable is used from unittests to inject configuration values!
 current_config = None
 
 # Access values with default fallback
@@ -83,12 +84,25 @@ def get_cache_folder():
     """The folder where the cached files should be stored"""
     return get_config_value("General","cache_folder", "./cache/")
 
+def is_analytics_enabled():
+    """true = advanced analytics is activated"""
+    return get_boolean_config_value("General","analytics_enabled", False)
+
+def get_analytics_db_path():
+    """The path and filename of teh analytics database (will be created if not existing)"""
+    return get_config_value("General","analytics_db_path", "./analytics.db")
+
+def get_analytics_city_db():
+    """The path and filename of the ip 2 city database"""
+    return get_config_value("General","analytics_city_db", "./GeoLite2-City.mmdb")
+
+
 #-----------------------------------------------------------------
 # section UI
 #-----------------------------------------------------------------
-def UI_show_stengths_slider():
+def UI_show_stength_slider():
     """true = enables the slider in the UI"""
-    return get_boolean_config_value("UI","show_strengths", False)
+    return get_boolean_config_value("UI","show_strength", False)
 
 def UI_show_steps_slider():
     """true = enables the slider in the UI"""
@@ -119,7 +133,7 @@ def get_style_negative_prompt(style: int):
 
 def get_style_strengths(style: int):
     """The prompt for the specified style or the default value"""
-    return get_float_config_value("Styles",f"style_{style}_strengths", get_default_strengths())
+    return get_float_config_value("Styles",f"style_{style}_strength", get_default_strength())
 
 #-----------------------------------------------------------------
 # section GenAI
@@ -136,15 +150,19 @@ def get_model_url():
     """The URL of a safetensor file to be downloaded if 'model' file is not existing"""
     return get_config_value(f"GenAI","safetensor_url", "https://civitai.com/api/download/models/244831?type=Model&format=SafeTensor&size=pruned&fp=fp16")
 
-def get_default_strengths():
+def get_default_strength():
     """The default strengths if nothing is specified"""
-    v = get_float_config_value(f"GenAI","default_strengths", 0.5)
-    if v<=0 or v>=1: v=0.5
+    default = 0.5
+    v = get_float_config_value(f"GenAI","default_strength", 0.5)
+    if v<=0 or v>=1: v=default
     return v
 
 def get_default_steps():
     """The default steps if nothing is specified"""
-    return int(get_config_value(f"GenAI","default_steps", 40))
+    default = 50
+    v = int(get_config_value(f"GenAI","default_steps", 50))
+    if v<=10 or v>=100: v=default
+    return v
 
 def get_max_size():
     """the maximum width or height of the output image"""
