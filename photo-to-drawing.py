@@ -336,9 +336,57 @@ def create_gradio_interface():
             concurrency_id="gpu_queue"
         )
 
+        disclaimer = config.get_app_disclaimer()
+        if disclaimer:
+            js=f"""
+            () => {{
+                // Overlay erstellen
+                const overlay = document.createElement('div');
+                overlay.style.position = 'fixed';
+                overlay.style.top = 0;
+                overlay.style.left = 0;
+                overlay.style.width = '100%';
+                overlay.style.height = '100%';
+                overlay.style.backgroundColor = 'rgba(50, 0, 0, 0.7)';
+                overlay.style.display = 'flex';
+                overlay.style.justifyContent = 'center';
+                overlay.style.alignItems = 'center';
+                overlay.style.zIndex = 1000;
+
+                // Nachricht und Button hinzufügen
+                overlay.innerHTML = `
+                <div style="padding: 20px; border-radius: 20px; text-align: center; box-shadow: 0px 4px 10px rgba(0, 0, 255, 0.3);">
+                    <p style="margin-bottom: 20px;">{disclaimer}</p>
+                    <button id="accept-btn" style="padding: 10px 20px; border: none; background: #4caf50; color: white; border-radius: 5px; cursor: pointer;">Accept</button>
+                </div>
+                `;
+
+                // Overlay zur Seite hinzufügen
+                document.body.appendChild(overlay);
+
+                // Button-Click-Event, um Overlay zu schließen
+                document.getElementById('accept-btn').onclick = () => {{
+                    document.body.removeChild(overlay);
+                }};
+            }}
+            """
+            # js=f"""
+            # (content) => {{
+            #     alert(`Dynamische Nachricht: {disclaimer}`);
+            # }}
+            # """
+
+            app.load(
+                fn=None,
+                inputs=None,
+                outputs=None,
+                js=js
+            )
+        #end if dislaimer 
         return app
 
 if __name__ == "__main__":
+    app = None
     try:
         if config.read_configuration() == None: print("read configuration failed")
         model = config.get_model()
@@ -367,7 +415,7 @@ if __name__ == "__main__":
             )
         analytics.stop()
     except Exception as e:
-        if DEBUG: print (e)
+        print (e)
     finally:
-        app.close()
+        if app != None: app.close()
         print ("app closed")
