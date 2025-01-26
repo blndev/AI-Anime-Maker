@@ -111,10 +111,17 @@ class TestAnalytics(unittest.TestCase):
 
         result = self.cursor.fetchone()
         self.assertIsNotNone(result) 
-        self.assertEqual(result[0], session)  
-        self.assertEqual(result[1], "Europe")  
-        self.assertEqual(result[2], "United Kingdom")  
-        self.assertEqual(result[3], "Neasden")  
+        self.assertEqual(result[0], session)
+        #if there is no geoip database, all shoule be n.a.
+        if src_analytics._ip_geo_reader:
+            self.assertEqual(result[1], "Europe")  
+            self.assertEqual(result[2], "United Kingdom")  
+            self.assertEqual(result[3], "Neasden")  
+        else:
+            self.assertEqual(result[1], "n.a.")  
+            self.assertEqual(result[2], "n.a.")  
+            self.assertEqual(result[3], "n.a.")  
+
 
     def test_save_generation(self):
         """Check if generation data is correctly stored into database."""
