@@ -25,4 +25,4 @@
 - Error Handling and robustnes
 
 ### Bug Fixes
-- ...
+- Strength of Styles is not used, System always use default strength

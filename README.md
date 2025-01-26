@@ -115,7 +115,7 @@ max_size=1024
 
 [UI]
 # true = Enables the slider to modify strengths in the UI.
-show_strengths=false
+show_strength=false
 
 # true = Enables the slider to modify steps in the UI.
 show_steps=false
