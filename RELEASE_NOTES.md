@@ -20,6 +20,7 @@
 
 ### New Features
 - Analytics allows you to determine which style is mostly used and more
+- Disclaimer
 
 ### Improvements
 - Error Handling and robustnes
