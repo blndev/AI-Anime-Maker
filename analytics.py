@@ -120,7 +120,7 @@ def save_session(session, ip, user_agent, languages):
     
     continent = "n.a."
     country = "n.a."
-    city = "n.a." if _ip_geo_reader==None else "private IP" 
+    city = "private IP" if  ipaddress.ip_address(ip).is_private else "n.a."
     if not ipaddress.ip_address(ip).is_private and _ip_geo_reader != None:
         try:
             ipinfo = _ip_geo_reader.city(ip)
