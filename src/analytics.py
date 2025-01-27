@@ -1,7 +1,7 @@
 import ipaddress
 import gradio as gr
 import sqlite3          # as datastore
-import config           # to get configuration values
+import src.config as config           # to get configuration values
 import geoip2.database  # for ip to city
 import os               # to check if files exists
 from threading import Lock  # write to DB must be thread save

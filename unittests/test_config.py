@@ -10,7 +10,7 @@ import os
 # Übergeordnetes Verzeichnis zum Suchpfad hinzufügen
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-import config as src_config
+import src.config as src_config
 
 class TestConfiguration(unittest.TestCase):
 

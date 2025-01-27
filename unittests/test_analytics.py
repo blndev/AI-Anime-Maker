@@ -10,8 +10,8 @@ import os
 # Übergeordnetes Verzeichnis zum Suchpfad hinzufügen
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-import analytics as src_analytics
-import config
+import src.analytics as src_analytics
+import src.config as config
 
 class TestAnalytics(unittest.TestCase):
 
