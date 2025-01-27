@@ -12,7 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import config as src_config
 
-class TestAnalytics(unittest.TestCase):
+class TestConfiguration(unittest.TestCase):
 
     def setUp(self):
         """Setzt die Test-Datenbank auf."""
@@ -22,6 +22,7 @@ class TestAnalytics(unittest.TestCase):
         self.testconfiguration = {
             'General': {
                 'app_title': "UNITTEST",
+                'app_disclaimer': str(uuid.uuid4()),
                 'user_message': str(uuid.uuid4()),
                 'port': str(random.randint(2048, 32000)),
                 'is_shared': random.choice([True, False]),
@@ -67,7 +68,9 @@ class TestAnalytics(unittest.TestCase):
         self.assertIsNotNone(src_config.current_config)  # Sicherstellen, dass ein Ergebnis zurückkommt
         general = self.testconfiguration["General"]
         self.assertEqual(src_config.get_app_title(), general["app_title"])  
+        self.assertEqual(src_config.get_app_disclaimer(), general["app_disclaimer"],"disclaimer failed")  
         self.assertEqual(src_config.get_user_message(), general["user_message"])  
+        
         self.assertEqual(src_config.get_server_port(), general["port"])  
         self.assertEqual(src_config.is_gradio_shared(), general["is_shared"])
 
@@ -88,6 +91,8 @@ class TestAnalytics(unittest.TestCase):
         self.assertIsNotNone(src_config.current_config)  # Sicherstellen, dass ein Ergebnis zurückkommt
         
         self.assertEqual(src_config.get_app_title(), "Funny Image Converter")  
+        self.assertEqual(src_config.get_app_disclaimer(), "")  
+
         self.assertEqual(src_config.get_user_message(), "")  
         self.assertEqual(src_config.get_server_port(), None)  
         self.assertEqual(src_config.is_gradio_shared(), False)

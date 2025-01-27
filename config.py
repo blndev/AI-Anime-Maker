@@ -56,6 +56,10 @@ def get_app_title():
     """the title of the application"""
     return get_config_value("General","app_title", "Funny Image Converter")
 
+def get_app_disclaimer():
+    """if set, it will create a popup when the application starts"""
+    return get_config_value("General","app_disclaimer", "")
+
 def get_user_message():
     """a message which is displayed to the user like "limited uptime"""
     return get_config_value("General","user_message", "")

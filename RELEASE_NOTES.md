@@ -20,9 +20,10 @@
 
 ### New Features
 - Analytics allows you to determine which style is mostly used and more
+- Disclaimer
 
 ### Improvements
 - Error Handling and robustnes
 
 ### Bug Fixes
-- ...
+- Strength of Styles is not used, System always use default strength

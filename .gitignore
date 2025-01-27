@@ -11,7 +11,7 @@ dev.config
 # C extensions
 *.so
 analytics.db
-GeoLite2-City.mmdb
+*.mmdb
 *.off
 unittests/tmp/**
 

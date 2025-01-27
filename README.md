@@ -15,8 +15,7 @@ Status: V1 - Stable and rocking! 🎉
   - [🛠️ Development](#️-development)
   - [📜 License](#-license)
   - [🤝 Contributing](#-contributing)
-  - [🌟 Outlook (Planned Features)](#-outlook-planned-features)
-    - [More Ideas](#more-ideas)
+  - [🌟 Outlook (Features which could be useful)](#-outlook-features-which-could-be-useful)
 
 ## 🎯 Goal
 Our mission (and the mission of our future tools) is to provide simple, dedicated solutions for specific purposes. Unlike the complex and convoluted atomic0000, our tools are designed to be user-friendly for everyone, not just tech wizards!
@@ -65,8 +64,14 @@ Customize your anime-creating experience using the app.config file. Here's a sne
 
 ```ini
 [General]
-app_title=Funny Image-converter
-user_message=Attention: Limited Render Resources. App might be slow!
+# Name of the App and Browser Tab
+app_title=AI Anime Maker
+
+# if set, a poup message for the user. You can use any HTML to format it
+#app_disclaimer=This App is made for educational purpose.<br><br><p align=left>It is shared to you by sponsored hardware.</p>
+
+# the message showed below the app title
+user_message = Have fun creating funny pictures out of your photos!
 
 # Defines the port where the app starts. If not defined, a random port will be chosen.
 #port=7860
@@ -79,11 +84,6 @@ save_output=true
 
 # The folder where the output should be saved if activated.
 output_folder=./output/
-
-# true = Enables cache for input images (not implemented so far).
-#cache_enabled=false
-# The folder where the cached files should be saved if cache is activated.
-#cache_folder=./cache/
 
 # With this feature enabled, you can determine which style is mostly used and much more
 # be aware of data privacy and regulations
@@ -107,15 +107,16 @@ default_model=./models/toonify.safetensors
 default_steps=60
 
 # Value between 0 and 1. 0 = no changes to the input image, 1 = maximum changes.
+# this Setting is appied to all Styles who don't define a strength
 # Good values are 0.4 to 0.6.
-default_strength=0.4
+default_strength=0.5
 
 # The maximum width or height of the output image. Adjust based on model and available GPU RAM.
 max_size=1024
 
 [UI]
 # true = Enables the slider to modify strengths in the UI.
-show_strengths=false
+show_strength=false
 
 # true = Enables the slider to modify steps in the UI.
 show_steps=false
@@ -162,12 +163,9 @@ This project is licensed under the GPL3 License - see the [LICENSE.md] file for 
 ## 🤝 Contributing
 We welcome contributions! Please read our Contributing Guidelines for details on the process for submitting pull requests.
 
-## 🌟 Outlook (Planned Features)
+## 🌟 Outlook (Features which could be useful)
 * Preview on generation Process
 * Better Image description generation
 * Better Memory Handling for higher resolutions
 * SDXL and FLUX Support
 * More Styles or Groups of Styles
-
-### More Ideas
-* Gif/Video output
