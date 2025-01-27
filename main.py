@@ -12,7 +12,7 @@ import time # for sleep in FAKE_AI
 import src.config as config
 import src.utils as utils
 import src.analytics as analytics
-from src.UI import create_gradio_interface, load_model, load_captioner
+from src.UI import create_gradio_interface
 
 # if active much more log output and ability to switch and select the used generation model 
 DEBUG = False
@@ -41,9 +41,9 @@ if __name__ == "__main__":
         print (f"running on {device}")
         if FAKE_AI:
             print ("ai deactivated")
-        else:
-            IMAGE_TO_IMAGE_PIPELINE = load_model()
-            IMAGE_TO_TEXT_PIPELINE = load_captioner()
+        # else:
+        #     IMAGE_TO_IMAGE_PIPELINE = load_model()
+        #     IMAGE_TO_TEXT_PIPELINE = load_captioner()
 
         if config.is_analytics_enabled():
             analytics._DEBUG = DEBUG

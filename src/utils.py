@@ -7,6 +7,21 @@ from hashlib import sha1        # generate image hash
 
 DEBUG = False
 
+
+def get_all_local_models(model_folder: str, extension: str = ".safetensors"):
+    """read all local models to the system"""
+    safetensors_files = []
+    try:
+        for root, _, files in os.walk(model_folder, followlinks=True):
+            for file in files:
+                if file.endswith(extension):
+                    relative_path = "./" + os.path.relpath(os.path.join(root, file))
+                    safetensors_files.append(relative_path)
+        print(safetensors_files)
+    except Exception as e:
+        print(e)
+    return safetensors_files
+
 def download_file_if_not_existing(url, local_path):
     # Check if the file already exists
     if not os.path.exists(local_path):
@@ -49,11 +64,13 @@ def save_image_as_file(image: Image.Image, dir: str):
         if not os.path.exists(file_path):
             image.save(file_path, format="JPEG")
 
-        if DEBUG: print(f"Image saved to \"{file_path}\"")
+        if DEBUG:
+            print(f"Image saved to \"{file_path}\"")
         return hash
     except Exception as e:
         print(f"Error while saving image to cache:\n{e}")
         return None
+
 
 def save_image_with_timestamp(image, folder_path, ignore_errors=False, reference=""):
     """
@@ -67,7 +84,7 @@ def save_image_with_timestamp(image, folder_path, ignore_errors=False, reference
         # Generate a timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        separator = "" if reference=="" else "-"
+        separator = "" if reference == "" else "-"
         # Create the filename with the timestamp
         filename = f"{reference}{separator}{timestamp}.png"  # Change the extension as needed
 
@@ -78,8 +95,10 @@ def save_image_with_timestamp(image, folder_path, ignore_errors=False, reference
         image.save(file_path)
         return file_path
     except Exception as e:
-        print (f"save image failed: {e}")
-        if not ignore_errors: raise e
+        print(f"save image failed: {e}")
+        if not ignore_errors:
+            raise e
+
 
 def image_convert_to_sepia(input: Image):
     """converts a image to a sepia ton image"""
@@ -91,6 +110,6 @@ def image_convert_to_sepia(input: Image):
         [0.272, 0.534, 0.131]
     ])
     sepia_img = img @ sepia_filter.T
-    sepia_img = np.clip(sepia_img,0,255)
+    sepia_img = np.clip(sepia_img, 0, 255)
     sepia_img = sepia_img.astype(np.uint8)
     return Image.fromarray(sepia_img)
