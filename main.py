@@ -45,6 +45,8 @@ if __name__ == "__main__":
         print (f"starting Server ""{title}""")
         app = create_gradio_interface()
         app.launch(
+            server_name="0.0.0.0",
+            server_port=config.get_server_port(),
             share = config.is_gradio_shared(), 
             max_file_size=8*gr.FileSize.MB
             )
