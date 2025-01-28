@@ -45,6 +45,7 @@ def read_configuration():
         # they define same settings
         configFileLocations = [
             "app.config",
+            "local.config",
             "dev.config"
         ]
         current_config = ConfigParser()

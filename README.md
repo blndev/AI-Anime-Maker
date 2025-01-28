@@ -12,7 +12,7 @@ Status: V1 - Stable and rocking! 🎉
     - [Now](#now)
   - [⚙️ Configuration](#️-configuration)
   - [🌟 Analytics](#-analytics)
-  - [🛠️ Development](#️-development)
+  - [🛠️ Development and Deployment](#️-development-and-deployment)
   - [📜 License](#-license)
   - [🤝 Contributing](#-contributing)
   - [🌟 Outlook (Features which could be useful)](#-outlook-features-which-could-be-useful)
@@ -150,8 +150,10 @@ To get more information about this topic and security concerns check the gradio 
 You can analyze the stored data via the Analyze_Usage jupyter notebook in this project.
 For that use an IDE like VSCode or run ```notebook lab Analyze_Usage.ipynb``` from the application folder.
 
-## 🛠️ Development
-For development purposes, you can create a dev.config (copy of app.config) which allows you to use local folders without affecting the release/standard configuration. Happy coding! 💻
+## 🛠️ Development and Deployment
+For development and deployment purposes, you can create a "local.config" file (copy of app.config) which allows you to use dedicated configuration, e.g. local model folder without affecting the release/standard configuration. 
+This is useful for updating the app including app.config without affecting you local settings.
+Happy coding! 💻
 
 ---
 Get ready to unleash your inner artist and turn your photos into anime masterpieces! 🌈✨
