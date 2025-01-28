@@ -174,11 +174,11 @@ def create_gradio_interface():
         with gr.Row():
             with gr.Column():
                 image_input = gr.Image(label="Input Image", type="pil", height=512)
-                describe_button = gr.Button("Describe", interactive=False)
+                describe_button = gr.Button("Describe your Image", interactive=False)
                 text_description = gr.Textbox(label="use good but short image description for better results")
             with gr.Column():
                 output_image = gr.Image(label="Output Image", type="pil", height=512)
-                start_button = gr.Button("Create", interactive=False)
+                start_button = gr.Button("Start Creation", interactive=False)
                 
                 styles = []
                 for i in range(1,config.get_style_count()+1):
@@ -231,7 +231,7 @@ def create_gradio_interface():
                 overlay.style.left = 0;
                 overlay.style.width = '100%';
                 overlay.style.height = '100%';
-                overlay.style.backgroundColor = 'rgba(50, 0, 0, 0.7)';
+                overlay.style.backgroundColor = 'rgba(10, 0, 0, 0.9)';
                 overlay.style.display = 'flex';
                 overlay.style.justifyContent = 'center';
                 overlay.style.alignItems = 'center';
