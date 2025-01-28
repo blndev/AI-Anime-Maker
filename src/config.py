@@ -1,6 +1,11 @@
 
 from configparser import ConfigParser
 
+# used from other areas like AI Module and is set by main module
+# helps to reduce easting storage for torch etc on build systems
+SKIP_AI = True
+DEBUG = False
+
 # this variable is used from unittests to inject configuration values!
 current_config = None
 

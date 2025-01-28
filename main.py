@@ -1,15 +1,10 @@
-from datetime import datetime
 import gradio as gr
 import torch
 from hashlib import sha1
-import os
-from diffusers import StableDiffusionPipeline, StableDiffusionImg2ImgPipeline
-from PIL import Image, ImageDraw
-from transformers import pipeline # for captioning
-from xformers.ops import MemoryEfficientAttentionFlashAttentionOp
-import time # for sleep in FAKE_AI
 
 import src.config as config
+config.SKIP_AI = False # it's default if starting main, False = default for tests etc.
+
 import src.utils as utils
 import src.analytics as analytics
 from src.UI import create_gradio_interface
@@ -23,9 +18,8 @@ FAKE_AI_DELAY = 5 # time how long the thread sleeps to simulate generation
 device = "cuda" # will be checked and set in main functions
 style_details = {}
 
-#TODO: Refactor and use logger instead
-utils.DEBUG = DEBUG
-analytics.DEBUG = DEBUG
+#TODO: use parameter
+config.DEBUG = DEBUG
 
 if __name__ == "__main__":
     app = None
@@ -46,7 +40,6 @@ if __name__ == "__main__":
         #     IMAGE_TO_TEXT_PIPELINE = load_captioner()
 
         if config.is_analytics_enabled():
-            analytics._DEBUG = DEBUG
             analytics.start()
         title = config.get_app_title()
         print (f"starting Server ""{title}""")

@@ -14,18 +14,9 @@ import src.utils as utils
 import src.analytics as analytics
 import src.AI as AI
 
-# if active much more log output and ability to switch and select the used generation model 
-DEBUG = False
-# if active the system is not using any AI, just simulating the funcion
-FAKE_AI = True
 FAKE_AI_DELAY = 5 # time how long the thread sleeps to simulate generation
 
-device = "cuda" # will be checked and set in main functions
 style_details = {}
-
-#TODO: Refactor and use logger instead
-utils.DEBUG = DEBUG
-analytics.DEBUG = DEBUG
 
 
 def action_update_all_local_models():
@@ -47,7 +38,7 @@ def action_save_input_file(request: gr.Request, image):
                 ip=request.client.host,
                 user_agent=request.headers["user-agent"], 
                 languages=request.headers["accept-language"])
-            if DEBUG:
+            if config.DEBUG:
                 print("new image uploaded from: ", request.client.host)
         except Exception as e:
             print("Error for analytics", e)
@@ -61,15 +52,15 @@ def action_save_input_file(request: gr.Request, image):
 
 def action_describe_image(image):
     """describe an image for better inpaint results."""
-    if FAKE_AI: return "ai deactivated"
+    if config.SKIP_AI: return "ai deactivated"
     
     value = AI.describe_image(image)
-    if DEBUG: print(f"Image description: {value}")
+    if config.DEBUG: print(f"Image description: {value}")
     return value
 
 
 def action_reload_model(model):
-    if FAKE_AI: return
+    if config.SKIP_AI: return
     global IMAGE_TO_IMAGE_PIPELINE
     print (f"Reload model {model}")
     try:
@@ -88,7 +79,7 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
             print("Warning: no request object. API usage?")
             return None,"API forbidden"
 
-        if DEBUG: print("start image generation")
+        if config.DEBUG: print("start image generation")
         if image_description == None or image_description == "": image_description = AI.describe_image(image)
 
         sd = style_details.get(style)
@@ -113,7 +104,7 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
         if not config.UI_show_stength_slider(): strength = sd["strength"]
         if not config.UI_show_steps_slider(): steps = sd["steps"]
 
-        if FAKE_AI:
+        if config.SKIP_AI:
             result_image = utils.image_convert_to_sepia(image)
             time.sleep(FAKE_AI_DELAY)
         else:
@@ -162,8 +153,8 @@ def create_gradio_interface():
         with gr.Row():
             gr.Markdown("### " + config.get_app_title()+"\n\n" + config.get_user_message())
             
-        if DEBUG and not FAKE_AI:
-            gr.Markdown("*DEBUG enabled*" + (" __Fake AI__" if FAKE_AI else ""))
+        if config.DEBUG and not FAKE_AI:
+            gr.Markdown("*DEBUG enabled*" + (" __Fake AI__" if config.SKIP_AI else ""))
             with gr.Row():
                 with gr.Column():
                     model_dropdown = gr.Dropdown(choices=get_all_local_models(), value=config.get_model(), label="Models", allow_custom_value=True)
@@ -199,7 +190,7 @@ def create_gradio_interface():
                         "strength": config.get_style_strengths(i),
                         "steps": config.get_default_steps()
                     }
-                if DEBUG: styles.append("Open Style")
+                if config.DEBUG: styles.append("Open Style")
                 style_dropdown = gr.Radio(styles, label="Style", value="Anime")
                 strength_slider = gr.Slider(label="Strength", minimum=0.1, maximum=1, value=config.get_default_strength(), step=0.1,  visible=config.UI_show_stength_slider())
                 steps_slider = gr.Slider(label="Steps", minimum=10, maximum=100, value=config.get_default_steps(), step=5, visible=config.UI_show_steps_slider())
