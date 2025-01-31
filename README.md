@@ -122,6 +122,10 @@ default_strength=0.5
 max_size=1024
 
 [UI]
+# visual style of the application.
+# you can define your own style or selected e.g. from here: https://huggingface.co/spaces/gradio/theme-gallery
+theme=allenai/gradio-theme
+
 # true = Enables the slider to modify strengths in the UI.
 show_strength=false
 

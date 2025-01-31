@@ -121,6 +121,10 @@ def UI_show_steps_slider():
     """true = enables the slider in the UI"""
     return get_boolean_config_value("UI","show_steps", False)
 
+def UI_get_gradio_theme():
+    """name of the gradio theme to be used"""
+    return get_config_value("UI","theme", "")
+
 #-----------------------------------------------------------------
 # section Styles
 #-----------------------------------------------------------------

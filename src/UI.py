@@ -20,7 +20,7 @@ def action_update_all_local_models():
 def action_save_input_file(request: gr.Request, image):
     """Save the input image in a cache directory using its SHA-1 hash."""
     # deactivate the start buttons
-    if image is None: return [gr.update(interactive=False), gr.update(visible=False, value="")]
+    if image is None: return [gr.update(interactive=False), gr.update(value=""), gr.update(visible=False)]
     
     # API Users don't have a request (by documentation)
     if not request: return
@@ -49,8 +49,8 @@ def action_save_input_file(request: gr.Request, image):
         gr.warning("Could not create a proper description, please describe your image shortly")
     # there is an image, activate the start buttons
     # TODO switch visibility for image description!
-    #outputs=[start_button, text_description], 
-    return [gr.update(interactive=True), gr.update(visible=True, value=image_description)]#, image_description]
+    #outputs=[start_button, text_description, row_description], 
+    return [gr.update(interactive=True), gr.update(value=image_description), gr.update(visible=True)]
 
 def action_describe_image(image):
     """describe an image for better inpaint results."""
@@ -148,9 +148,10 @@ def create_gradio_interface():
     global style_details
     with gr.Blocks(
         title=config.get_app_title(), 
+        theme="allenai/gradio-theme",
         css="footer {visibility: hidden}",
-        analytics_enabled=False,
-        theme=gr.themes.Soft()) as app:
+        analytics_enabled=False
+        ) as app:
         with gr.Row():
             gr.Markdown("### " + config.get_app_title()+"\n\n" + config.get_user_message())
             
@@ -176,10 +177,15 @@ def create_gradio_interface():
             with gr.Column():
                 image_input = gr.Image(label="Input Image", type="pil", height=512)
                 #describe_button = gr.Button("Describe your Image", interactive=False)
-                text_description = gr.Textbox(label="use good but short image description for better results", visible=False)
+                with gr.Column(visible=False) as area_description:
+                    # with gr.Row() :
+                    #     gr.Markdown(value="change the image description for better results")
+                    # with gr.Row():
+                    text_description = gr.Textbox(label="change the image description for better results", show_label=True, max_length=70, submit_btn="↻")
+
             with gr.Column():
                 output_image = gr.Image(label="Output Image", type="pil", height=512)
-                start_button = gr.Button("Start Creation", interactive=False)
+                start_button = gr.Button("Start Creation", interactive=False, variant="primary")
                 
                 styles = []
                 for i in range(1,config.get_style_count()+1):
@@ -201,18 +207,19 @@ def create_gradio_interface():
         image_input.change(
             fn=action_save_input_file,
             inputs=[image_input],
-            outputs=[start_button, text_description], 
+            outputs=[start_button, text_description, area_description], 
             concurrency_limit=None,
             concurrency_id="new_image"
         )
 
-        # describe_button.click(
-        #     fn=action_describe_image,
-        #     inputs=[image_input],
-        #     outputs=[text_description],
-        #     concurrency_limit=4,
-        #     concurrency_id="describe"
-        # )
+        text_description.submit(
+            fn=action_describe_image,
+            inputs=[image_input],
+            outputs=[text_description],
+            concurrency_limit=4,
+            concurrency_id="describe"
+        )
+
 
         start_button.click(
             fn=action_generate_image,
