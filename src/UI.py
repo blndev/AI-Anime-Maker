@@ -1,13 +1,7 @@
-from datetime import datetime
 import gradio as gr
-import torch
 from hashlib import sha1
-import os
-from diffusers import StableDiffusionPipeline, StableDiffusionImg2ImgPipeline
-from PIL import Image, ImageDraw
-from transformers import pipeline # for captioning
-from xformers.ops import MemoryEfficientAttentionFlashAttentionOp
-import time # for sleep in FAKE_AI
+import time # for sleep in SKIP_AI
+from datetime import datetime
 
 import src.config as config
 import src.utils as utils
@@ -47,8 +41,10 @@ def action_save_input_file(request: gr.Request, image):
         dir = config.get_cache_folder()
         utils.save_image_as_file(image, dir)
 
+    image_description = AI.describe_image(image)
     # there is an image, activate the start buttons
-    return [gr.update(interactive=True), gr.update(interactive=True), ""]
+    # TODO switch visibility for image description!
+    return [gr.update(interactive=True), gr.update(interactive=True), image_description]
 
 def action_describe_image(image):
     """describe an image for better inpaint results."""
@@ -61,7 +57,6 @@ def action_describe_image(image):
 
 def action_reload_model(model):
     if config.SKIP_AI: return
-    global IMAGE_TO_IMAGE_PIPELINE
     print (f"Reload model {model}")
     try:
         AI.change_text2img_model(model=model)
@@ -106,7 +101,7 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
 
         if config.SKIP_AI:
             result_image = utils.image_convert_to_sepia(image)
-            time.sleep(FAKE_AI_DELAY)
+            time.sleep(5)
         else:
             # Generate new picture
             result_image = AI.generate_image(
@@ -153,11 +148,11 @@ def create_gradio_interface():
         with gr.Row():
             gr.Markdown("### " + config.get_app_title()+"\n\n" + config.get_user_message())
             
-        if config.DEBUG and not FAKE_AI:
-            gr.Markdown("*DEBUG enabled*" + (" __Fake AI__" if config.SKIP_AI else ""))
+        if config.DEBUG and not config.SKIP_AI:
+            gr.Markdown("*DEBUG enabled*" + (" SKIP AI__" if config.SKIP_AI else ""))
             with gr.Row():
                 with gr.Column():
-                    model_dropdown = gr.Dropdown(choices=get_all_local_models(), value=config.get_model(), label="Models", allow_custom_value=True)
+                    model_dropdown = gr.Dropdown(choices=utils.get_all_local_models(config.get_model_folder()), value=config.get_model(), label="Models", allow_custom_value=True)
                 with gr.Column():
                     refresh_model_list_button = gr.Button("refresh model list")
                     reload_button = gr.Button("load model")
@@ -231,6 +226,7 @@ def create_gradio_interface():
                 overlay.style.left = 0;
                 overlay.style.width = '100%';
                 overlay.style.height = '100%';
+                overlay.style.color = 'white';
                 overlay.style.backgroundColor = 'rgba(10, 0, 0, 0.9)';
                 overlay.style.display = 'flex';
                 overlay.style.justifyContent = 'center';
@@ -254,11 +250,6 @@ def create_gradio_interface():
                 }};
             }}
             """
-            # js=f"""
-            # (content) => {{
-            #     alert(`Dynamische Nachricht: {disclaimer}`);
-            # }}
-            # """
 
             app.load(
                 fn=None,
@@ -266,5 +257,5 @@ def create_gradio_interface():
                 outputs=None,
                 js=js
             )
-        #end if dislaimer 
+        #end if disclaimer activated
         return app
