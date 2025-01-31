@@ -19,8 +19,10 @@ def check_safety(x_image):
     # all images are SFW ;)
     return x_image, False
 
-#cache for image to text model
+
+# cache for image to text model
 IMAGE_TO_TEXT_PIPELINE = None
+
 
 def _load_captioner_model():
     """Load and return a image to text model."""
@@ -55,8 +57,10 @@ def describe_image(image):
         print("Error while creating image description", e)
         return ""
 
-#cache of the image loaded already
+
+# cache of the image loaded already
 IMAGE_TO_IMAGE_PIPELINE = None
+
 
 def _load_img2img_model(model=config.get_model(), use_cached_model=True):
     """Load and return the Stable Diffusion model to generate images"""
@@ -117,8 +121,7 @@ def change_text2img_model(model):
             raise Exception("Pipeline is none")
     except Exception as e:
         print(f"Error while change_text2img_model: {e}")
-        raise(f"Loading new img2img model '{model}' failed", e)
-
+        raise (f"Loading new img2img model '{model}' failed", e)
 
 
 def generate_image(image: Image, prompt: str, negative_prompt: str = "", strength: float = 0.5, steps: int = 60):
@@ -132,7 +135,7 @@ def generate_image(image: Image, prompt: str, negative_prompt: str = "", strengt
             print("start AI.generate_image")
 
         model = _load_img2img_model()
-        
+
         if (not config.SKIP_AI and model == None):
             print("error: no model loaded")
             raise Exception(message="No model loaded. Generation not available")
