@@ -24,7 +24,7 @@ if __name__ == "__main__":
         if config.is_analytics_enabled():
             analytics.start()
         title = config.get_app_title()
-        print(f"starting Server ""{title}""")
+        print("starting Server with title:", title)
         app = create_gradio_interface()
         app.launch(
             server_name="0.0.0.0",
