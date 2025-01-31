@@ -32,6 +32,9 @@ if __name__ == "__main__":
             server_name="0.0.0.0",
             server_port=config.get_server_port(),
             share=config.is_gradio_shared(),
+            show_error=config.DEBUG,
+            show_api=False,
+            enable_monitoring=False,
             max_file_size=8*gr.FileSize.MB
         )
         analytics.stop()
