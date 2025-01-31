@@ -1,15 +1,15 @@
-import src.config as config
-import src.AI as src_AI
-from configparser import ConfigParser
 import unittest
 from unittest.mock import MagicMock
 import uuid
 from PIL import Image, ImageDraw, ImageFont
+
 # Add parent Path to search path for python modules
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+import src.config as config
+import src.AI as src_AI
 
 class TestAI(unittest.TestCase):
 
