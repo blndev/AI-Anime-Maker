@@ -12,6 +12,8 @@ if not config.SKIP_AI:
     from xformers.ops import MemoryEfficientAttentionFlashAttentionOp
     from diffusers import StableDiffusionPipeline, StableDiffusionImg2ImgPipeline
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    print (f"running on {device}")
+
 
 
 def check_safety(x_image):

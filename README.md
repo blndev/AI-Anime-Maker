@@ -96,7 +96,14 @@ analytics_db_path=./analytics.db
 # official source: https://dev.maxmind.com/geoip/geoip2/geolite2/
 analytics_city_db=./GeoLite2-City.mmdb
 
+# allows to switch on debug mode with additional UI elements and log output
+#debug=false
+
 [GenAI]
+# option to turn off all gen ai functions
+# this is useful for development environments especially for UI development
+#skip_ai=true
+
 # A local savetensors file or a Huggingface Model (will be downloaded).
 default_model=./models/toonify.safetensors
 
@@ -153,6 +160,10 @@ For that use an IDE like VSCode or run ```notebook lab Analyze_Usage.ipynb``` fr
 ## 🛠️ Development and Deployment
 For development and deployment purposes, you can create a "local.config" file (copy of app.config) which allows you to use dedicated configuration, e.g. local model folder without affecting the release/standard configuration. 
 This is useful for updating the app including app.config without affecting you local settings.
+Interesting settings for dev environments are:
+* [General][debug] (true/false)
+* [AI][skip_ai] (true/false)
+  
 Happy coding! 💻
 
 ---

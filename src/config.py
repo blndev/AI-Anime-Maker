@@ -36,7 +36,7 @@ def get_float_config_value(section, option, default=None):
         return default
     
 def read_configuration():
-    global current_config
+    global current_config, SKIP_AI, DEBUG
     try:
         # Read the INI file
         print ("read configuration")
@@ -50,6 +50,9 @@ def read_configuration():
         ]
         current_config = ConfigParser()
         current_config.read(configFileLocations)
+        # check if there is a overwrite from config file
+        SKIP_AI = get_boolean_config_value("AI","skip_ai", SKIP_AI)
+        DEBUG = get_boolean_config_value("General","debug", DEBUG)
         return current_config
     except Exception as e:
         print (e)
