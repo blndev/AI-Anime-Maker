@@ -20,7 +20,7 @@ def action_update_all_local_models():
 def action_save_input_file(request: gr.Request, image):
     """Save the input image in a cache directory using its SHA-1 hash."""
     # deactivate the start buttons
-    if image is None: return [gr.update(interactive=False), gr.update(interactive=False), ""]
+    if image is None: return [gr.update(interactive=False), gr.update(visible=False, value="")]
     
     # API Users don't have a request (by documentation)
     if not request: return
@@ -41,10 +41,16 @@ def action_save_input_file(request: gr.Request, image):
         dir = config.get_cache_folder()
         utils.save_image_as_file(image, dir)
 
-    image_description = AI.describe_image(image)
+    image_description = ""
+    try:
+        image_description = action_describe_image(image)
+    except Exception as e:
+        print (e)
+        gr.warning("Could not create a proper description, please describe your image shortly")
     # there is an image, activate the start buttons
     # TODO switch visibility for image description!
-    return [gr.update(interactive=True), gr.update(interactive=True), image_description]
+    #outputs=[start_button, text_description], 
+    return [gr.update(interactive=True), gr.update(visible=True, value=image_description)]#, image_description]
 
 def action_describe_image(image):
     """describe an image for better inpaint results."""
@@ -169,8 +175,8 @@ def create_gradio_interface():
         with gr.Row():
             with gr.Column():
                 image_input = gr.Image(label="Input Image", type="pil", height=512)
-                describe_button = gr.Button("Describe your Image", interactive=False)
-                text_description = gr.Textbox(label="use good but short image description for better results")
+                #describe_button = gr.Button("Describe your Image", interactive=False)
+                text_description = gr.Textbox(label="use good but short image description for better results", visible=False)
             with gr.Column():
                 output_image = gr.Image(label="Output Image", type="pil", height=512)
                 start_button = gr.Button("Start Creation", interactive=False)
@@ -195,17 +201,18 @@ def create_gradio_interface():
         image_input.change(
             fn=action_save_input_file,
             inputs=[image_input],
-            outputs=[start_button, describe_button, text_description], 
+            outputs=[start_button, text_description], 
             concurrency_limit=None,
+            concurrency_id="new_image"
         )
 
-        describe_button.click(
-            fn=action_describe_image,
-            inputs=[image_input],
-            outputs=[text_description],
-            concurrency_limit=4,
-            concurrency_id="describe"
-        )
+        # describe_button.click(
+        #     fn=action_describe_image,
+        #     inputs=[image_input],
+        #     outputs=[text_description],
+        #     concurrency_limit=4,
+        #     concurrency_id="describe"
+        # )
 
         start_button.click(
             fn=action_generate_image,
