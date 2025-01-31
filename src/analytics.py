@@ -1,5 +1,4 @@
 import ipaddress
-import gradio as gr
 import sqlite3          # as datastore
 import src.config as config           # to get configuration values
 import geoip2.database  # for ip to city
