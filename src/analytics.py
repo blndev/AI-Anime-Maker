@@ -1,7 +1,6 @@
 import ipaddress
-import gradio as gr
 import sqlite3          # as datastore
-import config           # to get configuration values
+import src.config as config           # to get configuration values
 import geoip2.database  # for ip to city
 import os               # to check if files exists
 from threading import Lock  # write to DB must be thread save
@@ -9,7 +8,6 @@ from user_agents import parse as parse_user_agent   # Split OS. Browser etc.
 
 # read only database for getting location from IP
 _ip_geo_reader = None
-DEBUG = False
 
 def _load_geo_db():
     """loads the ip to city database if existing"""
@@ -23,7 +21,7 @@ def _load_geo_db():
 
 def _create_tables():
 
-    if DEBUG: print ("check or create analytics tables")
+    if config.DEBUG: print ("check or create analytics tables")
     #every user creates a session, even if he is not creating any content
     create_table_session = """
     CREATE TABLE IF NOT EXISTS tblSessions (
@@ -78,7 +76,7 @@ def _create_tables():
 def _write_thread_save_to_db(query, data):
     """as we running multi threaded we need to avoid conflicts on the database"""
     # for bigger scaling usage suggestion is to use a dedicated database system
-    if DEBUG: print("write to db", query, data)
+    if config.DEBUG: print("write to db", query, data)
     try:
         lock = Lock()
         with lock:
@@ -104,7 +102,7 @@ def start():
 
 def stop():
     if _ip_geo_reader!=None:
-        if DEBUG: print("closing analytics database")
+        if config.DEBUG: print("closing analytics database")
         _ip_geo_reader.close()
 
 def save_session(session, ip, user_agent, languages):
@@ -116,7 +114,7 @@ def save_session(session, ip, user_agent, languages):
             languages = languages.split(',')
             languages = languages[0].split(";")[0].strip()
         except Exception as e:
-            if DEBUG: print("split languages failed", e)
+            if config.DEBUG: print("split languages failed", e)
     
     continent = "n.a."
     country = "n.a."
@@ -129,7 +127,7 @@ def save_session(session, ip, user_agent, languages):
                 country = ipinfo.country.name
                 city = ipinfo.city.name
         except Exception as e:
-            if DEBUG: print("failed to determine country and city", e)
+            if config.DEBUG: print("failed to determine country and city", e)
 
     query = """
     insert or ignore into tblSessions 

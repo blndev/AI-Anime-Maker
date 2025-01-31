@@ -20,7 +20,8 @@
 
 ### New Features
 - Analytics allows you to determine which style is mostly used and more
-- Disclaimer
+- Disclaimer can be shown
+- UI theme can be selected via configuration
 
 ### Improvements
 - Error Handling and robustnes

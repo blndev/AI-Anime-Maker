@@ -10,7 +10,7 @@ import os
 # Übergeordnetes Verzeichnis zum Suchpfad hinzufügen
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-import config as src_config
+import src.config as src_config
 
 class TestConfiguration(unittest.TestCase):
 
@@ -44,7 +44,8 @@ class TestConfiguration(unittest.TestCase):
             },
             'UI': {
                 'show_steps': random.choice([True, False]),
-                'show_strength': random.choice([True, False])
+                'show_strength': random.choice([True, False]),
+                'theme': str(uuid.uuid4())
             },
             'Styles': {
                 'style_count': random.randint(1, 10),
@@ -116,6 +117,7 @@ class TestConfiguration(unittest.TestCase):
         section = self.testconfiguration["UI"]
         self.assertEqual(src_config.UI_show_stength_slider(), section["show_strength"])  
         self.assertEqual(src_config.UI_show_steps_slider(), section["show_steps"])  
+        self.assertEqual(src_config.UI_get_gradio_theme(), section["theme"])  
 
     def test_UI_defaults(self):
         """Check section UI."""
@@ -125,6 +127,7 @@ class TestConfiguration(unittest.TestCase):
         
         self.assertEqual(src_config.UI_show_stength_slider(), False)  
         self.assertEqual(src_config.UI_show_steps_slider(), False)  
+        self.assertEqual(src_config.UI_get_gradio_theme(), "")  
 
     def test_AI_settings(self):
         """Check section UI."""

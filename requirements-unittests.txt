@@ -1,0 +1,6 @@
+# this is a subset of the requirements.txt to have a much faster run on build systems
+# torch etc. requires very big installations and can be skipped here
+geoip2          # for analytics to determine country and city
+user-agents     # to parse user agents and split into 
+Pillow          # PIL images
+numpy           # Image Manipulation (SKIP_AI)

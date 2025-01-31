@@ -1,6 +1,11 @@
 
 from configparser import ConfigParser
 
+# used from other areas like AI Module and is set by main module
+# helps to reduce easting storage for torch etc on build systems
+SKIP_AI = True
+DEBUG = False
+
 # this variable is used from unittests to inject configuration values!
 current_config = None
 
@@ -31,7 +36,7 @@ def get_float_config_value(section, option, default=None):
         return default
     
 def read_configuration():
-    global current_config
+    global current_config, SKIP_AI, DEBUG
     try:
         # Read the INI file
         print ("read configuration")
@@ -40,10 +45,14 @@ def read_configuration():
         # they define same settings
         configFileLocations = [
             "app.config",
+            "local.config",
             "dev.config"
         ]
         current_config = ConfigParser()
         current_config.read(configFileLocations)
+        # check if there is a overwrite from config file
+        SKIP_AI = get_boolean_config_value("GenAI","skip", SKIP_AI)
+        DEBUG = get_boolean_config_value("General","debug", DEBUG)
         return current_config
     except Exception as e:
         print (e)
@@ -111,6 +120,10 @@ def UI_show_stength_slider():
 def UI_show_steps_slider():
     """true = enables the slider in the UI"""
     return get_boolean_config_value("UI","show_steps", False)
+
+def UI_get_gradio_theme():
+    """name of the gradio theme to be used"""
+    return get_config_value("UI","theme", "")
 
 #-----------------------------------------------------------------
 # section Styles

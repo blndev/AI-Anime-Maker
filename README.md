@@ -12,7 +12,7 @@ Status: V1 - Stable and rocking! 🎉
     - [Now](#now)
   - [⚙️ Configuration](#️-configuration)
   - [🌟 Analytics](#-analytics)
-  - [🛠️ Development](#️-development)
+  - [🛠️ Development and Deployment](#️-development-and-deployment)
   - [📜 License](#-license)
   - [🤝 Contributing](#-contributing)
   - [🌟 Outlook (Features which could be useful)](#-outlook-features-which-could-be-useful)
@@ -96,7 +96,14 @@ analytics_db_path=./analytics.db
 # official source: https://dev.maxmind.com/geoip/geoip2/geolite2/
 analytics_city_db=./GeoLite2-City.mmdb
 
+# allows to switch on debug mode with additional UI elements and log output
+#debug=false
+
 [GenAI]
+# option to turn off all gen ai functions
+# this is useful for development environments especially for UI development
+#skip=true
+
 # A local savetensors file or a Huggingface Model (will be downloaded).
 default_model=./models/toonify.safetensors
 
@@ -115,6 +122,10 @@ default_strength=0.5
 max_size=1024
 
 [UI]
+# visual style of the application.
+# you can define your own style or selected e.g. from here: https://huggingface.co/spaces/gradio/theme-gallery
+theme=allenai/gradio-theme
+
 # true = Enables the slider to modify strengths in the UI.
 show_strength=false
 
@@ -150,8 +161,14 @@ To get more information about this topic and security concerns check the gradio 
 You can analyze the stored data via the Analyze_Usage jupyter notebook in this project.
 For that use an IDE like VSCode or run ```notebook lab Analyze_Usage.ipynb``` from the application folder.
 
-## 🛠️ Development
-For development purposes, you can create a dev.config (copy of app.config) which allows you to use local folders without affecting the release/standard configuration. Happy coding! 💻
+## 🛠️ Development and Deployment
+For development and deployment purposes, you can create a "local.config" file (copy of app.config) which allows you to use dedicated configuration, e.g. local model folder without affecting the release/standard configuration. 
+This is useful for updating the app including app.config without affecting you local settings.
+Interesting settings for dev environments are:
+* [General][debug] (true/false)
+* [GenAI][skip] (true/false)
+  
+Happy coding! 💻
 
 ---
 Get ready to unleash your inner artist and turn your photos into anime masterpieces! 🌈✨

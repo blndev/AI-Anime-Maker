@@ -4,7 +4,7 @@ import matplotlib.image as mpimg  # images
 import seaborn as sns           # Heatmaps etc.
 from user_agents import parse   # Split OS. Browser etc.
 import math  # calc sizes
-import config
+import src.config as config
 
 
 def showBar(df: pd.DataFrame, title: str, x_column: str, y_column: str = "SessionCount", x_label: str = None, y_label: str = None, show_x_values=True):
