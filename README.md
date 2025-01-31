@@ -102,7 +102,7 @@ analytics_city_db=./GeoLite2-City.mmdb
 [GenAI]
 # option to turn off all gen ai functions
 # this is useful for development environments especially for UI development
-#skip_ai=true
+#skip=true
 
 # A local savetensors file or a Huggingface Model (will be downloaded).
 default_model=./models/toonify.safetensors
@@ -162,7 +162,7 @@ For development and deployment purposes, you can create a "local.config" file (c
 This is useful for updating the app including app.config without affecting you local settings.
 Interesting settings for dev environments are:
 * [General][debug] (true/false)
-* [AI][skip_ai] (true/false)
+* [GenAI][skip] (true/false)
   
 Happy coding! 💻
 

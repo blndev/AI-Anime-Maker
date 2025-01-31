@@ -51,7 +51,7 @@ def read_configuration():
         current_config = ConfigParser()
         current_config.read(configFileLocations)
         # check if there is a overwrite from config file
-        SKIP_AI = get_boolean_config_value("AI","skip_ai", SKIP_AI)
+        SKIP_AI = get_boolean_config_value("GenAI","skip", SKIP_AI)
         DEBUG = get_boolean_config_value("General","debug", DEBUG)
         return current_config
     except Exception as e:
