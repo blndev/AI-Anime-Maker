@@ -1,8 +1,6 @@
-import src.utils as utils
 from PIL import Image, ImageDraw
 from hashlib import sha1
 import src.config as config
-from datetime import datetime
 device = "cpu"  # will be checked and set in main functions
 
 if not config.SKIP_AI:
