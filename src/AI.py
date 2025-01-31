@@ -14,26 +14,20 @@ if not config.SKIP_AI:
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-# import src.analytics as analytics
-
-# if active much more log output and ability to switch and select the used generation model
-DEBUG = False
-
-
 def check_safety(x_image):
     """Support function to check if the image is NSFW."""
     # all images are SFW ;)
     return x_image, False
 
-
+#cache for image to text model
 IMAGE_TO_TEXT_PIPELINE = None
-
 
 def _load_captioner_model():
     """Load and return a image to text model."""
     if (IMAGE_TO_TEXT_PIPELINE != None):
         return IMAGE_TO_TEXT_PIPELINE
 
+    # this will load teh model. if it is not availabole it will be downloaded from huggingface
     captioner = pipeline("image-to-text", model="Salesforce/blip-image-captioning-base")
     # TODO V3: change to this pipeline to query details about the image in Version 2
     # captioner = pipeline("image-text-to-text", model="Salesforce/blip-image-captioning-base")
@@ -61,29 +55,25 @@ def describe_image(image):
         print("Error while creating image description", e)
         return ""
 
-
+#cache of the image loaded already
 IMAGE_TO_IMAGE_PIPELINE = None
 
-
-def _load_test2img_model(model=config.get_model()):
-    """Load and return the Stable Diffusion model based on style."""
-    if config.SKIP_AI:
-        return False
-
+def _load_img2img_model(model=config.get_model(), use_cached_model=True):
+    """Load and return the Stable Diffusion model to generate images"""
     global IMAGE_TO_IMAGE_PIPELINE
-    if (IMAGE_TO_IMAGE_PIPELINE != None):
-        if DEBUG:
+    if (IMAGE_TO_IMAGE_PIPELINE != None and use_cached_model):
+        if config.DEBUG:
             print("using cached model")
         return IMAGE_TO_IMAGE_PIPELINE
 
     try:
         # TODO V3: support SDXL or FLux
-        if DEBUG:
+        if config.DEBUG:
             print(f"create pipeline for model {model}")
 
         pipeline = None
         if model.endswith("safetensors"):
-            if DEBUG:
+            if config.DEBUG:
                 print("use 'from_single_file' to load model from local folder")
             pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
                 model,
@@ -93,19 +83,19 @@ def _load_test2img_model(model=config.get_model()):
                 # revision="fp16" if device == "cuda" else "",
             )
         else:
-            if DEBUG:
+            if config.DEBUG:
                 print("use 'from_pretrained' option to load model from hugging face")
             pipeline = StableDiffusionImg2ImgPipeline.from_pretrained(
                 model,
                 torch_dtype=torch.float16 if device == "cuda" else torch.float32,
                 safety_checker=None, requires_safety_checker=False)
 
-        if DEBUG:
+        if config.DEBUG:
             print(f"--> pipeline initiated")
         pipeline = pipeline.to(device)
         if device == "cuda":
             pipeline.enable_xformers_memory_efficient_attention()
-        if DEBUG:
+        if config.DEBUG:
             print("--> pipeline created")
         return pipeline
     except Exception as e:
@@ -114,8 +104,6 @@ def _load_test2img_model(model=config.get_model()):
 
 
 def change_text2img_model(model):
-    if config.SKIP_AI:
-        return
     global IMAGE_TO_IMAGE_PIPELINE
     print(f"Reload model {model}")
     try:
@@ -124,17 +112,17 @@ def change_text2img_model(model):
         if device == "cuda":
             torch.cuda.empty_cache()
         # load new model
-        IMAGE_TO_IMAGE_PIPELINE = _load_test2img_model(model)
+        IMAGE_TO_IMAGE_PIPELINE = _load_img2img_model(model=model, use_cached_model=False)
         if IMAGE_TO_IMAGE_PIPELINE is None:
             raise Exception("Pipeline is none")
-        gr.Info(message=f"Model {model} loaded.", title="Model changed")
     except Exception as e:
         print(f"Error while change_text2img_model: {e}")
+        raise(f"Loading new img2img model '{model}' failed", e)
+
 
 
 def generate_image(image: Image, prompt: str, negative_prompt: str = "", strength: float = 0.5, steps: int = 60):
     """Convert the entire input image to the selected style."""
-    global style_details
     try:
         if image is None:
             raise Exception("no image provided")
@@ -143,7 +131,7 @@ def generate_image(image: Image, prompt: str, negative_prompt: str = "", strengt
         if config.DEBUG:
             print("start AI.generate_image")
 
-        model = _load_test2img_model()
+        model = _load_img2img_model()
         
         if (not config.SKIP_AI and model == None):
             print("error: no model loaded")
