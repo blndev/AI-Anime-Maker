@@ -8,8 +8,8 @@ import src.utils as utils
 import src.analytics as analytics
 import src.AI as AI
 
-FAKE_AI_DELAY = 5 # time how long the thread sleeps to simulate generation
-
+# used to get properties of the selected style liek prompt or strangth
+# will be filled while interface is loading
 style_details = {}
 
 
@@ -75,7 +75,7 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
     global style_details
     try:
         if image is None: return None, "no image"
-        # API Users don't have a request (by documentation)
+        # API Users don't have a request object (by documentation)
         if request is None: 
             print("Warning: no request object. API usage?")
             return None,"API forbidden"
@@ -175,16 +175,13 @@ def create_gradio_interface():
                     )
         with gr.Row():
             with gr.Column():
-                image_input = gr.Image(label="Input Image", type="pil", height=512)
+                image_input = gr.Image(label="Input", type="pil", height=512)
                 #describe_button = gr.Button("Describe your Image", interactive=False)
                 with gr.Column(visible=False) as area_description:
-                    # with gr.Row() :
-                    #     gr.Markdown(value="change the image description for better results")
-                    # with gr.Row():
                     text_description = gr.Textbox(label="change the image description for better results", show_label=True, max_length=70, submit_btn="↻")
 
             with gr.Column():
-                output_image = gr.Image(label="Output Image", type="pil", height=512)
+                output_image = gr.Image(label="Result", type="pil", height=512)
                 start_button = gr.Button("Start Creation", interactive=False, variant="primary")
                 
                 styles = []
