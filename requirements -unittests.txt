@@ -1,2 +1,0 @@
-geoip2          # for analytics to determine country and city
-user-agents     # to parse user agents and split into 
