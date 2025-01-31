@@ -17,11 +17,10 @@ def action_update_all_local_models():
     """updates the list of available models in the ui"""
     return gr.update(choices=utils.get_all_local_models(config.get_model_folder()))
 
-def action_save_input_file(request: gr.Request, image):
+def action_save_input_file(request: gr.Request, image, token_count):
     """Save the input image in a cache directory using its SHA-1 hash."""
     # deactivate the start buttons
-    if image is None: return [gr.update(interactive=False), gr.update(value=""), gr.update(visible=False)]
-    
+    if image is None: return [gr.update(interactive=False), gr.update(value="", visible=False), token_count]
     # API Users don't have a request (by documentation)
     if not request: return
 
@@ -50,7 +49,8 @@ def action_save_input_file(request: gr.Request, image):
     # there is an image, activate the start buttons
     # TODO switch visibility for image description!
     #outputs=[start_button, text_description, row_description], 
-    return [gr.update(interactive=True), gr.update(value=image_description), gr.update(visible=True)]
+    token_count+=3
+    return [gr.update(interactive=True), gr.update(value=image_description, visible=True), token_count]
 
 def action_describe_image(image):
     """describe an image for better inpaint results."""
@@ -148,7 +148,7 @@ def create_gradio_interface():
     global style_details
     with gr.Blocks(
         title=config.get_app_title(), 
-        theme="allenai/gradio-theme",
+        theme=config.UI_get_gradio_theme(),
         css="footer {visibility: hidden}",
         analytics_enabled=False
         ) as app:
@@ -173,6 +173,14 @@ def create_gradio_interface():
                         inputs=[],
                         outputs=[model_dropdown]
                     )
+        with gr.Row(visible=config.is_generation_with_token_enabled()):
+            with gr.Column():
+                gr.HTML("You will receive Token by using new images. Each generation will cost you 1 Token. We implemented this to avoid misuse.")
+            with gr.Column():
+                #token = gr.Session
+                local_storage = gr.BrowserState([0]) # initial token count
+                token_counter = gr.Number(visible=False, value=0)
+                token_label = gr.Label(show_label=False, value=f"Current Token: 0")
         with gr.Row():
             with gr.Column():
                 image_input = gr.Image(label="Input", type="pil", height=512)
@@ -199,12 +207,28 @@ def create_gradio_interface():
                 strength_slider = gr.Slider(label="Strength", minimum=0.1, maximum=1, value=config.get_default_strength(), step=0.1,  visible=config.UI_show_stength_slider())
                 steps_slider = gr.Slider(label="Steps", minimum=10, maximum=100, value=config.get_default_steps(), step=5, visible=config.UI_show_steps_slider())
 
+        def helper_display_token(token):
+            return f"Current Token: {token}"
+        
+        @app.load(inputs=[local_storage], outputs=[token_label])
+        def load_from_local_storage(saved_values):
+            print("loading from local storage", saved_values)
+            return saved_values[0]
+        @gr.on([token_counter.change], inputs=[token_counter], outputs=[local_storage])
+        def save_to_local_storage(token):
+            return [token]
+    
+        token_counter.change(
+            inputs=token_counter,
+            outputs=token_label,
+            fn=helper_display_token
+        )
 
         # Save input image immediately on change
         image_input.change(
             fn=action_save_input_file,
-            inputs=[image_input],
-            outputs=[start_button, text_description, area_description], 
+            inputs=[image_input, token_counter],
+            outputs=[start_button, text_description, token_counter], 
             concurrency_limit=None,
             concurrency_id="new_image"
         )
