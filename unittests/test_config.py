@@ -22,6 +22,7 @@ class TestConfiguration(unittest.TestCase):
         self.testconfiguration = {
             'General': {
                 'app_title': "UNITTEST",
+                'debug': False,
                 'app_disclaimer': str(uuid.uuid4()),
                 'user_message': str(uuid.uuid4()),
                 'port': str(random.randint(2048, 32000)),
@@ -33,8 +34,11 @@ class TestConfiguration(unittest.TestCase):
                 'analytics_db_path': str(uuid.uuid4()),
                 'analytics_enabled': random.choice([True, False]),
                 'analytics_city_db': str(uuid.uuid4()),
+                'generation_with_token_enabled': random.choice([True, False]),
+                'new_token_for_image': random.randint(1, 10),
             },
             'GenAI': {
+                'skip': True,
                 'default_model': str(uuid.uuid4()),
                 'model_folder': str(uuid.uuid4()),
                 'safetensor_url': str(uuid.uuid4()),
@@ -61,6 +65,26 @@ class TestConfiguration(unittest.TestCase):
     def tearDown(self):
         """nothing do now so far."""
 
+    def test_missing_values(self):
+        """Check that all values in app.config reflected in the settings."""
+        app_config = src_config.read_configuration()
+        test_config = ConfigParser()
+        test_config.read_dict(self.testconfiguration)
+        for section in app_config.sections():
+            for key in app_config[section].keys():
+                if not key.startswith("style_"):
+                    self.assertTrue(test_config.has_option(section,key),f"{section}/{key} is missing in Unittest - TestConfiguration")
+
+        # WHAT IS MISSING IN APP.CONFIG                                
+        # excludes = not set as planned (commented out)
+        excludes = ["app_disclaimer", "port", "debug", "skip", "model_folder", "safetensor_url"]
+        for section in test_config.sections():
+            for key in test_config[section].keys():
+                if key not in excludes:
+                    if not key.startswith("style_"):
+                        self.assertTrue(app_config.has_option(section,key),f"{section}/{key} is missing in App.config")
+
+
     def test_general_settings(self):
         """Check section general."""
         src_config.current_config = ConfigParser()
@@ -85,6 +109,11 @@ class TestConfiguration(unittest.TestCase):
         self.assertEqual(src_config.get_analytics_db_path(), general["analytics_db_path"])  
         self.assertEqual(src_config.get_analytics_city_db(), general["analytics_city_db"])  
 
+        # Features
+        self.assertEqual(src_config.is_generation_with_token_enabled(), general["generation_with_token_enabled"])  
+        self.assertEqual(src_config.token_new_token_for_image(), general["new_token_for_image"])  
+        
+
     def test_general_defaults(self):
         """Check section general."""
         src_config.current_config = ConfigParser()
@@ -107,6 +136,10 @@ class TestConfiguration(unittest.TestCase):
         self.assertEqual(src_config.is_analytics_enabled(), False)  
         self.assertEqual(src_config.get_analytics_db_path(), "./analytics.db")  
         self.assertEqual(src_config.get_analytics_city_db(), "./GeoLite2-City.mmdb")  
+
+        self.assertEqual(src_config.is_generation_with_token_enabled(), True)  
+        self.assertEqual(src_config.token_new_token_for_image(), 3)  
+
 
     def test_UI_settings(self):
         """Check section UI."""

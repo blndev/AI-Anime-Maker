@@ -109,6 +109,14 @@ def get_analytics_city_db():
     """The path and filename of the ip 2 city database"""
     return get_config_value("General","analytics_city_db", "./GeoLite2-City.mmdb")
 
+def is_generation_with_token_enabled():
+    """true = Generation only possible by token"""
+    return get_boolean_config_value("General","generation_with_token_enabled", True)
+
+def token_new_token_for_image():
+    """true = enables the slider in the UI"""
+    return int(get_config_value("General","new_token_for_image", 3))
+
 
 #-----------------------------------------------------------------
 # section UI
