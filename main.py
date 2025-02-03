@@ -18,6 +18,14 @@ if __name__ == "__main__":
         if model.endswith("safetensors"):
             utils.download_file_if_not_existing(url=config.get_model_url(), local_path=model)
 
+        try:
+            #TODO: put model path and names to config
+            utils.download_file_if_not_existing("https://github.com/onnx/models/raw/refs/heads/main/validated/vision/body_analysis/age_gender/models/age_googlenet.onnx", local_path="./models/onnx/age_googlenet.onnx")
+            utils.download_file_if_not_existing("https://github.com/onnx/models/raw/refs/heads/main/validated/vision/body_analysis/age_gender/models/gender_googlenet.onnx", local_path="./models/onnx/gender_googlenet.onnx")
+        except Exception as e:
+            print("could not detect or download face recognition models", e)
+
+
         if config.SKIP_AI:
             print("ai is deactivated")
         else:
