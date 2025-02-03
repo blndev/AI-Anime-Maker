@@ -17,8 +17,8 @@ def action_update_all_local_models():
     """updates the list of available models in the ui"""
     return gr.update(choices=utils.get_all_local_models(config.get_model_folder()))
 
-def action_save_input_file(request: gr.Request, image, token_count):
-    """Save the input image in a cache directory using its SHA-1 hash."""
+def action_handle_input_file(request: gr.Request, image, token_count):
+    """Analyze the Image, Handle Session Info, Save the input image in a cache if enabled, count token."""
     # deactivate the start buttons
     if image is None: return [gr.update(interactive=False), gr.update(value="", visible=False), token_count]
     # API Users don't have a request (by documentation)
@@ -46,10 +46,36 @@ def action_save_input_file(request: gr.Request, image, token_count):
     except Exception as e:
         print (e)
         gr.warning("Could not create a proper description, please describe your image shortly")
-    # there is an image, activate the start buttons
-    # TODO switch visibility for image description!
+
+    if config.is_feature_generation_with_token_enabled:
+        detected_faces = []
+        try:
+            detected_faces = utils.get_gender_and_age_from_image(image)
+        except Exception as e:
+            print (e)
+        
+        new_token = config.get_token_for_new_image()
+        if len(detected_faces)>0:
+            #we have minimum one face
+            print("Bonus for a face")
+            if config.get_token_bonus_for_face()>0: gr.Info("Bonus token added for an Image with a Face!")
+            new_token += config.get_token_bonus_for_face()
+            cuteness = config.get_token_bonus_for_cuteness()
+            for face in detected_faces:
+                if face["isFemale"]: 
+                    print("Bonus: smiling")
+                    new_token+=config.get_token_bonus_for_smile() # until we can recognize smiles
+                
+                if cuteness>0 and (face["maxAge"]<20 or face["minAge"]>60):
+                    print("Bonus: cuteness")
+                    new_token+=cuteness
+                    gr.Info("Bonus token added cuteness!")
+                    cuteness = 0 #allow bonus only once per upload
+        
+        gr.Info(f"Total new Token: {new_token}")
+        token_count+=new_token
+
     #outputs=[start_button, text_description, row_description], 
-    token_count+=3
     return [gr.update(interactive=True), gr.update(value=image_description, visible=True), token_count]
 
 def action_describe_image(image):
@@ -173,14 +199,16 @@ def create_gradio_interface():
                         inputs=[],
                         outputs=[model_dropdown]
                     )
-        with gr.Row(visible=config.is_generation_with_token_enabled()):
-            with gr.Column():
-                gr.HTML("You will receive Token by using new images. Each generation will cost you 1 Token. We implemented this to avoid misuse.")
+        with gr.Row(visible=config.is_feature_generation_with_token_enabled()):
             with gr.Column():
                 #token = gr.Session
                 local_storage = gr.BrowserState([0]) # initial token count
+                #token count is restored from app.load
                 token_counter = gr.Number(visible=False, value=0)
-                token_label = gr.Label(show_label=False, value=f"Current Token: 0")
+                token_label = gr.Text(
+                    show_label=False,
+                    value=f"Current Token: 0",
+                    info=config.get_token_explanation())
         with gr.Row():
             with gr.Column():
                 image_input = gr.Image(label="Input", type="pil", height=512)
@@ -210,9 +238,9 @@ def create_gradio_interface():
         def helper_display_token(token):
             return f"Current Token: {token}"
         
-        @app.load(inputs=[local_storage], outputs=[token_label])
+        @app.load(inputs=[local_storage], outputs=[token_counter])
         def load_from_local_storage(saved_values):
-            print("loading from local storage", saved_values)
+            print("restoring token from local storage", saved_values)
             return saved_values[0]
         @gr.on([token_counter.change], inputs=[token_counter], outputs=[local_storage])
         def save_to_local_storage(token):
@@ -226,7 +254,7 @@ def create_gradio_interface():
 
         # Save input image immediately on change
         image_input.change(
-            fn=action_save_input_file,
+            fn=action_handle_input_file,
             inputs=[image_input, token_counter],
             outputs=[start_button, text_description, token_counter], 
             concurrency_limit=None,
