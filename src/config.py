@@ -116,19 +116,22 @@ def is_feature_generation_with_token_enabled():
     """true = Generation only possible by token"""
     return get_boolean_config_value("Token","enabled", True)
 
-def token_new_token_for_image():
+def get_token_explanation():
+    return get_config_value("Token","explanation", "")
+
+def get_token_for_new_image():
     """true = enables the slider in the UI"""
     return int(get_config_value("Token","new_image", 3))
 
-def token_bonus_for_face():
+def get_token_bonus_for_face():
     """value which is the bonus for new images with face"""
     return int(get_config_value("Token","bonus_for_face", 2))
 
-def token_bonus_for_smile():
+def get_token_bonus_for_smile():
     """value which is the bonus for new images with a smile"""
     return int(get_config_value("Token","bonus_for_smile", 1))
 
-def token_bonus_for_cuteness():
+def get_token_bonus_for_cuteness():
     """value which is the bonus for new images with cuteness"""
     return int(get_config_value("Token","bonus_for_cuteness", 3))
 

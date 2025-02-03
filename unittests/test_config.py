@@ -37,6 +37,7 @@ class TestConfiguration(unittest.TestCase):
             },
             'Token': {
                 'enabled': random.choice([True, False]),
+                'explanation': str(uuid.uuid4()),
                 'new_image': random.randint(1, 10),
                 'bonus_for_face': random.randint(1, 10),
                 'bonus_for_smile': random.randint(1, 10),
@@ -147,10 +148,11 @@ class TestConfiguration(unittest.TestCase):
         section = self.testconfiguration["Token"]
 
         self.assertEqual(src_config.is_feature_generation_with_token_enabled(), section["enabled"])
-        self.assertEqual(src_config.token_new_token_for_image(), section["new_image"])
-        self.assertEqual(src_config.token_bonus_for_face(), section["bonus_for_face"])
-        self.assertEqual(src_config.token_bonus_for_smile(), section["bonus_for_smile"])
-        self.assertEqual(src_config.token_bonus_for_cuteness(), section["bonus_for_cuteness"])
+        self.assertEqual(src_config.get_token_explanation(), section["explanation"])
+        self.assertEqual(src_config.get_token_for_new_image(), section["new_image"])
+        self.assertEqual(src_config.get_token_bonus_for_face(), section["bonus_for_face"])
+        self.assertEqual(src_config.get_token_bonus_for_smile(), section["bonus_for_smile"])
+        self.assertEqual(src_config.get_token_bonus_for_cuteness(), section["bonus_for_cuteness"])
 
     def test_token_defaults(self):
         """Check section general."""
@@ -161,10 +163,11 @@ class TestConfiguration(unittest.TestCase):
         section = self.testconfiguration["Token"]
 
         self.assertEqual(src_config.is_feature_generation_with_token_enabled(), True)
-        self.assertEqual(src_config.token_new_token_for_image(), 3)
-        self.assertEqual(src_config.token_bonus_for_face(), 2)
-        self.assertEqual(src_config.token_bonus_for_smile(), 1)
-        self.assertEqual(src_config.token_bonus_for_cuteness(), 3)
+        self.assertEqual(src_config.get_token_explanation(), "")
+        self.assertEqual(src_config.get_token_for_new_image(), 3)
+        self.assertEqual(src_config.get_token_bonus_for_face(), 2)
+        self.assertEqual(src_config.get_token_bonus_for_smile(), 1)
+        self.assertEqual(src_config.get_token_bonus_for_cuteness(), 3)
 
     def test_UI_settings(self):
         """Check section UI."""
