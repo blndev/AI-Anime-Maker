@@ -8,7 +8,7 @@ import cv2                      # prepare images for face recognition
 import onnxruntime as ort       # for age and gender classification
 #import insightface              # face recognition
 from insightface.app import FaceAnalysis    # face boxes detection
-import config as config
+import src.config as config
 
 def get_all_local_models(model_folder: str, extension: str = ".safetensors"):
     """read all local models to the system"""
@@ -120,7 +120,9 @@ def image_convert_to_sepia(input: Image):
 #emotions
 #https://github.com/onnx/models/blob/main/validated/vision/body_analysis/emotion_ferplus/model/emotion-ferplus-2.onnx
 
-#TODO: load from config
+#TODO: load model names from config
+
+#https://github.com/onnx/models/tree/main/validated/vision/body_analysis/age_gender
 age_classifier = ort.InferenceSession('./models/onnx/age_googlenet.onnx')
 def age_is_below_ageClassifier(face_only_image):
     #def ageClassifier(orig_image):
@@ -148,11 +150,11 @@ def age_is_below_ageClassifier(face_only_image):
     return age, minAge, maxAge
 
 gender_classifier = ort.InferenceSession('./models/onnx/gender_googlenet.onnx')
-genderList=['Male','Female']
-genderList=[True,False]
 
 # gender classification method
 def isMale_genderClassifier(face_only_image):
+    genderListText=['Male','Female']
+    genderListBool=[True,False]
     image = cv2.cvtColor(face_only_image, cv2.COLOR_BGR2RGB)
     image = cv2.resize(image, (224, 224))
     image_mean = np.array([104, 117, 123])
@@ -163,8 +165,9 @@ def isMale_genderClassifier(face_only_image):
 
     input_name = gender_classifier.get_inputs()[0].name
     genders = gender_classifier.run(None, {input_name: image})
-    gender = genderList[genders[0].argmax()]
-    return gender
+    genderText = genderListText[genders[0].argmax()]
+    isMale = genderListBool[genders[0].argmax()]
+    return genderText, isMale
 
 
 def get_gender_and_age_from_image(pil_image: Image):
@@ -174,7 +177,6 @@ def get_gender_and_age_from_image(pil_image: Image):
 
     try:
         face_detector = FaceAnalysis(name="buffalo_sc")  # https://github.com/deepinsight/insightface/tree/master/model_zoo
-        #https://github.com/onnx/models/tree/main/validated/vision/body_analysis/age_gender
         # correct EXIF-Orientation!! very important
         pil_image = ImageOps.exif_transpose(pil_image)
         cv2_image = np.array(pil_image.convert("RGB"))
@@ -185,8 +187,8 @@ def get_gender_and_age_from_image(pil_image: Image):
         if len(cv2_image.shape) == 2:  # if gray make RGB
             cv2_image = cv2.cvtColor(cv2_image, cv2.COLOR_GRAY2BGR)
         #ctx_id =0 GPU, -1=CPU, 1,2, select GPU to be used
-        # size = scaling to for face detection
-        face_detector.prepare(ctx_id=0, det_size=(640,640))
+        # size = scaling to for face detection (smaller = faster)
+        face_detector.prepare(ctx_id=0, det_size=(1024,1024))
         faces = face_detector.get(cv2_image)
 
         for face in faces:
@@ -195,7 +197,7 @@ def get_gender_and_age_from_image(pil_image: Image):
             cropped_face = cv2_image[y1:y2, x1:x2]
             #cv2.imwrite(img=cropped_face, filename=f"./models/face_{x1}.jpg")
 
-            isMale = isMale_genderClassifier(cropped_face)
+            gender_name, isMale = isMale_genderClassifier(cropped_face)
             age, minAge, maxAge = age_is_below_ageClassifier(cropped_face)
 
             retVal.append({
@@ -204,6 +206,7 @@ def get_gender_and_age_from_image(pil_image: Image):
                 "maxAge": maxAge,
                 "isMale": isMale,
                 "isFemale": not isMale,
+                "gender": gender_name,
                 "smiling": False
             })
         if config.DEBUG:
