@@ -1,7 +1,8 @@
+import os
 import gradio as gr
 from hashlib import sha1
 import time # for sleep in SKIP_AI
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import src.config as config
 import src.utils as utils
@@ -17,10 +18,12 @@ def action_update_all_local_models():
     """updates the list of available models in the ui"""
     return gr.update(choices=utils.get_all_local_models(config.get_model_folder()))
 
+session_image_hashes = {}
 def action_handle_input_file(request: gr.Request, image, token_count):
     """Analyze the Image, Handle Session Info, Save the input image in a cache if enabled, count token."""
-    # deactivate the start buttons
-    if image is None: return [gr.update(interactive=False), gr.update(value="", visible=False), token_count]
+    global session_image_hashes
+    # deactivate the start button on error
+    if image is None: return [gr.update(interactive=False), gr.update(value=""), token_count, gr.update(visible=False)]
     # API Users don't have a request (by documentation)
     if not request: return
 
@@ -38,6 +41,7 @@ def action_handle_input_file(request: gr.Request, image, token_count):
 
     if config.is_cache_enabled():
         dir = config.get_cache_folder()
+        dir = os.path.join(dir, datetime.now().strftime("%Y%m%d"))
         utils.save_image_as_file(image, dir)
 
     image_description = ""
@@ -48,35 +52,47 @@ def action_handle_input_file(request: gr.Request, image, token_count):
         gr.warning("Could not create a proper description, please describe your image shortly")
 
     if config.is_feature_generation_with_token_enabled:
-        detected_faces = []
-        try:
-            detected_faces = utils.get_gender_and_age_from_image(image)
-        except Exception as e:
-            print (e)
+        #TODO: check that the image was not already used in this session
+        image_sha1 = sha1(image.tobytes()).hexdigest()
+        skip_token = False
+        if image_sha1 in session_image_hashes.keys():
+            # TODO ablaufzeit prüfen und ggf neu eintragen
+            dt = session_image_hashes[image_sha1]
+            if dt>datetime.now():
+                gr.Warning(f"This image signature was already used to gain token. New token for it will be provided after {dt.strftime("%d.%m.%Y - %H:%M")}")
+                skip_token = True
         
-        new_token = config.get_token_for_new_image()
-        if len(detected_faces)>0:
-            #we have minimum one face
-            print("Bonus for a face")
-            if config.get_token_bonus_for_face()>0: gr.Info("Bonus token added for an Image with a Face!")
-            new_token += config.get_token_bonus_for_face()
-            cuteness = config.get_token_bonus_for_cuteness()
-            for face in detected_faces:
-                if face["isFemale"]: 
-                    print("Bonus: smiling")
-                    new_token+=config.get_token_bonus_for_smile() # until we can recognize smiles
-                
-                if cuteness>0 and (face["maxAge"]<20 or face["minAge"]>60):
-                    print("Bonus: cuteness")
-                    new_token+=cuteness
-                    gr.Info("Bonus token added cuteness!")
-                    cuteness = 0 #allow bonus only once per upload
-        
-        gr.Info(f"Total new Token: {new_token}")
-        token_count+=new_token
+        if not skip_token:
+            session_image_hashes[image_sha1]=datetime.now()+timedelta(hours=4)# TODO: 4h aus konfiguration lesen
+            detected_faces = []
+            try:
+                detected_faces = utils.get_gender_and_age_from_image(image)
+            except Exception as e:
+                print (e)
+            
+            new_token = config.get_token_for_new_image()
+            if len(detected_faces)>0:
+                #we have minimum one face
+                print("Bonus for a face")
+                if config.get_token_bonus_for_face()>0: gr.Info("Bonus token added for an Image with a Face!")
+                new_token += config.get_token_bonus_for_face()
+                cuteness = config.get_token_bonus_for_cuteness()
+                for face in detected_faces:
+                    if face["isFemale"]: 
+                        print("Bonus: smiling")
+                        new_token+=config.get_token_bonus_for_smile() # until we can recognize smiles
+                    
+                    if cuteness>0 and (face["maxAge"]<20 or face["minAge"]>60):
+                        print("Bonus: cuteness")
+                        new_token+=cuteness
+                        gr.Info("Bonus token added cuteness!")
+                        cuteness = 0 #allow bonus only once per upload
+            
+            gr.Info(f"Total new Token: {new_token}")
+            token_count+=new_token
 
-    #outputs=[start_button, text_description, row_description], 
-    return [gr.update(interactive=True), gr.update(value=image_description, visible=True), token_count]
+    #outputs=[start_button, text_description, token_count,row_description], 
+    return [gr.update(interactive=bool(token_count>0)), image_description, token_count, gr.update(visible=True)]
 
 def action_describe_image(image):
     """describe an image for better inpaint results."""
@@ -96,11 +112,16 @@ def action_reload_model(model):
     except Exception as e:
         gr.Error(message=e.message)
 
-def action_generate_image(request: gr.Request, image, style, strength, steps, image_description):
+def action_generate_image(request: gr.Request, image, style, strength, steps, image_description, token_count):
     """Convert the entire input image to the selected style."""
     global style_details
     try:
-        if image is None: return None, "no image"
+        if token_count<=0:
+            gr.Warning("You have not enough token to start a generation. Upload a new image for new token!")
+            return image, token_count, gr.update(interactive=False)
+        if image is None: 
+            gr.Error("Start of Generation without image!")
+            return None, token_count, gr.update(interactive=False)
         # API Users don't have a request object (by documentation)
         if request is None: 
             print("Warning: no request object. API usage?")
@@ -147,9 +168,11 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
         # save generated file if enabled
         fn=None
         if config.is_save_output_enabled():
+            folder_path=config.get_output_folder()
+            folder_path = os.path.join(folder_path, datetime.now().strftime("%Y%m%d"))
             fn = utils.save_image_with_timestamp(
                 image=result_image,
-                folder_path=config.get_output_folder(),
+                folder_path=folder_path,
                 reference=f"{image_sha1}-{style}",
                 ignore_errors=True)
 
@@ -161,11 +184,13 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
                 prompt=image_description,
                 output_filename=fn
                 )
-        return result_image, image_description
+        token_count-=1
+        if token_count<=0: gr.Warning("You running out of Token.\n\nUpload a new image to continue.")
+        return result_image, token_count, gr.update(interactive=bool(token_count>0))
     except RuntimeError as e:
         print(f"RuntimeError: {e}")
         gr.Error(e)
-        return None, image_description
+        return None, token_count, gr.update(interactive=bool(token_count>0))
 
 #--------------------------------------------------------------
 # Gradio - Render UI
@@ -256,7 +281,7 @@ def create_gradio_interface():
         image_input.change(
             fn=action_handle_input_file,
             inputs=[image_input, token_counter],
-            outputs=[start_button, text_description, token_counter], 
+            outputs=[start_button, text_description, token_counter, area_description], 
             concurrency_limit=None,
             concurrency_id="new_image"
         )
@@ -272,8 +297,8 @@ def create_gradio_interface():
 
         start_button.click(
             fn=action_generate_image,
-            inputs=[image_input, style_dropdown, strength_slider, steps_slider, text_description],
-            outputs=[output_image, text_description],
+            inputs=[image_input, style_dropdown, strength_slider, steps_slider, text_description, token_counter],
+            outputs=[output_image, token_counter, start_button],
             concurrency_limit=1,
             concurrency_id="gpu_queue"
         )
