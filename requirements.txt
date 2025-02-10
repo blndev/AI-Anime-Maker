@@ -11,4 +11,5 @@ Pillow          # PIL images
 numpy           # Image Manipulation (SKIP_AI)
 insightface     # Face recognition for tokens
 opencv-python   # Face recognition for tokens
-onnxruntime     # Face recognition (required for core models)
+onnxruntime     # Face recognition CPU based (required for onnx models)
+onnxruntime_gpu # Face recognition GPU based (required for onnx models)
