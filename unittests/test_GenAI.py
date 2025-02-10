@@ -98,6 +98,7 @@ class Test_GenAI(unittest.TestCase):
         value = src_GenAI.describe_image(srcImg) 
         self.assertIsNotNone(value)
         self.assertNotEqual(value, "")
+        print("generated description text", value)
 
 
     def test_change_text2img_model(self):
