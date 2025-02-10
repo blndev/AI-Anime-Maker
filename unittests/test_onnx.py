@@ -1,4 +1,3 @@
-import src.onnx as src_onnx
 import unittest
 from PIL import Image, ImageDraw, ImageFont
 import sys
@@ -6,9 +5,12 @@ import os
 
 # Übergeordnetes Verzeichnis zum Suchpfad hinzufügen
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+import src.config as config
+if not config.SKIP_ONNX:
+    import onnx_analyzer as src_onnx
 
-
-class TestToken(unittest.TestCase):
+@unittest.skipIf(config.SKIP_ONNX, "Skipping ONNX Model tests")
+class Test_ONNX(unittest.TestCase):
 
     images = {}
 

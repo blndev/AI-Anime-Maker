@@ -1,16 +1,18 @@
 import numpy as np              # for image manipulation e.g. sepia
 from PIL import Image, ImageOps # for image handling
+import src.config as config
 import cv2                      # prepare images for face recognition
 import onnxruntime as ort       # for age and gender classification
 #import insightface              # face recognition
 from insightface.app import FaceAnalysis    # face boxes detection
-import src.config as config
-
 
 #emotions
 #https://github.com/onnx/models/blob/main/validated/vision/body_analysis/emotion_ferplus/model/emotion-ferplus-2.onnx
 #ctx_id =0 GPU, -1=CPU, 1,2, select GPU to be used
 ctx_id=1
+
+#TODO Refactor pipeline instanciating and sharing
+#TODO: Thread safety??
 
 #https://github.com/onnx/models/tree/main/validated/vision/body_analysis/age_gender
 age_classifier = ort.InferenceSession(config.get_modelfile_onnx_age_googlenet())

@@ -8,7 +8,7 @@ import src.config as config
 import src.utils as utils
 import src.analytics as analytics
 import src.AI as AI
-import src.onnx as onnx
+import src.onnx_wrapper as onnx
 
 # used to get properties of the selected style liek prompt or strangth
 # will be filled while interface is loading
@@ -52,7 +52,6 @@ def action_handle_input_file(request: gr.Request, image, token_count):
         print (e)
         gr.warning("Could not create a proper description, please describe your image shortly")
 
-    # TODO: check also skip_ai
     if config.is_feature_generation_with_token_enabled:
         #TODO: check that the image was not already used in this session
         image_sha1 = sha1(image.tobytes()).hexdigest()
@@ -68,9 +67,10 @@ def action_handle_input_file(request: gr.Request, image, token_count):
             session_image_hashes[image_sha1]=datetime.now()+timedelta(hours=4)# TODO: 4h aus konfiguration lesen
             detected_faces = []
             try:
+                print("ui detect")
                 detected_faces = onnx.get_gender_and_age_from_image(image)
             except Exception as e:
-                print (e)
+                print ("UI", e)
             
             new_token = config.get_token_for_new_image()
             if len(detected_faces)>0:

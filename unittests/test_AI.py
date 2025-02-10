@@ -9,9 +9,11 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import src.config as config
-import src.AI as src_AI
+import src.AI as src_GenAI
 
-class TestAI(unittest.TestCase):
+#skip_genai = os.getenv("SKIP_GENAI") == "1"
+
+class Test_GenAI(unittest.TestCase):
 
     def setUp(self):
         """."""
@@ -40,9 +42,9 @@ class TestAI(unittest.TestCase):
     def tearDown(self):
         """cleanup test environment."""
 
+    @unittest.skipIf(config.SKIP_AI, "Skipping GPU tests")
     def test_nsfw_detected(self):
         """Support function to check if the image is NSFW."""
-        # currently all images are SFW ;)
         img = Image.new("RGB", (256, 256), color="pink")  # NSFW-Themed Background
         draw = ImageDraw.Draw(img)
         try:
@@ -51,12 +53,12 @@ class TestAI(unittest.TestCase):
             font = None
         draw.text((50, 100), "NSFW", fill="red", font=font)
 
-        result_image, is_nsfw = src_AI.check_safety(img)
+        result_image, is_nsfw = src_GenAI.check_safety(img)
         self.assertFalse(is_nsfw)
         self.assertEqual(result_image, img)
 
-    def test_describe_image(self):
-        """Check if data is correctly stored into database."""
+    def test_describe_image_with_mocked_pipeline(self):
+        """Check if data pipeline is correctly queried and pipeline text is returned."""
         # create tmp image
         srcImg = Image.new("L", (1024, 1024), 255)
         mockup_imageDescription = str(uuid.uuid4())
@@ -74,17 +76,29 @@ class TestAI(unittest.TestCase):
             return mock_image_to_text_pipeline
 
         # assign mockups
-        src_AI.IMAGE_TO_TEXT_PIPELINE = mock_image_to_text_pipeline
-        org_func = src_AI._load_captioner_model
-        src_AI._load_captioner_model = mockup_load_captioner_model
+        src_GenAI.IMAGE_TO_TEXT_PIPELINE = mock_image_to_text_pipeline
+        org_func = src_GenAI._load_captioner_model
+        src_GenAI._load_captioner_model = mockup_load_captioner_model
 
         try:
             # execute the test
-            value = src_AI.describe_image(srcImg)  # image)
-            self.assertIsNotNone(value)  # Sicherstellen, dass ein Ergebnis zurückkommt
+            value = src_GenAI.describe_image(srcImg)  # image)
+            self.assertIsNotNone(value)
             self.assertEqual(value, mockup_imageDescription)
         finally:
-            src_AI._load_captioner_model = org_func
+            src_GenAI._load_captioner_model = org_func
+
+    @unittest.skipIf(config.SKIP_AI, "Skipping GPU tests")
+    def test_describe_image_with_vison_model(self):
+        """Check if we get back data from describe image pipeline. The text can't be validated"""
+        # create tmp image
+        srcImg = Image.new("L", (1024, 1024), 255)
+
+        # execute the test
+        value = src_GenAI.describe_image(srcImg) 
+        self.assertIsNotNone(value)
+        self.assertNotEqual(value, "")
+
 
     def test_change_text2img_model(self):
         """Check changing a model"""
@@ -94,23 +108,24 @@ class TestAI(unittest.TestCase):
             self.assertEqual(model, modelname)
             self.assertFalse(use_cached_model)
             return self.img2img_pipeline
-        org_func = src_AI._load_img2img_model
-        src_AI._load_img2img_model = mockup_load_img2img_model
+        org_func = src_GenAI._load_img2img_model
+        src_GenAI._load_img2img_model = mockup_load_img2img_model
         try:
             # execute test
-            src_AI.change_text2img_model(modelname)
+            src_GenAI.change_text2img_model(modelname)
         finally:
-            src_AI._load_img2img_model = org_func
+            src_GenAI._load_img2img_model = org_func
 
+    @unittest.skipIf(config.SKIP_AI, "Skipping GPU tests")
     def test_generate_image(self):
         """Check image generation"""
         # add a fake generator
-        src_AI.IMAGE_TO_IMAGE_PIPELINE = self.img2img_pipeline
+        src_GenAI.IMAGE_TO_IMAGE_PIPELINE = self.img2img_pipeline
         img = Image.new("L", (config.get_max_size()*2, config.get_max_size()*2), 255)
 
         # execute test
         # self.assertRaises(src_AI.generate_image(image=None,prompt=""), "no image provided")
-        result_image = src_AI.generate_image(
+        result_image = src_GenAI.generate_image(
             image=img,
             prompt="create a image")
         self.assertIsNotNone(result_image)

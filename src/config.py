@@ -2,10 +2,14 @@
 from configparser import ConfigParser
 import os
 
-# used from other areas like AI Module and is set by main module
+# property used from other areas like AI Module
+# can finally be configured in setting GenAI/skip (read while load fuinction)
+# it's implemented as property, so that it can be change on runtime
 # helps to reduce easting storage for torch etc on build systems
-SKIP_AI = True
+SKIP_AI = os.getenv("SKIP_GENAI") == "1"
+SKIP_ONNX = os.getenv("SKIP_ONNX") == "1"
 DEBUG = False
+
 
 # this variable is used from unittests to inject configuration values!
 current_config = None

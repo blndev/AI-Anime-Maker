@@ -16,7 +16,6 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python 3.10
@@ -35,5 +34,10 @@ jobs:
     #     # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
     #     flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
+      env:
+        SKIP_GENAI: "1"
+        SKIP_ONNX: "1"
       run: |
+        export SKIP_GPU_TESTS=1
         pytest ./unittests/test_*.py
+        # python -m unittest discover -k "not test_gpu"

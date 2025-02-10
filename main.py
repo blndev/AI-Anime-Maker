@@ -1,6 +1,5 @@
 # this must be the first import
 import src.config as config
-config.SKIP_AI = False  # it's default if starting main, False = default for tests etc.
 config.read_configuration()
 
 from src.UI import create_gradio_interface
