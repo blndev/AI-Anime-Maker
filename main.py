@@ -24,9 +24,8 @@ if __name__ == "__main__":
                 utils.download_file_if_not_existing(url=config.get_model_url(), local_path=model)
 
             try:
-                #TODO: put model path and names to config
-                utils.download_file_if_not_existing("https://github.com/onnx/models/raw/refs/heads/main/validated/vision/body_analysis/age_gender/models/age_googlenet.onnx", local_path="./models/onnx/age_googlenet.onnx")
-                utils.download_file_if_not_existing("https://github.com/onnx/models/raw/refs/heads/main/validated/vision/body_analysis/age_gender/models/gender_googlenet.onnx", local_path="./models/onnx/gender_googlenet.onnx")
+                utils.download_file_if_not_existing(config.get_modelurl_onnx_age_googlenet(), local_path=config.get_modelfile_onnx_age_googlenet())
+                utils.download_file_if_not_existing(config.get_modelurl_onnx_gender_googlenet(), local_path=config.get_modelfile_onnx_gender_googlenet())
             except Exception as e:
                 print("could not detect or download face recognition models", e)
 

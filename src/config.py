@@ -1,5 +1,6 @@
 
 from configparser import ConfigParser
+import os
 
 # used from other areas like AI Module and is set by main module
 # helps to reduce easting storage for torch etc on build systems
@@ -214,3 +215,22 @@ def get_max_size():
 #     if read_configuration() is None: print("read configuration failed")
 #     print (is_gradio_shared())
 #     if is_gradio_shared(): print ("shared")
+
+def get_modelurl_onnx_age_googlenet():
+    """The url of the onnx model to determine age"""
+    return "https://github.com/onnx/models/raw/refs/heads/main/validated/vision/body_analysis/age_gender/models/age_googlenet.onnx"
+
+def get_modelfile_onnx_age_googlenet():
+    """The path and filename of the onnx model to determine age"""
+    mf = get_model_folder()
+    return os.path.join(mf, 'onnx/age_googlenet.onnx')
+
+def get_modelurl_onnx_gender_googlenet():
+    """The url of the onnx model to determine gender"""
+    return "https://github.com/onnx/models/raw/refs/heads/main/validated/vision/body_analysis/age_gender/models/gender_googlenet.onnx"
+
+def get_modelfile_onnx_gender_googlenet():
+    """The path and filename of the onnx model to determine gender"""
+    mf = get_model_folder()
+    return os.path.join(mf, 'onnx/gender_googlenet.onnx')
+
