@@ -10,7 +10,7 @@ from insightface.app import FaceAnalysis    # face boxes detection
 #https://github.com/onnx/models/blob/main/validated/vision/body_analysis/emotion_ferplus/model/emotion-ferplus-2.onnx
 #ctx_id =0 GPU, -1=CPU, 1,2, select GPU to be used
 ctx_id=1
-
+#TODO: make test images much smaller (jpg, 70%)
 #TODO Refactor pipeline instanciating and sharing
 #TODO: Thread safety??
 
@@ -42,7 +42,6 @@ def age_is_below_ageClassifier(face_only_image):
     return age, minAge, maxAge
 
 gender_classifier = ort.InferenceSession(config.get_modelfile_onnx_gender_googlenet())
-
 # gender classification method
 def isMale_genderClassifier(face_only_image):
     genderListText=['Male','Female']
@@ -61,12 +60,12 @@ def isMale_genderClassifier(face_only_image):
     isMale = genderListBool[genders[0].argmax()]
     return genderText, isMale
 
-
+face_detector = FaceAnalysis(name="buffalo_sc")  # https://github.com/deepinsight/insightface/tree/master/model_zoo
+face_detector.prepare(ctx_id=ctx_id, det_size=(512,512))
 def get_gender_and_age_from_image(pil_image: Image):
     """ return values are a list of dictionaries. if len=0, then no face was detected"""
     retVal = []
     try:
-        face_detector = FaceAnalysis(name="buffalo_sc")  # https://github.com/deepinsight/insightface/tree/master/model_zoo
         # correct EXIF-Orientation!! very important
         max_size = config.get_max_size()
         pil_image.thumbnail((max_size, max_size))
@@ -81,7 +80,6 @@ def get_gender_and_age_from_image(pil_image: Image):
         #ctx_id =0 GPU, -1=CPU, 1,2, select GPU to be used
         #size = scaling to for face detection (smaller = faster)
         #if size is bigger then the image size, we got no detection so 512x512 is fine
-        face_detector.prepare(ctx_id=ctx_id, det_size=(512,512))
         faces = face_detector.get(cv2_image)
 
         for face in faces:

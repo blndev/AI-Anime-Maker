@@ -245,6 +245,7 @@ def create_gradio_interface():
 
             with gr.Column():
                 output_image = gr.Image(label="Result", type="pil", height=512)
+                #TODO: set batch size to a configurable value
                 start_button = gr.Button("Start Creation", interactive=False, variant="primary")
                 
                 styles = []
