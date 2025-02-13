@@ -7,7 +7,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import src.config as config
 if not config.SKIP_ONNX:
-    import onnx_analyzer as src_onnx
+    import src.onnx_analyzer as src_onnx
 
 @unittest.skipIf(config.SKIP_ONNX, "Skipping ONNX Model tests")
 class Test_ONNX(unittest.TestCase):
@@ -21,22 +21,22 @@ class Test_ONNX(unittest.TestCase):
             {
                 40:
                 {
-                    'nosmile':  Image.open("./unittests/testdata/face_male_age30_nosmile.png")
+                    'nosmile':  Image.open("./unittests/testdata/face_male_age30_nosmile.jpg")
                 }
             },
             'female':
             {
                 20:
                 {
-                    'nosmile':  Image.open("./unittests/testdata/face_female_age20_nosmile.png"),
-                    'smile':  Image.open("./unittests/testdata/face_female_age20_smile.png")
+                    'nosmile':  Image.open("./unittests/testdata/face_female_age20_nosmile.jpg"),
+                    'smile':  Image.open("./unittests/testdata/face_female_age20_smile.jpg")
                 }
             }
 
 
         }
         # self.img_face = Image.open(
-        # "https://user-images.githubusercontent.com/64628244/81032727-8381d880-8eae-11ea-84a2-34380601088c.png")
+        # "https://user-images.githubusercontent.com/64628244/81032727-8381d880-8eae-11ea-84a2-34380601088c.jpg")
 
     def tearDown(self):
         """Remove Database file."""
