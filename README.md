@@ -11,7 +11,8 @@ Status: V1 - Stable and rocking! 🎉
     - [Prerequisites](#prerequisites)
     - [Now](#now)
   - [⚙️ Configuration](#️-configuration)
-  - [🌟 Analytics](#-analytics)
+  - [🌟 Feature: Analytics](#-feature-analytics)
+  - [🌟 Feature: Token based generation](#-feature-token-based-generation)
   - [🛠️ Development and Deployment](#️-development-and-deployment)
   - [📜 License](#-license)
   - [🤝 Contributing](#-contributing)
@@ -71,21 +72,15 @@ app_title=AI Anime Maker
 #app_disclaimer=This App is made for educational purpose.<br><br><p align=left>It is shared to you by sponsored hardware.</p>
 
 # the message showed below the app title
-user_message = Have fun creating funny pictures out of your photos!
+user_message=Have fun creating funny pictures out of your photos!
 
-# Defines the port where the app starts. If not defined, a random port will be chosen.
+# defines the port where the app is starting, if not defined, a random port will be choosen
 #port=7860
 
-# Define if the application should create an internet-reachable link via Gradio shared tunnel function.
+#define if the application should create a internet reachable link via gradio shared tunnel function
 is_shared=false
 
-# true = Output of the generation process should be saved to a file.
-save_output=true
-
-# The folder where the output should be saved if activated.
-output_folder=./output/
-
-# With this feature enabled, you can determine which style is mostly used and much more
+# With this feature you can determine which style is mostly used and much more
 # be aware of data privacy and regulations
 analytics_enabled=false
 
@@ -96,29 +91,56 @@ analytics_db_path=./analytics.db
 # official source: https://dev.maxmind.com/geoip/geoip2/geolite2/
 analytics_city_db=./GeoLite2-City.mmdb
 
-# allows to switch on debug mode with additional UI elements and log output
-#debug=false
+
+[Token]
+# This section contains the feature of token based image generation
+
+# if active (default=true), users can generate images only if they have token
+# token can be optained by uploading images
+enabled=false
+
+# if set, a explanation which will be shown to the user
+explanation=You will receive Token by using new images. Each generation will cost you 1 Token. We implemented this to avoid misuse.
+
+# amout of token users get a a new image
+new_image=3
+
+# time before the user will get token again for this image in the same session, default 240
+image_blocked_in_minutes=240
+
+# bonus of tokens they get if the image contains at least one face
+bonus_for_face=3
+# bonus of tokens if the faces smiles (not implemented so far)
+bonus_for_smile=1
+# bonus of token they get if the image is recognized as "cute"
+bonus_for_cuteness=3
 
 [GenAI]
-# option to turn off all gen ai functions
-# this is useful for development environments especially for UI development
-#skip=true
-
-# A local savetensors file or a Huggingface Model (will be downloaded).
+# a local savetensors file or a Huggingface Model (will be downloaded)
 default_model=./models/toonify.safetensors
 
-# The URL to download the model if the file specified in "model" does not exist.
+# a local folder where the system can look for the specified model 
+#model_folder=./models/
+
+# the url to download the model if the file specified in "model" is not existing
 #safetensor_url=https://civit.ai/...
 
-# The number of steps used to generate the image. Lower values for systems without GPU.
+# amount of parallel renderings (depends on GPU size), default 1
+execution_batch_size=1
+
+# the amount of steps used to generate the image
+# the value should be lower for systems without GPU
 default_steps=60
 
-# Value between 0 and 1. 0 = no changes to the input image, 1 = maximum changes.
+# value between 0 and 1
+# 0=no changes to the input image
+# 1=maximum changes (like no input file)
 # this Setting is appied to all Styles who don't define a strength
-# Good values are 0.4 to 0.6.
+# good values are 0.4 to 0.6
 default_strength=0.5
 
-# The maximum width or height of the output image. Adjust based on model and available GPU RAM.
+# the maximum width or height of the output image
+# change the value depending on teh model and available RAM on the GPU
 max_size=1024
 
 [UI]
@@ -126,10 +148,10 @@ max_size=1024
 # you can define your own style or selected e.g. from here: https://huggingface.co/spaces/gradio/theme-gallery
 theme=allenai/gradio-theme
 
-# true = Enables the slider to modify strengths in the UI.
+# true=enables the slider to modify strengths in the UI
 show_strength=false
 
-# true = Enables the slider to modify steps in the UI.
+# true=enables the slider to modify steps in the UI
 show_steps=false
 
 [Styles]
@@ -137,7 +159,7 @@ show_steps=false
 style_count=2
 
 # The negative prompt applied to all styles.
-general_negative_prompt=realistic photo, wrong fingers, ugly, sad
+general_negative_prompt=realistic photo, wrong fingers, ugly, sad, brutal, violence
 
 style_1_name=Test 1
 style_1_prompt=disney-style painting
@@ -150,7 +172,7 @@ style_2_prompt=a anime style painting
 #style_2_strength=0.3
 #style_2_negative_prompt=oil painting
 ```
-## 🌟 Analytics
+## 🌟 Feature: Analytics
 If you have activated analytics, a few interesting data will be saved. This includes the usage of styles, time of activities and languages of the requesting clients. With this information you can optimize the configuration of your system and save costs if it runs on a cloud.
 For privacy reasons, there will be no data stored which allows identification of users.
 
@@ -161,12 +183,17 @@ To get more information about this topic and security concerns check the gradio 
 You can analyze the stored data via the Analyze_Usage jupyter notebook in this project.
 For that use an IDE like VSCode or run ```notebook lab Analyze_Usage.ipynb``` from the application folder.
 
+## 🌟 Feature: Token based generation
+If you have activated token based generation,  then the users can't build unlimited amount of images based on one source file. For generation they need token (on for each) and such toklen will be received for uploaded images.
+That prevents the system for misuse. In our public beta we have seen that users try to generate inappropiate content by tweaking the prompt. It wasn't succesful as our used model don't support that and the style description and negative prompt prevent it in addition. But finally users wasted computing times and with that slowed down the system for others. That was the main reason why we implemented token. It's turned off by default, but feel free to switch it on.
+
 ## 🛠️ Development and Deployment
 For development and deployment purposes, you can create a "local.config" file (copy of app.config) which allows you to use dedicated configuration, e.g. local model folder without affecting the release/standard configuration. 
 This is useful for updating the app including app.config without affecting you local settings.
+
 Interesting settings for dev environments are:
-* [General][debug] (true/false)
-* [GenAI][skip] (true/false)
+* [General][debug] (true/false) - enable model selection and more output
+* [GenAI][skip] (true/false) - skip the GenAI part (used for UI Development)
   
 Happy coding! 💻
 

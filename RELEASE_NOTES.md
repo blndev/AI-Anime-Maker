@@ -21,7 +21,8 @@
 ### New Features
 - Analytics allows you to determine which style is mostly used and more
 - Disclaimer can be shown
-- UI theme can be selected via configuration
+- UI theme can be selected via configuration file
+- Rendering could be limited by enabling render token
 
 ### Improvements
 - Error Handling and robustnes
