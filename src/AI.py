@@ -31,8 +31,6 @@ def _load_captioner_model():
 
     # this will load teh model. if it is not availabole it will be downloaded from huggingface
     captioner = pipeline("image-to-text", model="Salesforce/blip-image-captioning-base")
-    # TODO V3: change to this pipeline to query details about the image in Version 2
-    # captioner = pipeline("image-text-to-text", model="Salesforce/blip-image-captioning-base")
     return captioner
 
 
@@ -140,7 +138,6 @@ def generate_image(image: Image, prompt: str, negative_prompt: str = "", strengt
             print("error: no model loaded")
             raise Exception(message="No model loaded. Generation not available")
 
-        # TODO Render previews in Version 2
         max_size = config.get_max_size()
         image.thumbnail((max_size, max_size))
 

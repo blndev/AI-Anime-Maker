@@ -202,6 +202,10 @@ def get_model_url():
     """The URL of a safetensor file to be downloaded if 'model' file is not existing"""
     return get_config_value(f"GenAI","safetensor_url", "https://civitai.com/api/download/models/244831?type=Model&format=SafeTensor&size=pruned&fp=fp16")
 
+def GenAI_get_execution_batch_size():
+    """amount of parallel renderings (depends on GPU size)"""
+    return int(get_config_value(f"GenAI","execution_batch_size", 1))
+
 def get_default_strength():
     """The default strengths if nothing is specified"""
     default = 0.5

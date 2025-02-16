@@ -49,6 +49,7 @@ class TestConfiguration(unittest.TestCase):
                 'default_model': str(uuid.uuid4()),
                 'model_folder': str(uuid.uuid4()),
                 'safetensor_url': str(uuid.uuid4()),
+                'execution_batch_size': random.randint(1, 10),
                 'default_steps': random.randint(10, 100),
                 'default_strength': random.uniform(0, 1),
                 'max_size': random.randint(128, 4096),
@@ -203,6 +204,7 @@ class TestConfiguration(unittest.TestCase):
         section = self.testconfiguration["GenAI"]
         self.assertEqual(src_config.get_default_strength(), section["default_strength"])
         self.assertEqual(src_config.get_default_steps(), section["default_steps"])
+        self.assertEqual(src_config.GenAI_get_execution_batch_size(), section["execution_batch_size"])
         self.assertEqual(src_config.get_model(), section["default_model"])
         self.assertEqual(src_config.get_model_folder(), section["model_folder"])
         self.assertEqual(src_config.get_model_url(), section["safetensor_url"])
@@ -245,6 +247,8 @@ class TestConfiguration(unittest.TestCase):
         section = self.testconfiguration["GenAI"]
         self.assertEqual(src_config.get_default_strength(), 0.5)
         self.assertEqual(src_config.get_default_steps(), 50)
+
+        self.assertEqual(src_config.GenAI_get_execution_batch_size(), 1)
 
         self.assertEqual(src_config.get_model(), "./models/toonify.safetensors")
         self.assertEqual(src_config.get_model_folder(), "./models/")

@@ -10,14 +10,14 @@ import src.analytics as analytics
 import src.AI as AI
 
 if config.SKIP_ONNX:
-    def get_gender_and_age_from_image(pil_image: any):
+    def analyze_faces(pil_image: any):
         """ without onnx we cant detect and analyze faces"""
         return []
 else:
     print("loading onnx functions")
     from src.onnx_analyzer import FaceAnalyzer
     fai = FaceAnalyzer() # singleton
-    def get_gender_and_age_from_image(pil_image):
+    def analyze_faces(pil_image):
         return fai.get_gender_and_age_from_image(pil_image)
 
 # used to get properties of the selected style liek prompt or strangth
@@ -82,10 +82,9 @@ def action_handle_input_file(request: gr.Request, image, token_count):
             session_image_hashes[image_sha1]=datetime.now()+timedelta(minutes=config.get_token_time_lock_for_new_image())
             detected_faces = []
             try:
-                print("ui detect")
-                detected_faces = get_gender_and_age_from_image(image)
+                detected_faces = analyze_faces(image)
             except Exception as e:
-                print ("UI", e)
+                print ("Error while analyzing face", e)
             
             new_token = config.get_token_for_new_image()
             if len(detected_faces)>0:
@@ -138,6 +137,7 @@ def action_reload_model(model):
 def action_generate_image(request: gr.Request, image, style, strength, steps, image_description, token_count):
     """Convert the entire input image to the selected style."""
     global style_details
+    if token_count == None: token_count=0
     try:
         if token_count<=0:
             gr.Warning("You have not enough token to start a generation. Upload a new image for new token!")
@@ -266,7 +266,6 @@ def create_gradio_interface():
 
             with gr.Column():
                 output_image = gr.Image(label="Result", type="pil", height=512)
-                #TODO: set batch size to a configurable value
                 start_button = gr.Button("Start Creation", interactive=False, variant="primary")
                 
                 styles = []
@@ -314,7 +313,7 @@ def create_gradio_interface():
             fn=action_describe_image,
             inputs=[image_input],
             outputs=[text_description],
-            concurrency_limit=4,
+            concurrency_limit=10,
             concurrency_id="describe"
         )
 
@@ -323,7 +322,9 @@ def create_gradio_interface():
             fn=action_generate_image,
             inputs=[image_input, style_dropdown, strength_slider, steps_slider, text_description, token_counter],
             outputs=[output_image, token_counter, start_button],
-            concurrency_limit=1,
+            concurrency_limit=config.GenAI_get_execution_batch_size(),
+            batch=False,
+            max_batch_size=config.GenAI_get_execution_batch_size(),
             concurrency_id="gpu_queue"
         )
 
