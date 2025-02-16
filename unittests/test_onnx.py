@@ -15,6 +15,8 @@ class Test_ONNX(unittest.TestCase):
     images = {}
 
     def setUp(self):
+        #to prevent that wrong config is loaded from another test, we have to re read the file
+        config.read_configuration()
         self.img_no_face = Image.new("RGB", (256, 256), color="blue")
         self.images = {
             'male':
