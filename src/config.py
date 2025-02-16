@@ -122,11 +122,16 @@ def is_feature_generation_with_token_enabled():
     return get_boolean_config_value("Token","enabled", True)
 
 def get_token_explanation():
+    """Explanation for Token in the UI"""
     return get_config_value("Token","explanation", "")
 
 def get_token_for_new_image():
-    """true = enables the slider in the UI"""
+    """amount of token for new images"""
     return int(get_config_value("Token","new_image", 3))
+
+def get_token_time_lock_for_new_image():
+    """time after the user gets new token for the same image"""
+    return int(get_config_value("Token","image_blocked_in_minutes", 240))
 
 def get_token_bonus_for_face():
     """value which is the bonus for new images with face"""
