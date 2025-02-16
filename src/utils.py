@@ -4,9 +4,7 @@ from datetime import datetime   # for timestamp
 import numpy as np              # for image manipulation e.g. sepia
 from PIL import Image           # for image handling
 from hashlib import sha1        # generate image hash
-
-DEBUG = False
-
+from src import config          # for debug check
 
 def get_all_local_models(model_folder: str, extension: str = ".safetensors"):
     """read all local models to the system"""
@@ -21,6 +19,7 @@ def get_all_local_models(model_folder: str, extension: str = ".safetensors"):
     except Exception as e:
         print(e)
     return safetensors_files
+
 
 def download_file_if_not_existing(url, local_path):
     # Check if the file already exists
@@ -64,7 +63,7 @@ def save_image_as_file(image: Image.Image, dir: str):
         if not os.path.exists(file_path):
             image.save(file_path, format="JPEG")
 
-        if DEBUG:
+        if config.DEBUG:
             print(f"Image saved to \"{file_path}\"")
         return hash
     except Exception as e:

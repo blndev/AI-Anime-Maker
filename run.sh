@@ -54,7 +54,6 @@ pip install --quiet --require-virtualenv --requirement requirements.txt
 
 # Execute "photo-to-drawing.py" in the virtual environment
 echo "Starting app..."
-python photo-to-drawing.py
+python main.py
 
 # Deactivate the virtual environment
-deactivate

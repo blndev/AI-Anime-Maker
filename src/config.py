@@ -1,10 +1,15 @@
 
 from configparser import ConfigParser
+import os
 
-# used from other areas like AI Module and is set by main module
+# property used from other areas like AI Module
+# can finally be configured in setting GenAI/skip (read while load fuinction)
+# it's implemented as property, so that it can be change on runtime
 # helps to reduce easting storage for torch etc on build systems
-SKIP_AI = True
+SKIP_AI = os.getenv("SKIP_GENAI") == "1"
+SKIP_ONNX = os.getenv("SKIP_ONNX") == "1"
 DEBUG = False
+
 
 # this variable is used from unittests to inject configuration values!
 current_config = None
@@ -109,6 +114,36 @@ def get_analytics_city_db():
     """The path and filename of the ip 2 city database"""
     return get_config_value("General","analytics_city_db", "./GeoLite2-City.mmdb")
 
+#-----------------------------------------------------------------
+# section Feature Token
+#-----------------------------------------------------------------
+def is_feature_generation_with_token_enabled():
+    """true = Generation only possible by token"""
+    return get_boolean_config_value("Token","enabled", True)
+
+def get_token_explanation():
+    """Explanation for Token in the UI"""
+    return get_config_value("Token","explanation", "")
+
+def get_token_for_new_image():
+    """amount of token for new images"""
+    return int(get_config_value("Token","new_image", 3))
+
+def get_token_time_lock_for_new_image():
+    """time after the user gets new token for the same image"""
+    return int(get_config_value("Token","image_blocked_in_minutes", 240))
+
+def get_token_bonus_for_face():
+    """value which is the bonus for new images with face"""
+    return int(get_config_value("Token","bonus_for_face", 2))
+
+def get_token_bonus_for_smile():
+    """value which is the bonus for new images with a smile"""
+    return int(get_config_value("Token","bonus_for_smile", 1))
+
+def get_token_bonus_for_cuteness():
+    """value which is the bonus for new images with cuteness"""
+    return int(get_config_value("Token","bonus_for_cuteness", 3))
 
 #-----------------------------------------------------------------
 # section UI
@@ -167,6 +202,10 @@ def get_model_url():
     """The URL of a safetensor file to be downloaded if 'model' file is not existing"""
     return get_config_value(f"GenAI","safetensor_url", "https://civitai.com/api/download/models/244831?type=Model&format=SafeTensor&size=pruned&fp=fp16")
 
+def GenAI_get_execution_batch_size():
+    """amount of parallel renderings (depends on GPU size)"""
+    return int(get_config_value(f"GenAI","execution_batch_size", 1))
+
 def get_default_strength():
     """The default strengths if nothing is specified"""
     default = 0.5
@@ -189,3 +228,22 @@ def get_max_size():
 #     if read_configuration() is None: print("read configuration failed")
 #     print (is_gradio_shared())
 #     if is_gradio_shared(): print ("shared")
+
+def get_modelurl_onnx_age_googlenet():
+    """The url of the onnx model to determine age"""
+    return "https://github.com/onnx/models/raw/refs/heads/main/validated/vision/body_analysis/age_gender/models/age_googlenet.onnx"
+
+def get_modelfile_onnx_age_googlenet():
+    """The path and filename of the onnx model to determine age"""
+    mf = get_model_folder()
+    return os.path.join(mf, 'onnx/age_googlenet.onnx')
+
+def get_modelurl_onnx_gender_googlenet():
+    """The url of the onnx model to determine gender"""
+    return "https://github.com/onnx/models/raw/refs/heads/main/validated/vision/body_analysis/age_gender/models/gender_googlenet.onnx"
+
+def get_modelfile_onnx_gender_googlenet():
+    """The path and filename of the onnx model to determine gender"""
+    mf = get_model_folder()
+    return os.path.join(mf, 'onnx/gender_googlenet.onnx')
+

@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.safetensors
-/models/SD*
+/models/**
 /output/**
 /cache/**
 dev.config
@@ -14,6 +14,8 @@ analytics.db
 *.mmdb
 *.off
 unittests/tmp/**
+.gradio
+local.config
 
 # Distribution / packaging
 .Python
