@@ -16,7 +16,7 @@
 - Initial release, no bugs to fix yet!
 
 
-## Version 1.1.0 - Upcoming
+## Version 1.1
 
 ### New Features
 - Analytics allows you to determine which style is mostly used and more
