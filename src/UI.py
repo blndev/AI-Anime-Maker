@@ -62,7 +62,7 @@ def action_handle_input_file(request: gr.Request, image, token_count):
         print (e)
         gr.warning("Could not create a proper description, please describe your image shortly")
 
-    if config.is_feature_generation_with_token_enabled:
+    if config.is_feature_generation_with_token_enabled():
         #check that the image was not already used in this session
         image_sha1 = sha1(image.tobytes()).hexdigest()
         skip_token = False
@@ -114,7 +114,8 @@ def action_handle_input_file(request: gr.Request, image, token_count):
             token_count+=new_token
 
     #outputs=[start_button, text_description, token_count,row_description], 
-    return [gr.update(interactive=bool(token_count>0)), image_description, token_count, gr.update(visible=True)]
+    start_enabled = True if not config.is_feature_generation_with_token_enabled() else bool(token_count>0)
+    return [gr.update(interactive=start_enabled), image_description, token_count, gr.update(visible=True)]
 
 def action_describe_image(image):
     """describe an image for better inpaint results."""
@@ -137,9 +138,12 @@ def action_reload_model(model):
 def action_generate_image(request: gr.Request, image, style, strength, steps, image_description, token_count):
     """Convert the entire input image to the selected style."""
     global style_details
-    if token_count == None: token_count=0
+    #setting token always to 10 if the feature is disabled saved a lot of "if feature enabled .." statements
+    if token_count == None: token_count = 0 
+    if not config.is_feature_generation_with_token_enabled(): token_count = 10
+
     try:
-        if token_count<=0:
+        if config.is_feature_generation_with_token_enabled() and token_count<=0:
             gr.Warning("You have not enough token to start a generation. Upload a new image for new token!")
             return image, token_count, gr.update(interactive=False)
         if image is None: 
@@ -172,6 +176,7 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
         # or adapt the source image saving with thumbnail property
         image_sha1 = sha1(image.tobytes()).hexdigest()
 
+        # use always the sliders for strength and steps if they are enabled
         if not config.UI_show_stength_slider(): strength = sd["strength"]
         if not config.UI_show_steps_slider(): steps = sd["steps"]
 
@@ -288,7 +293,7 @@ def create_gradio_interface():
         
         @app.load(inputs=[local_storage], outputs=[token_counter])
         def load_from_local_storage(saved_values):
-            print("restoring token from local storage", saved_values)
+            if config.is_feature_generation_with_token_enabled(): print("restoring token from local storage", saved_values)
             return saved_values[0]
         @gr.on([token_counter.change], inputs=[token_counter], outputs=[local_storage])
         def save_to_local_storage(token):
