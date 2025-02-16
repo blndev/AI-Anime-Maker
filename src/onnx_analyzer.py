@@ -11,17 +11,18 @@ class FaceAnalyzer:
         print ("init")
         #https://github.com/onnx/models/blob/main/validated/vision/body_analysis/emotion
         # _ferplus/model/emotion-ferplus-2.onnx
+        # FIXME V3: we can have a switch here if GPU Memory >20GB(?) then onnx can run on GPU as well
         #ctx_id =0 GPU, -1=CPU, 1,2, select GPU to be used
-        self.ctx_id = 0
+        self.ctx_id = -1 #to save gpu memory
+        #providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+        providers = ['CPUExecutionProvider']
         #https://github.com/onnx/models/tree/main/validated/vision/body_analysis/age_gender
-        self.age_classifier = ort.InferenceSession(config.get_modelfile_onnx_age_googlenet(),  providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])    #emotions
-        self.gender_classifier = ort.InferenceSession(config.get_modelfile_onnx_gender_googlenet(),  providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+        self.age_classifier = ort.InferenceSession(config.get_modelfile_onnx_age_googlenet(),  providers=providers)    #emotions
+        self.gender_classifier = ort.InferenceSession(config.get_modelfile_onnx_gender_googlenet(),  providers=providers)
 
-        self.face_detector = FaceAnalysis(name="buffalo_sc", providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])  # https://github.com/deepinsight/insightface/tree/master/model_zoo
+        self.face_detector = FaceAnalysis(name="buffalo_sc", providers=providers)  # https://github.com/deepinsight/insightface/tree/master/model_zoo
         self.face_detector.prepare(ctx_id=self.ctx_id, det_size=(512,512))
-
-    #TODO Refactor pipeline instanciating and sharing
-    #TODO: Thread safety??
+        if config.DEBUG: print ("FaceAnalyzer ONNX initialization done")
 
     def _run_classifier(self, classifier, face_only_image):
         image = cv2.cvtColor(face_only_image, cv2.COLOR_BGR2RGB)
