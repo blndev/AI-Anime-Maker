@@ -75,7 +75,9 @@ class TestConfiguration(unittest.TestCase):
 
     def test_missing_values(self):
         """Check that all values in app.config reflected in the settings."""
-        app_config = src_config.read_configuration()
+        app_config = ConfigParser()
+        #here we have to load only the app.config, if we use config.readconfiguration then it will include unversioned configs like dev.config as well.
+        app_config.read("app.config")
         test_config = ConfigParser()
         test_config.read_dict(self.testconfiguration)
         for section in app_config.sections():
@@ -84,8 +86,16 @@ class TestConfiguration(unittest.TestCase):
                     self.assertTrue(test_config.has_option(section, key), f"{section}/{key} is missing in Unittest - TestConfiguration")
 
         # WHAT IS MISSING IN APP.CONFIG
-        # excludes = not set as planned (commented out)
-        excludes = ["app_disclaimer", "port", "debug", "skip", "model_folder", "safetensor_url"]
+        # excludes = all values which should not be or commented out in app.config by default
+        excludes = [
+            "app_disclaimer", 
+            "port", 
+            "debug", 
+            "skip", 
+            "model_folder", 
+            "safetensor_url", 
+            "save_output", "output_folder",
+            "cache_enabled", "cache_folder"]
         for section in test_config.sections():
             for key in test_config[section].keys():
                 if key not in excludes:
