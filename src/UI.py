@@ -8,7 +8,19 @@ import src.config as config
 import src.utils as utils
 import src.analytics as analytics
 import src.AI as AI
-import src.onnx_wrapper as onnx
+#TODO: Remove, as this is only for UnitTests
+#import src.onnx_wrapper as onnx
+
+if config.SKIP_ONNX:
+    def get_gender_and_age_from_image(pil_image: any):
+        """ without onnx we cant detect and analyze faces"""
+        return []
+else:
+    print("loading onnx functions")
+    from src.onnx_analyzer import FaceAnalyzer
+    fai = FaceAnalyzer() # singleton
+    def get_gender_and_age_from_image(pil_image):
+        return fai.get_gender_and_age_from_image(pil_image)
 
 # used to get properties of the selected style liek prompt or strangth
 # will be filled while interface is loading
@@ -68,7 +80,7 @@ def action_handle_input_file(request: gr.Request, image, token_count):
             detected_faces = []
             try:
                 print("ui detect")
-                detected_faces = onnx.get_gender_and_age_from_image(image)
+                detected_faces = get_gender_and_age_from_image(image)
             except Exception as e:
                 print ("UI", e)
             
@@ -76,19 +88,25 @@ def action_handle_input_file(request: gr.Request, image, token_count):
             if len(detected_faces)>0:
                 #we have minimum one face
                 print("Bonus for a face")
-                if config.get_token_bonus_for_face()>0: gr.Info("Bonus token added for an Image with a Face!")
-                new_token += config.get_token_bonus_for_face()
-                cuteness = config.get_token_bonus_for_cuteness()
+                face_bonus = config.get_token_bonus_for_face()
+                if face_bonus>0: 
+                    new_token += face_bonus
+                    gr.Info(f"{face_bonus} Bonus token added for an Image with a Face!")
+
+                # we have that bonus in a variable as we want to give it only once
+                token_for_cuteness = config.get_token_bonus_for_cuteness()
+                token_for_smiling = config.get_token_bonus_for_smile() 
                 for face in detected_faces:
-                    if face["isFemale"]: 
+                    if face["isFemale"]: # until we can recognize smiles
                         print("Bonus: smiling")
-                        new_token+=config.get_token_bonus_for_smile() # until we can recognize smiles
+                        new_token+=token_for_smiling
+                        gr.Info(f"{token_for_smiling} Bonus token added!")
                     
-                    if cuteness>0 and (face["maxAge"]<20 or face["minAge"]>60):
+                    if token_for_cuteness>0 and (face["maxAge"]<20 or face["minAge"]>60):
                         print("Bonus: cuteness")
-                        new_token+=cuteness
-                        gr.Info("Bonus token added cuteness!")
-                        cuteness = 0 #allow bonus only once per upload
+                        new_token+=token_for_cuteness
+                        gr.Info(f"{token_for_cuteness} Bonus token added!")
+                        token_for_cuteness = 0 #allow bonus only once per upload
             
             gr.Info(f"Total new Token: {new_token}")
             token_count+=new_token
