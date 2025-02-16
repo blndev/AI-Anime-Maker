@@ -81,8 +81,7 @@ class TestConfiguration(unittest.TestCase):
         for section in app_config.sections():
             for key in app_config[section].keys():
                 if not key.startswith("style_"):
-                    self.assertTrue(test_config.has_option(section, key), f"{
-                                    section}/{key} is missing in Unittest - TestConfiguration")
+                    self.assertTrue(test_config.has_option(section, key), f"{section}/{key} is missing in Unittest - TestConfiguration")
 
         # WHAT IS MISSING IN APP.CONFIG
         # excludes = not set as planned (commented out)
@@ -91,8 +90,7 @@ class TestConfiguration(unittest.TestCase):
             for key in test_config[section].keys():
                 if key not in excludes:
                     if not key.startswith("style_"):
-                        self.assertTrue(app_config.has_option(section, key), f"{
-                                        section}/{key} is missing in App.config")
+                        self.assertTrue(app_config.has_option(section, key), f"{section}/{key} is missing in App.config")
 
     def test_general_settings(self):
         """Check section general."""
