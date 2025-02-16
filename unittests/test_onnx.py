@@ -38,12 +38,14 @@ class Test_ONNX(unittest.TestCase):
         # self.img_face = Image.open(
         # "https://user-images.githubusercontent.com/64628244/81032727-8381d880-8eae-11ea-84a2-34380601088c.jpg")
 
+        self.FaceAnalyzer = src_onnx.FaceAnalyzer()
+
     def tearDown(self):
         """Remove Database file."""
 
     def test_has_no_face(self):
         """check that the image has a face"""
-        v = src_onnx.get_gender_and_age_from_image(self.img_no_face)
+        v = self.FaceAnalyzer.get_gender_and_age_from_image(self.img_no_face)
         self.assertEqual(len(v), 0)
 
     def test_is_gender(self):
@@ -53,7 +55,7 @@ class Test_ONNX(unittest.TestCase):
                 for expression in self.images[gender][age]:
                     id = f"{gender}, age {age}, {expression}"
                     image = self.images[gender][age][expression]
-                    v = src_onnx.get_gender_and_age_from_image(image)
+                    v = self.FaceAnalyzer.get_gender_and_age_from_image(image)
                     self.assertNotEqual(len(v), 0, f"No face deteted on {id}")
                     if gender=="male":
                         self.assertTrue(v[0]["isMale"], id)
@@ -69,7 +71,7 @@ class Test_ONNX(unittest.TestCase):
                 for expression in self.images[gender][age]:
                     id = f"{gender}, age {age}, {expression}"
                     image = self.images[gender][age][expression]
-                    v = src_onnx.get_gender_and_age_from_image(image)
+                    v = self.FaceAnalyzer.get_gender_and_age_from_image(image)
                     self.assertNotEqual(len(v), 0, f"No face deteted on {id}")
                     self.assertLessEqual(v[0]["maxAge"], age+15, id)
                     self.assertLessEqual(age-10, v[0]["minAge"], id)
@@ -81,7 +83,7 @@ class Test_ONNX(unittest.TestCase):
                 for expression in self.images[gender][age]:
                     id = f"{gender}, age {age}, {expression}"
                     image = self.images[gender][age][expression]
-                    v = src_onnx.get_gender_and_age_from_image(image)
+                    v = self.FaceAnalyzer.get_gender_and_age_from_image(image)
                     self.assertNotEqual(len(v), 0, f"No face deteted on {id}")
                     if gender=="female":
                         self.assertFalse(v[0]["isMale"], id)
@@ -94,7 +96,7 @@ class Test_ONNX(unittest.TestCase):
                 for expression in self.images[gender][age]:
                     id = f"{gender}, age {age}, {expression}"
                     image = self.images[gender][age][expression]
-                    v = src_onnx.get_gender_and_age_from_image(image)
+                    v = self.FaceAnalyzer.get_gender_and_age_from_image(image)
                     self.assertNotEqual(len(v), 0, f"No face deteted on {id}")
                     if gender=="male":
                         self.assertTrue(v[0]["isMale"], id)
