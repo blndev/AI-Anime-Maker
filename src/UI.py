@@ -4,11 +4,37 @@ from hashlib import sha1
 import time # for sleep in SKIP_AI
 from datetime import datetime, timedelta
 import logging
+import uuid
+from dataclasses import dataclass
+from typing import Optional
 
 import src.config as config
 import src.utils as utils
 import src.analytics as analytics
 import src.AI as AI
+
+@dataclass
+class AppState:
+    """State object for storing application data in browser."""
+    token: int = 0
+    session: str = "str(uuid.uuid4())"  # Generate a new UUID4 for each instance
+
+    def to_dict(self) -> dict:
+        """Convert AppState to dictionary for serialization."""
+        return {
+            'token': self.token,
+            'session': self.session
+        }
+
+    @classmethod
+    def from_dict(cls, data: Optional[dict]) -> 'AppState':
+        """Create AppState from dictionary after deserialization."""
+        if not data:
+            return cls()
+        return cls(
+            token=data.get('token', 0),
+            session=data.get('session', str(uuid.uuid4()))
+        )
 
 # Set up module logger
 logger = logging.getLogger(__name__)
@@ -263,7 +289,7 @@ def create_gradio_interface():
         with gr.Row(visible=config.is_feature_generation_with_token_enabled()):
             with gr.Column():
                 #token = gr.Session
-                local_storage = gr.BrowserState([0]) # initial token count
+                local_storage = gr.BrowserState(AppState()) # initial state with token=0 and new session
                 #token count is restored from app.load
                 token_counter = gr.Number(visible=False, value=0)
                 token_label = gr.Text(
@@ -300,13 +326,18 @@ def create_gradio_interface():
             return f"Current Token: {token}"
         
         @app.load(inputs=[local_storage], outputs=[token_counter])
-        def load_from_local_storage(saved_values):
+        def load_from_local_storage(state_dict):
+            app_state = AppState.from_dict(state_dict)
             if config.is_feature_generation_with_token_enabled(): 
-                logger.debug("Restoring token from local storage: %s", saved_values)
-            return saved_values[0]
-        @gr.on([token_counter.change], inputs=[token_counter], outputs=[local_storage])
-        def save_to_local_storage(token):
-            return [token]
+                logger.debug("Restoring token from local storage: %s", app_state.token)
+                logger.debug("Session ID: %s", app_state.session)
+            return app_state.token
+
+        @gr.on([token_counter.change], inputs=[token_counter, local_storage], outputs=[local_storage])
+        def save_to_local_storage(token: int, state_dict):
+            app_state = AppState.from_dict(state_dict)
+            app_state.token = token
+            return app_state.to_dict()
     
         token_counter.change(
             inputs=token_counter,
