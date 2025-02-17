@@ -1,5 +1,30 @@
 # Release Notes
 
+## Version 1.1.1 - 2024-02-23
+
+### New Features
+- Added command-line debug mode with `--debug` flag
+- Added colorized logging output for better readability
+
+### Improvements
+- Enhanced error logging with detailed stack traces in debug mode
+- Standardized logging format across all modules
+- Replaced print statements with proper logging levels
+
+## Version 1.1 - 2024-02-17
+
+### New Features
+- Analytics allows you to determine which style is mostly used and more
+- Disclaimer can be shown
+- UI theme can be selected via configuration file
+- Rendering could be limited by enabling render token
+
+### Improvements
+- Error Handling and robustnes
+
+### Bug Fixes
+- Strength of Styles is not used, System always use default strength
+
 ## Version 1.0.0 - 2023-10-20
 
 ### New Features
@@ -14,18 +39,3 @@
 
 ### Bug Fixes
 - Initial release, no bugs to fix yet!
-
-
-## Version 1.1
-
-### New Features
-- Analytics allows you to determine which style is mostly used and more
-- Disclaimer can be shown
-- UI theme can be selected via configuration file
-- Rendering could be limited by enabling render token
-
-### Improvements
-- Error Handling and robustnes
-
-### Bug Fixes
-- Strength of Styles is not used, System always use default strength
