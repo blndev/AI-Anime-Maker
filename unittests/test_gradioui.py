@@ -125,7 +125,7 @@ class TestActionHandleInputFile(unittest.TestCase):
 
         response = action_handle_input_file(self.mock_request, self.test_image, self.app_state.to_dict())
         
-        mock_analytics.save_session.assert_called_once()
+        mock_analytics.save_input_image_details.assert_called_once()
         self.assertEqual(response[1], "Test description")
 
     @patch('src.UI.config')
