@@ -65,10 +65,12 @@ def read_configuration():
         current_config.read(configFileLocations)
         # check if there is a overwrite from config file
         SKIP_AI = get_boolean_config_value("GenAI","skip", SKIP_AI)
-        DEBUG = get_boolean_config_value("General","debug", DEBUG)
+        # keep debug if already set
+        DEBUG = DEBUG or get_boolean_config_value("General","debug", DEBUG)
         return current_config
     except Exception as e:
         logger.error("Failed to read configuration: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
         return None
 
 #-----------------------------------------------------------------

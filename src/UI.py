@@ -53,6 +53,7 @@ def action_handle_input_file(request: gr.Request, image, token_count):
                 logger.debug("New image uploaded from: %s", request.client.host)
         except Exception as e:
             logger.error("Error for analytics: %s", str(e))
+            logger.debug("Exception details:", exc_info=True)
 
     if config.is_cache_enabled():
         dir = config.get_cache_folder()
@@ -64,6 +65,7 @@ def action_handle_input_file(request: gr.Request, image, token_count):
         image_description = action_describe_image(image)
     except Exception as e:
         logger.error("Error creating image description: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
         gr.warning("Could not create a proper description, please describe your image shortly")
 
     if config.is_feature_generation_with_token_enabled():
@@ -89,6 +91,7 @@ def action_handle_input_file(request: gr.Request, image, token_count):
                 detected_faces = analyze_faces(image)
             except Exception as e:
                 logger.error("Error while analyzing face: %s", str(e))
+                logger.debug("Exception details:", exc_info=True)
             
             new_token = config.get_token_for_new_image()
             if len(detected_faces)>0:
@@ -221,6 +224,7 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
         return result_image, token_count, gr.update(interactive=bool(token_count>0))
     except RuntimeError as e:
         logger.error("RuntimeError: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
         gr.Error(e)
         return None, token_count, gr.update(interactive=bool(token_count>0))
 

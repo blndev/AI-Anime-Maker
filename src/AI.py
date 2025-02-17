@@ -57,6 +57,7 @@ def describe_image(image):
         return value[0]['generated_text']
     except Exception as e:
         logger.error("Error while creating image description: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
         return ""
 
 
@@ -100,6 +101,7 @@ def _load_img2img_model(model=config.get_model(), use_cached_model=True):
         return pipeline
     except Exception as e:
         logger.error("Pipeline could not be created. Error in load_model: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
         raise Exception(message="Error while loading the model.\nSee logfile for details.")
 
 
@@ -117,6 +119,7 @@ def change_text2img_model(model):
             raise Exception("Pipeline is none")
     except Exception as e:
         logger.error("Error while changing text2img model: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
         raise (f"Loading new img2img model '{model}' failed", e)
 
 
@@ -157,4 +160,5 @@ def generate_image(image: Image, prompt: str, negative_prompt: str = "", strengt
 
     except RuntimeError as e:
         logger.error("RuntimeError: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
         raise Exception(message="Error while creating the image. More details in log.")

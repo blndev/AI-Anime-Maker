@@ -30,6 +30,7 @@ class FaceAnalyzer:
             logger.debug("FaceAnalyzer ONNX initialization done")
         except Exception as e:
             logger.error("Error while initializing FaceAnalyzer: %s", str(e))
+            logger.debug("Exception details:", exc_info=True)
 
     def _run_classifier(self, classifier, face_only_image):
         image = cv2.cvtColor(face_only_image, cv2.COLOR_BGR2RGB)
@@ -115,4 +116,5 @@ class FaceAnalyzer:
             logger.debug("Detected Age and Gender: %s", retVal)
         except Exception as e:
             logger.error("Error while detecting face: %s", str(e))
+            logger.debug("Exception details:", exc_info=True)
         return retVal

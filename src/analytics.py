@@ -22,6 +22,7 @@ def _load_geo_db():
         _ip_geo_reader = geoip2.database.Reader(db)
     except Exception as e:
         logger.error("Error while loading geo ip database: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
 
 def _create_tables():
 
@@ -76,6 +77,7 @@ def _create_tables():
                 connection.commit()
     except sqlite3.Error as e:
         logger.error("Error while creating tables: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
 
 def _write_thread_save_to_db(query, data):
     """as we running multi threaded we need to avoid conflicts on the database"""
@@ -90,6 +92,7 @@ def _write_thread_save_to_db(query, data):
                 connection.commit()
     except sqlite3.Error as e:
         logger.error("Error while saving session info: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
 
 def start():
     """this will open or create the database if analytics is enable"""
@@ -102,6 +105,7 @@ def start():
         logger.info("Analytics database ready")
     except Exception as e:
         logger.error("Error during analytics startup: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
 
 
 def stop():
@@ -119,6 +123,7 @@ def save_session(session, ip, user_agent, languages):
             languages = languages[0].split(";")[0].strip()
         except Exception as e:
             logger.debug("Failed to split languages: %s", str(e))
+            logger.debug("Exception details:", exc_info=True)
     
     continent = "n.a."
     country = "n.a."
@@ -132,6 +137,7 @@ def save_session(session, ip, user_agent, languages):
                 city = ipinfo.city.name
         except Exception as e:
             logger.debug("Failed to determine country and city: %s", str(e))
+            logger.debug("Exception details:", exc_info=True)
 
     query = """
     insert or ignore into tblSessions 

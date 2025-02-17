@@ -194,6 +194,9 @@ This is useful for updating the app including app.config without affecting you l
 Interesting settings for dev environments are:
 * [General][debug] (true/false) - enable model selection and more output
 * [GenAI][skip] (true/false) - skip the GenAI part (used for UI Development)
+
+Command line options:
+* `--debug` - Enable debug mode for detailed logging output (alternative to setting debug=true in config)
   
 Happy coding! 💻
 

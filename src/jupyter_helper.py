@@ -39,6 +39,7 @@ def showBar(df: pd.DataFrame, title: str, x_column: str, y_column: str = "Sessio
             plt.show()
     except Exception as e:
         logger.error("Error showing bar chart: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
 
 
 def showImage(path: str, name: str = ""):

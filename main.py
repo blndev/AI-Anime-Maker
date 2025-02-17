@@ -1,11 +1,24 @@
-# this must be the first import
-import src.config as config
+import argparse
 import logging
+import src.config as config
 from src.logging_config import setup_logging
 
-# Initialize logging first
+def parse_arguments():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description='AI Anime Maker')
+    parser.add_argument('--debug', action='store_true', help='Enable debug mode')
+    return parser.parse_args()
+
+# Parse arguments first
+args = parse_arguments()
+
+# Set debug mode based on command line argument
+if args.debug:
+    config.DEBUG = True
+
+# Initialize logging with debug setting
 setup_logging()
-logger = logging.getLogger("app")
+logger = logging.getLogger("app.main")
 
 # Read configuration
 config.read_configuration()
@@ -14,6 +27,8 @@ from src.UI import create_gradio_interface
 import src.analytics as analytics
 import src.utils as utils
 import gradio as gr
+
+logger.debug("Starting application in debug mode" if config.DEBUG else "Starting application")
 
 
 if __name__ == "__main__":

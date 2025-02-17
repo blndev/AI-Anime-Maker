@@ -22,6 +22,7 @@ def get_all_local_models(model_folder: str, extension: str = ".safetensors"):
         logger.debug("Found safetensors files: %s", safetensors_files)
     except Exception as e:
         logger.error("Error listing safetensors files: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
     return safetensors_files
 
 
@@ -71,6 +72,7 @@ def save_image_as_file(image: Image.Image, dir: str):
         return hash
     except Exception as e:
         logger.error("Error while saving image to cache: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
         return None
 
 
@@ -98,6 +100,7 @@ def save_image_with_timestamp(image, folder_path, ignore_errors=False, reference
         return file_path
     except Exception as e:
         logger.error("Save image failed: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
         if not ignore_errors:
             raise e
 
