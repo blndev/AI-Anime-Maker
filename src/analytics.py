@@ -57,23 +57,29 @@ def _create_tables():
     );
     """
 
-    # # Table for permanent Input Image - Bans 
-    # create_table_blocked_source = """
-    # CREATE TABLE IF NOT EXISTS tblBlockedSource (
-    #     SHA1 TEXT NOT NULL PRIMARY KEY,
-    #     Reason TEXT,
-    #     Message TEXT
-    # );
-    # """
+    create_table_input = """
+    CREATE TABLE IF NOT EXISTS tblInput (
+        ID INTEGER PRIMARY KEY AUTOINCREMENT,
+        Timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        Session TEXT NOT NULL,
+        SHA1 TEXT NOT NULL,
+        CachePath TEXT,
+        Face BOOLEAN,
+        Gender INTEGER,
+        MinAge INTEGER,
+        MaxAge INTEGER,
+        Token TEXT
+    );
+    """
 
     try:
         lock = Lock()
         with lock:
             with sqlite3.connect(config.get_analytics_db_path()) as connection:
                 cursor = connection.cursor()
-                cursor.execute(create_table_generations)
                 cursor.execute(create_table_session)
-                #cursor.execute(create_table_blocked_source)
+                cursor.execute(create_table_generations)
+                cursor.execute(create_table_input)
                 connection.commit()
     except sqlite3.Error as e:
         logger.error("Error while creating tables: %s", str(e))
@@ -170,3 +176,25 @@ def save_generation_details(session, sha1, style, prompt, output_filename, isBlo
 
     # save all data now
     _write_thread_save_to_db(query, data)
+
+def save_input_image_details(session, sha1, cache_path_and_filename=None, face_detected: bool=False, gender: int=0, min_age=None, max_age=None, token=None):
+    # db_path: Pfad zur SQLite-Datenbankdatei
+
+    # Erstellen eines Datenobjekts (Dictionary), das die Parameter enthält
+    data = {
+        'Session': session,
+        'SHA1': sha1,
+        'CachePath': cache_path_and_filename,
+        'Face': 1 if face_detected else 0,
+        'Gender': gender,
+        'MinAge': min_age,
+        'MaxAge': max_age,
+        'Token': token
+    }
+
+    query = '''
+    INSERT OR IGNORE INTO tblInput (Timestamp, Session, SHA1, CachePath, Face, Gender, MinAge, MaxAge, Token)
+    VALUES (CURRENT_TIMESTAMP, :Session, :SHA1, :CachePath, :Face, :Gender, :MinAge, :MaxAge, :Token)
+    '''
+
+    _write_thread_save_to_db(query=query, data=data)

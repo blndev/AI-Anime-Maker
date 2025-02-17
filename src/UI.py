@@ -88,10 +88,11 @@ def action_handle_input_file(request: gr.Request, image, state_dict):
             logger.error("Error for analytics: %s", str(e))
             logger.debug("Exception details:", exc_info=True)
 
+    input_file_path = ""
     if config.is_cache_enabled():
         dir = config.get_cache_folder()
         dir = os.path.join(dir, datetime.now().strftime("%Y%m%d"))
-        utils.save_image_as_file(image, dir)
+        input_file_path = utils.save_image_as_file(image, dir)
 
     image_description = ""
     try:
@@ -117,6 +118,11 @@ def action_handle_input_file(request: gr.Request, image, state_dict):
                 #if the services is running for weeks wtith hundred of users, then it make sense to remove also other entries
                 #FIXME: itterate over list and remove all old entries at once to free memory
         
+        face_detected = False
+        min_age = 0
+        max_age = 0
+        gender = -1
+
         if not skip_token:
             session_image_hashes[image_sha1]=datetime.now()+timedelta(minutes=config.get_token_time_lock_for_new_image())
             detected_faces = []
@@ -128,6 +134,7 @@ def action_handle_input_file(request: gr.Request, image, state_dict):
             
             new_token = config.get_token_for_new_image()
             if len(detected_faces)>0:
+                face_detected = True
                 #we have minimum one face
                 logger.debug("Bonus: face")
                 face_bonus = config.get_token_bonus_for_face()
@@ -139,11 +146,18 @@ def action_handle_input_file(request: gr.Request, image, state_dict):
                 token_for_cuteness = config.get_token_bonus_for_cuteness()
                 token_for_smiling = config.get_token_bonus_for_smile() 
                 for face in detected_faces:
+                    #just save the jungest and oldest if we have multiple faces
+                    min_age = face["minAge"] if face["minAge"]<min_age or min_age == 0 else min_age
+                    max_age = face["maxAge"] if face["maxAge"]>max_age or max_age == 0 else max_age
                     if face["isFemale"]: # until we can recognize smiles
+                        gender = 1 if gender == -1 else 2
                         logger.debug("Bonus: smiling")
                         new_token+=token_for_smiling
                         gr.Info(f"{token_for_smiling} special Bonus token added!")
-                    
+                    else:
+                        # mal, 1 female, 2 both
+                        gender = 0 if gender == -1 else 2
+
                     if token_for_cuteness>0 and (face["maxAge"]<20 or face["minAge"]>60):
                         logger.debug("Bonus: cuteness")
                         new_token+=token_for_cuteness
@@ -152,7 +166,16 @@ def action_handle_input_file(request: gr.Request, image, state_dict):
             
             gr.Info(f"Total new Token: {new_token}")
             app_state.token += new_token
-
+    analytics.save_input_image_details(
+        session=app_state.session, 
+        sha1=image_sha1, 
+        token=new_token,
+        cache_path_and_filename=input_file_path, 
+        face_detected=face_detected,
+        min_age=min_age,
+        max_age=max_age,
+        gender=gender
+        )
     start_enabled = True if not config.is_feature_generation_with_token_enabled() else bool(app_state.token>0)
     return wrap_handle_input_response(app_state, start_enabled, image_description)
 
