@@ -69,9 +69,11 @@ def action_handle_input_file(request: gr.Request, image, state_dict):
     global session_image_hashes
     app_state = AppState.from_dict(state_dict)
     # deactivate the start button on error
-    if image is None: return [gr.update(interactive=False), gr.update(value=""), app_state.to_dict(), gr.update(visible=False)]
+    if image is None: 
+        return wrap_handle_input_response(app_state, False, "")
     # API Users don't have a request (by documentation)
-    if not request: return
+    if not request: 
+        return wrap_handle_input_response(app_state, False, "")
 
     if config.is_analytics_enabled():
         try:
@@ -151,9 +153,8 @@ def action_handle_input_file(request: gr.Request, image, state_dict):
             gr.Info(f"Total new Token: {new_token}")
             app_state.token += new_token
 
-    #outputs=[start_button, text_description, token_count,row_description,token_counter], 
     start_enabled = True if not config.is_feature_generation_with_token_enabled() else bool(app_state.token>0)
-    return [gr.update(interactive=start_enabled), image_description, app_state.to_dict(), gr.update(visible=True), app_state.token]
+    return wrap_handle_input_response(app_state, start_enabled, image_description)
 
 def action_describe_image(image):
     """describe an image for better inpaint results."""
@@ -184,14 +185,14 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
     try:
         if config.is_feature_generation_with_token_enabled() and app_state.token<=0:
             gr.Warning("You have not enough token to start a generation. Upload a new image for new token!")
-            return image, app_state.to_dict(), gr.update(interactive=False)
+            return wrap_generate_image_response(app_state, image)
         if image is None: 
             gr.Error("Start of Generation without image!")
-            return None, app_state.to_dict(), gr.update(interactive=False)
+            return wrap_generate_image_response(app_state, None)
         # API Users don't have a request object (by documentation)
         if request is None: 
             logger.warning("No request object. API usage?")
-            return None,"API forbidden"
+            return wrap_generate_image_response(app_state, None)
 
         logger.debug("Starting image generation")
         if image_description == None or image_description == "": image_description = AI.describe_image(image)
@@ -253,16 +254,52 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
                 )
         app_state.token -= 1
         if app_state.token <= 0: gr.Warning("You running out of Token.\n\nUpload a new image to continue.")
-        return result_image, app_state.to_dict(), gr.update(interactive=bool(app_state.token>0)), app_state.token
+        return wrap_generate_image_response(app_state, result_image)
     except RuntimeError as e:
         logger.error("RuntimeError: %s", str(e))
         logger.debug("Exception details:", exc_info=True)
         gr.Error(e)
-        return None, app_state.to_dict(), gr.update(interactive=bool(app_state.token>0)), app_state.token
+        return wrap_generate_image_response(app_state, None)
 
 #--------------------------------------------------------------
 # Gradio - Render UI
 #--------------------------------------------------------------
+def wrap_handle_input_response(app_state: AppState, start_enabled: bool, image_description: str) -> list:
+    """Create a consistent response format for handle_input_file action.
+    
+    Args:
+        app_state: The current AppState object
+        start_enabled: Whether the start button should be enabled
+        image_description: The generated image description
+        
+    Returns:
+        List of values in the order: [start_button, text_description, local_storage, area_description, token_counter]
+    """
+    return [
+        gr.update(interactive=start_enabled),
+        image_description,
+        app_state.to_dict(),
+        gr.update(visible=True),
+        app_state.token
+    ]
+
+def wrap_generate_image_response(app_state: AppState, result_image: any) -> list:
+    """Create a consistent response format for generate_image action.
+    
+    Args:
+        app_state: The current AppState object
+        result_image: The generated image result
+        
+    Returns:
+        List of values in the order: [output_image, local_storage, start_button, token_counter]
+    """
+    return [
+        result_image,
+        app_state.to_dict(),
+        gr.update(interactive=bool(app_state.token>0)),
+        app_state.token
+    ]
+
 def create_gradio_interface():
     global style_details
     with gr.Blocks(
@@ -346,6 +383,7 @@ def create_gradio_interface():
         )
 
         # Save input image immediately on change
+        # adapt wrap_handle_input_response if you change output params
         image_input.change(
             fn=action_handle_input_file,
             inputs=[image_input, local_storage],
@@ -362,7 +400,7 @@ def create_gradio_interface():
             concurrency_id="describe"
         )
 
-
+        # adapt wrap_generate_image_response if you change output parameters
         start_button.click(
             fn=action_generate_image,
             inputs=[image_input, style_dropdown, strength_slider, steps_slider, text_description, local_storage],

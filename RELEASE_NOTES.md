@@ -10,6 +10,7 @@
 - Enhanced error logging with detailed stack traces in debug mode
 - Standardized logging format across all modules
 - Replaced print statements with proper logging levels
+- Added wrapper functions for UI actions to improve code maintainability and reliability
 
 ## Version 1.1 - 2024-02-17
 
