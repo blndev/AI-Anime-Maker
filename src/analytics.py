@@ -174,24 +174,27 @@ def save_session(session: str, ip: str, user_agent: str, languages: str = None) 
                 logger.debug("Failed to determine country and city: %s", str(e))
                 logger.debug("Exception details:", exc_info=True)
 
-        query = """
-        insert or ignore into tblSessions 
-        (Timestamp, Session, 
-        OS, Browser, IsMobile,
-        Language, UserAgent,
-        Continent, Country, City)
-        values (
-            datetime('now'),?,
-            ?,?,?,
-            ?,?,
-            ?,?,?)
-        """
         ua = parse_user_agent(user_agent)
-        isMobile = 1 if ua.is_mobile or ua.is_tablet else 0
-        data = (session,
-                ua.os.family, ua.browser.family, isMobile, 
-                languages, user_agent,  
-                continent, country, city)
+        data = {
+            'Session': session,
+            'OS': ua.os.family,
+            'Browser': ua.browser.family,
+            'IsMobile': 1 if ua.is_mobile or ua.is_tablet else 0,
+            'Language': languages,
+            'UserAgent': user_agent,
+            'Continent': continent,
+            'Country': country,
+            'City': city
+        }
+
+        query = """
+        INSERT OR IGNORE INTO tblSessions 
+        (Timestamp, Session, OS, Browser, IsMobile, Language, UserAgent, Continent, Country, City)
+        VALUES (
+            datetime('now'), 
+            :Session, :OS, :Browser, :IsMobile, :Language, :UserAgent, :Continent, :Country, :City
+        )
+        """
         
         return _write_thread_save_to_db(query, data)
     except Exception as e:
@@ -219,12 +222,23 @@ def save_generation_details(session: str, sha1: str, style: str, prompt: str,
     if not config.is_analytics_enabled: return True
     
     try:
+        data = {
+            'Session': session,
+            'SHA1': sha1,
+            'Style': style,
+            'Prompt': prompt,
+            'Output': output_filename,
+            'IsBlocked': isBlocked,
+            'BlockReason': block_reason
+        }
+
         query = """
-        insert or ignore into tblGenerations 
+        INSERT OR IGNORE INTO tblGenerations 
         (Session, Timestamp, Input_SHA1, Style, Userprompt, Output, IsBlocked, BlockReason) 
-        values (?, datetime('now'), ?, ?, ?, ?, ?, ?)
+        VALUES (
+            :Session, datetime('now'), :SHA1, :Style, :Prompt, :Output, :IsBlocked, :BlockReason
+        )
         """
-        data = (session, sha1, style, prompt, output_filename, isBlocked, block_reason)
         return _write_thread_save_to_db(query, data)
     except Exception as e:
         logger.error("Failed to save generation details: %s", str(e))
