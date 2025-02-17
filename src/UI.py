@@ -98,6 +98,7 @@ def action_handle_input_file(request: gr.Request, image, state_dict):
         return wrap_handle_input_response(app_state, False, "")
 
     input_file_path = ""
+    image_sha1 = sha1(image.tobytes()).hexdigest()
     if config.is_cache_enabled():
         dir = config.get_cache_folder()
         dir = os.path.join(dir, datetime.now().strftime("%Y%m%d"))
@@ -111,9 +112,15 @@ def action_handle_input_file(request: gr.Request, image, state_dict):
         logger.debug("Exception details:", exc_info=True)
         gr.Warning("Could not create a proper description, please describe your image shortly")
 
+    # variables used for analytics if enabled
+    face_detected = False
+    min_age = 0
+    max_age = 0
+    gender = -1
+    new_token = 0 
+
     if config.is_feature_generation_with_token_enabled():
         #check that the image was not already used in this session
-        image_sha1 = sha1(image.tobytes()).hexdigest()
         skip_token = False
         if image_sha1 in session_image_hashes.keys():
             # check if the image is locked
@@ -126,11 +133,6 @@ def action_handle_input_file(request: gr.Request, image, state_dict):
                 del session_image_hashes[image_sha1]
                 #if the services is running for weeks wtith hundred of users, then it make sense to remove also other entries
                 #FIXME: itterate over list and remove all old entries at once to free memory
-        
-        face_detected = False
-        min_age = 0
-        max_age = 0
-        gender = -1
 
         if not skip_token:
             session_image_hashes[image_sha1]=datetime.now()+timedelta(minutes=config.get_token_time_lock_for_new_image())
@@ -175,6 +177,7 @@ def action_handle_input_file(request: gr.Request, image, state_dict):
             
             gr.Info(f"Total new Token: {new_token}")
             app_state.token += new_token
+    
     analytics.save_input_image_details(
         session=app_state.session, 
         sha1=image_sha1, 
