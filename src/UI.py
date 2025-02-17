@@ -151,9 +151,9 @@ def action_handle_input_file(request: gr.Request, image, state_dict):
             gr.Info(f"Total new Token: {new_token}")
             app_state.token += new_token
 
-    #outputs=[start_button, text_description, token_count,row_description], 
+    #outputs=[start_button, text_description, token_count,row_description,token_counter], 
     start_enabled = True if not config.is_feature_generation_with_token_enabled() else bool(app_state.token>0)
-    return [gr.update(interactive=start_enabled), image_description, app_state.to_dict(), gr.update(visible=True)]
+    return [gr.update(interactive=start_enabled), image_description, app_state.to_dict(), gr.update(visible=True), app_state.token]
 
 def action_describe_image(image):
     """describe an image for better inpaint results."""
@@ -253,12 +253,12 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
                 )
         app_state.token -= 1
         if app_state.token <= 0: gr.Warning("You running out of Token.\n\nUpload a new image to continue.")
-        return result_image, app_state.to_dict(), gr.update(interactive=bool(app_state.token>0))
+        return result_image, app_state.to_dict(), gr.update(interactive=bool(app_state.token>0)), app_state.token
     except RuntimeError as e:
         logger.error("RuntimeError: %s", str(e))
         logger.debug("Exception details:", exc_info=True)
         gr.Error(e)
-        return None, app_state.to_dict(), gr.update(interactive=bool(app_state.token>0))
+        return None, app_state.to_dict(), gr.update(interactive=bool(app_state.token>0)), app_state.token
 
 #--------------------------------------------------------------
 # Gradio - Render UI
@@ -339,15 +339,9 @@ def create_gradio_interface():
                 logger.debug("Session ID: %s", app_state.session)
             return app_state.token
 
-        @gr.on([token_counter.change], inputs=[token_counter, local_storage], outputs=[local_storage])
-        def save_to_local_storage(token: int, state_dict):
-            app_state = AppState.from_dict(state_dict)
-            app_state.token = token
-            return app_state.to_dict()
-    
         token_counter.change(
-            inputs=token_counter,
-            outputs=token_label,
+            inputs=[token_counter],
+            outputs=[token_label],
             fn=helper_display_token
         )
 
@@ -355,7 +349,7 @@ def create_gradio_interface():
         image_input.change(
             fn=action_handle_input_file,
             inputs=[image_input, local_storage],
-            outputs=[start_button, text_description, local_storage, area_description], 
+            outputs=[start_button, text_description, local_storage, area_description, token_counter], 
             concurrency_limit=None,
             concurrency_id="new_image"
         )
@@ -372,7 +366,7 @@ def create_gradio_interface():
         start_button.click(
             fn=action_generate_image,
             inputs=[image_input, style_dropdown, strength_slider, steps_slider, text_description, local_storage],
-            outputs=[output_image, local_storage, start_button],
+            outputs=[output_image, local_storage, start_button, token_counter],
             concurrency_limit=config.GenAI_get_execution_batch_size(),
             batch=False,
             max_batch_size=config.GenAI_get_execution_batch_size(),
