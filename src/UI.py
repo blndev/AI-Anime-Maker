@@ -17,7 +17,11 @@ import src.AI as AI
 class AppState:
     """State object for storing application data in browser."""
     token: int = 0
-    session: str = "str(uuid.uuid4())"  # Generate a new UUID4 for each instance
+    session: str = str(uuid.uuid4())  # Generate a new UUID4 for each instance
+
+    def __str__(self) -> str:
+        """String representation for logging."""
+        return f"AppState(token={self.token}, session={self.session})"
 
     def to_dict(self) -> dict:
         """Convert AppState to dictionary for serialization."""
@@ -60,11 +64,12 @@ def action_update_all_local_models():
     return gr.update(choices=utils.get_all_local_models(config.get_model_folder()))
 
 session_image_hashes = {}
-def action_handle_input_file(request: gr.Request, image, token_count):
+def action_handle_input_file(request: gr.Request, image, state_dict):
     """Analyze the Image, Handle Session Info, Save the input image in a cache if enabled, count token."""
     global session_image_hashes
+    app_state = AppState.from_dict(state_dict)
     # deactivate the start button on error
-    if image is None: return [gr.update(interactive=False), gr.update(value=""), token_count, gr.update(visible=False)]
+    if image is None: return [gr.update(interactive=False), gr.update(value=""), app_state.to_dict(), gr.update(visible=False)]
     # API Users don't have a request (by documentation)
     if not request: return
 
@@ -144,11 +149,11 @@ def action_handle_input_file(request: gr.Request, image, token_count):
                         token_for_cuteness = 0 #allow bonus only once per upload
             
             gr.Info(f"Total new Token: {new_token}")
-            token_count+=new_token
+            app_state.token += new_token
 
     #outputs=[start_button, text_description, token_count,row_description], 
-    start_enabled = True if not config.is_feature_generation_with_token_enabled() else bool(token_count>0)
-    return [gr.update(interactive=start_enabled), image_description, token_count, gr.update(visible=True)]
+    start_enabled = True if not config.is_feature_generation_with_token_enabled() else bool(app_state.token>0)
+    return [gr.update(interactive=start_enabled), image_description, app_state.to_dict(), gr.update(visible=True)]
 
 def action_describe_image(image):
     """describe an image for better inpaint results."""
@@ -168,20 +173,21 @@ def action_reload_model(model):
     except Exception as e:
         gr.Error(message=e.message)
 
-def action_generate_image(request: gr.Request, image, style, strength, steps, image_description, token_count):
+def action_generate_image(request: gr.Request, image, style, strength, steps, image_description, state_dict):
     """Convert the entire input image to the selected style."""
     global style_details
+    app_state = AppState.from_dict(state_dict)
     #setting token always to 10 if the feature is disabled saved a lot of "if feature enabled .." statements
-    if token_count == None: token_count = 0 
-    if not config.is_feature_generation_with_token_enabled(): token_count = 10
+    if app_state.token == None: app_state.token = 0 
+    if not config.is_feature_generation_with_token_enabled(): app_state.token = 10
 
     try:
-        if config.is_feature_generation_with_token_enabled() and token_count<=0:
+        if config.is_feature_generation_with_token_enabled() and app_state.token<=0:
             gr.Warning("You have not enough token to start a generation. Upload a new image for new token!")
-            return image, token_count, gr.update(interactive=False)
+            return image, app_state.to_dict(), gr.update(interactive=False)
         if image is None: 
             gr.Error("Start of Generation without image!")
-            return None, token_count, gr.update(interactive=False)
+            return None, app_state.to_dict(), gr.update(interactive=False)
         # API Users don't have a request object (by documentation)
         if request is None: 
             logger.warning("No request object. API usage?")
@@ -245,14 +251,14 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
                 prompt=image_description,
                 output_filename=fn
                 )
-        token_count-=1
-        if token_count<=0: gr.Warning("You running out of Token.\n\nUpload a new image to continue.")
-        return result_image, token_count, gr.update(interactive=bool(token_count>0))
+        app_state.token -= 1
+        if app_state.token <= 0: gr.Warning("You running out of Token.\n\nUpload a new image to continue.")
+        return result_image, app_state.to_dict(), gr.update(interactive=bool(app_state.token>0))
     except RuntimeError as e:
         logger.error("RuntimeError: %s", str(e))
         logger.debug("Exception details:", exc_info=True)
         gr.Error(e)
-        return None, token_count, gr.update(interactive=bool(token_count>0))
+        return None, app_state.to_dict(), gr.update(interactive=bool(app_state.token>0))
 
 #--------------------------------------------------------------
 # Gradio - Render UI
@@ -348,8 +354,8 @@ def create_gradio_interface():
         # Save input image immediately on change
         image_input.change(
             fn=action_handle_input_file,
-            inputs=[image_input, token_counter],
-            outputs=[start_button, text_description, token_counter, area_description], 
+            inputs=[image_input, local_storage],
+            outputs=[start_button, text_description, local_storage, area_description], 
             concurrency_limit=None,
             concurrency_id="new_image"
         )
@@ -365,8 +371,8 @@ def create_gradio_interface():
 
         start_button.click(
             fn=action_generate_image,
-            inputs=[image_input, style_dropdown, strength_slider, steps_slider, text_description, token_counter],
-            outputs=[output_image, token_counter, start_button],
+            inputs=[image_input, style_dropdown, strength_slider, steps_slider, text_description, local_storage],
+            outputs=[output_image, local_storage, start_button],
             concurrency_limit=config.GenAI_get_execution_batch_size(),
             batch=False,
             max_batch_size=config.GenAI_get_execution_batch_size(),
