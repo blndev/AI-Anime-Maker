@@ -99,7 +99,7 @@ def action_handle_input_file(request: gr.Request, image, state_dict):
     except Exception as e:
         logger.error("Error creating image description: %s", str(e))
         logger.debug("Exception details:", exc_info=True)
-        gr.warning("Could not create a proper description, please describe your image shortly")
+        gr.Warning("Could not create a proper description, please describe your image shortly")
 
     if config.is_feature_generation_with_token_enabled():
         #check that the image was not already used in this session

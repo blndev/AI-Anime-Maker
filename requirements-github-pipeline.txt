@@ -6,3 +6,4 @@ user-agents     # to parse user agents and split into
 Pillow          # PIL images
 colorlog        # Colored logging output
 gradio          # ui
+numpy           # Required for test image creation in unit tests
