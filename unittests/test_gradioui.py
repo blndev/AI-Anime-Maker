@@ -1,7 +1,13 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import gradio as gr
-from src.UI import AppState, wrap_handle_input_response, wrap_generate_image_response, action_handle_input_file
+from src.UI import (
+    AppState,
+    wrap_handle_input_response,
+    wrap_generate_image_response,
+    action_handle_input_file,
+    action_generate_image
+)
 from PIL import Image
 import numpy as np
 import src.config as config
@@ -76,6 +82,8 @@ class TestGradioUI(unittest.TestCase):
 class TestActionHandleInputFile(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures before each test method."""
+        from src.UI import session_image_hashes
+        session_image_hashes.clear()  # Clear shared state
         self.app_state = AppState(token=5)
         self.test_image = Image.fromarray(np.zeros((100, 100, 3), dtype=np.uint8))
         self.mock_request = MagicMock()
@@ -85,6 +93,11 @@ class TestActionHandleInputFile(unittest.TestCase):
             "user-agent": "test-browser",
             "accept-language": "en-US"
         }
+
+    def tearDown(self):
+        """Clean up after each test method."""
+        from src.UI import session_image_hashes
+        session_image_hashes.clear()  # Clear shared state
 
     @patch('src.UI.config')
     @patch('src.UI.analytics')
@@ -207,6 +220,230 @@ class TestActionHandleInputFile(unittest.TestCase):
         
         # Token count should increase on second upload since lock expired
         self.assertGreater(state_after_second.token, state_after_first.token)
+
+class TestActionGenerateImage(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        from src.UI import session_image_hashes
+        session_image_hashes.clear()  # Clear shared state
+        self.app_state = AppState(token=5)
+        self.test_image = Image.fromarray(np.zeros((100, 100, 3), dtype=np.uint8))
+        self.mock_request = MagicMock()
+        self.mock_request.client.host = "127.0.0.1"
+        self.style = "Anime Style"
+        self.strength = 0.75
+        self.steps = 20
+        self.image_description = "Test description"
+
+    def tearDown(self):
+        """Clean up after each test method."""
+        from src.UI import session_image_hashes
+        session_image_hashes.clear()  # Clear shared state
+
+    @patch('src.UI.config')
+    @patch('src.UI.analytics')
+    @patch('src.UI.AI')
+    def test_generate_image_tokens_disabled(self, mock_ai, mock_analytics, mock_config):
+        """Test image generation when tokens are disabled."""
+        # Configure all token-related mocks
+        mock_config.is_feature_generation_with_token_enabled.return_value = False
+        mock_config.SKIP_AI = False
+        mock_config.get_token_for_new_image.return_value = 0
+        mock_config.get_token_bonus_for_face.return_value = 0
+        mock_config.get_token_bonus_for_smile.return_value = 0
+        mock_config.get_token_bonus_for_cuteness.return_value = 0
+        mock_ai.generate_image.return_value = self.test_image
+        mock_ai.describe_image.return_value = self.image_description
+
+        response = action_generate_image(
+            self.mock_request,
+            self.test_image,
+            self.style,
+            self.strength,
+            self.steps,
+            self.image_description,
+            self.app_state.to_dict()
+        )
+
+        self.assertEqual(response[0], self.test_image)  # Result image
+        reconstructed_state = AppState.from_dict(response[1])
+        self.assertEqual(reconstructed_state.token, 9)  # Token is always set to 10 and decrement by one for each tunr if taken handling is disabled
+
+    @patch('src.UI.config')
+    @patch('src.UI.analytics')
+    @patch('src.UI.AI')
+    def test_generate_image_success(self, mock_ai, mock_analytics, mock_config):
+        """Test successful image generation."""
+        mock_config.is_feature_generation_with_token_enabled.return_value = True
+        mock_config.SKIP_AI = False
+        mock_ai.generate_image.return_value = self.test_image
+        mock_ai.describe_image.return_value = self.image_description
+
+        response = action_generate_image(
+            self.mock_request,
+            self.test_image,
+            self.style,
+            self.strength,
+            self.steps,
+            self.image_description,
+            self.app_state.to_dict()
+        )
+
+        self.assertEqual(response[0], self.test_image)  # Result image
+        reconstructed_state = AppState.from_dict(response[1])
+        self.assertEqual(reconstructed_state.token, self.app_state.token - 1)  # Token decremented
+
+    @patch('src.UI.config')
+    @patch('src.UI.analytics')
+    def test_generate_image_no_tokens(self, mock_analytics, mock_config):
+        """Test generation attempt with no tokens."""
+        mock_config.is_feature_generation_with_token_enabled.return_value = True
+        self.app_state.token = 0
+
+        response = action_generate_image(
+            self.mock_request,
+            self.test_image,
+            self.style,
+            self.strength,
+            self.steps,
+            self.image_description,
+            self.app_state.to_dict()
+        )
+
+        self.assertEqual(response[0], self.test_image)  # Original image returned
+        reconstructed_state = AppState.from_dict(response[1])
+        self.assertEqual(reconstructed_state.token, 0)  # Token remains 0
+
+    @patch('src.UI.config')
+    @patch('src.UI.analytics')
+    @patch('src.UI.AI')
+    def test_generate_image_no_description(self, mock_ai, mock_analytics, mock_config):
+        """Test generation with missing description."""
+        mock_config.is_feature_generation_with_token_enabled.return_value = True
+        mock_config.SKIP_AI = False
+        mock_ai.describe_image.return_value = "AI generated description"
+        mock_ai.generate_image.return_value = self.test_image
+
+        response = action_generate_image(
+            self.mock_request,
+            self.test_image,
+            self.style,
+            self.strength,
+            self.steps,
+            None,  # No description
+            self.app_state.to_dict()
+        )
+
+        mock_ai.describe_image.assert_called_once()
+        self.assertEqual(response[0], self.test_image)
+
+    @patch('src.UI.config')
+    @patch('src.UI.analytics')
+    @patch('src.UI.AI')
+    def test_generate_image_runtime_error(self, mock_ai, mock_analytics, mock_config):
+        """Test handling of runtime errors during generation."""
+        mock_config.is_feature_generation_with_token_enabled.return_value = True
+        mock_config.SKIP_AI = False
+        mock_ai.generate_image.side_effect = RuntimeError("Generation failed")
+
+        response = action_generate_image(
+            self.mock_request,
+            self.test_image,
+            self.style,
+            self.strength,
+            self.steps,
+            self.image_description,
+            self.app_state.to_dict()
+        )
+
+        self.assertIsNone(response[0])  # No image returned
+        reconstructed_state = AppState.from_dict(response[1])
+        self.assertEqual(reconstructed_state.token, self.app_state.token)  # Token not decremented on error
+
+    @patch('src.UI.config')
+    @patch('src.UI.analytics')
+    @patch('src.UI.utils')
+    def test_generate_image_skip_ai(self, mock_utils, mock_analytics, mock_config):
+        """Test image generation when AI is skipped."""
+        mock_config.is_feature_generation_with_token_enabled.return_value = True
+        mock_config.SKIP_AI = True
+        mock_utils.image_convert_to_sepia.return_value = self.test_image
+
+        response = action_generate_image(
+            self.mock_request,
+            self.test_image,
+            self.style,
+            self.strength,
+            self.steps,
+            self.image_description,
+            self.app_state.to_dict()
+        )
+
+        mock_utils.image_convert_to_sepia.assert_called_once()
+        self.assertEqual(response[0], self.test_image)
+
+    @patch('src.UI.config')
+    @patch('src.UI.analytics')
+    def test_generate_image_no_input_image(self, mock_analytics, mock_config):
+        """Test generation attempt with no input image."""
+        mock_config.is_feature_generation_with_token_enabled.return_value = True
+
+        response = action_generate_image(
+            self.mock_request,
+            None,  # No input image
+            self.style,
+            self.strength,
+            self.steps,
+            self.image_description,
+            self.app_state.to_dict()
+        )
+
+        self.assertIsNone(response[0])  # No result image
+        reconstructed_state = AppState.from_dict(response[1])
+        self.assertEqual(reconstructed_state.token, self.app_state.token)  # Token not decremented
+
+    @patch('src.UI.config')
+    @patch('src.UI.analytics')
+    def test_generate_image_no_request(self, mock_analytics, mock_config):
+        """Test generation attempt with no request object."""
+        mock_config.is_feature_generation_with_token_enabled.return_value = True
+
+        response = action_generate_image(
+            None,  # No request object
+            self.test_image,
+            self.style,
+            self.strength,
+            self.steps,
+            self.image_description,
+            self.app_state.to_dict()
+        )
+
+        self.assertIsNone(response[0])  # No result image
+        reconstructed_state = AppState.from_dict(response[1])
+        self.assertEqual(reconstructed_state.token, self.app_state.token)  # Token not decremented
+
+    @patch('src.UI.config')
+    @patch('src.UI.analytics')
+    @patch('src.UI.AI')
+    def test_generate_image_with_analytics(self, mock_ai, mock_analytics, mock_config):
+        """Test image generation with analytics enabled."""
+        mock_config.is_feature_generation_with_token_enabled.return_value = True
+        mock_config.is_analytics_enabled.return_value = True
+        mock_config.SKIP_AI = False
+        mock_ai.generate_image.return_value = self.test_image
+
+        response = action_generate_image(
+            self.mock_request,
+            self.test_image,
+            self.style,
+            self.strength,
+            self.steps,
+            self.image_description,
+            self.app_state.to_dict()
+        )
+
+        mock_analytics.save_generation_details.assert_called_once()
+        self.assertEqual(response[0], self.test_image)
 
 if __name__ == '__main__':
     unittest.main()

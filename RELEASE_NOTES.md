@@ -17,6 +17,12 @@
   - Image input handling with various scenarios
   - Token generation and analytics integration
   - Image hash caching and token lock mechanisms
+  - Image generation with AI and fallback scenarios
+  - Error handling and token management during generation
+  - Edge cases (missing images, requests, descriptions)
+  - Token management scenarios (enabled/disabled, validation)
+  - Test isolation improvements for shared state
+  - Comprehensive mocking of token-related functions
 
 ## Version 1.1 - 2024-02-17
 
