@@ -59,6 +59,28 @@ else:
 style_details = {}
 
 
+def action_session_initialized(request: gr.Request, state_dict: dict) -> None:
+    """Initialize analytics session when app loads.
+    
+    Args:
+        request (gr.Request): The Gradio request object containing client information
+        state_dict (dict): The current application state dictionary
+    """
+    if not config.is_analytics_enabled() or not request:
+        return
+
+    app_state = AppState.from_dict(state_dict)
+    try:
+        analytics.save_session(
+            session=app_state.session, 
+            ip=request.client.host,
+            user_agent=request.headers["user-agent"], 
+            languages=request.headers["accept-language"])
+        logger.info("Session initialized for: %s", request.client.host)
+    except Exception as e:
+        logger.error("Error initializing analytics session: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
+
 def action_update_all_local_models():
     """updates the list of available models in the ui"""
     return gr.update(choices=utils.get_all_local_models(config.get_model_folder()))
@@ -74,19 +96,6 @@ def action_handle_input_file(request: gr.Request, image, state_dict):
     # API Users don't have a request (by documentation)
     if not request: 
         return wrap_handle_input_response(app_state, False, "")
-
-    if config.is_analytics_enabled():
-        try:
-            analytics.save_session(
-                session=app_state.session, 
-                ip=request.client.host,
-                user_agent=request.headers["user-agent"], 
-                languages=request.headers["accept-language"])
-            if config.DEBUG:
-                logger.debug("New image uploaded from: %s", request.client.host)
-        except Exception as e:
-            logger.error("Error for analytics: %s", str(e))
-            logger.debug("Exception details:", exc_info=True)
 
     input_file_path = ""
     if config.is_cache_enabled():
@@ -392,7 +401,11 @@ def create_gradio_interface():
             return f"Current Token: {token}"
         
         @app.load(inputs=[local_storage], outputs=[token_counter])
-        def load_from_local_storage(state_dict):
+        def load_from_local_storage(request: gr.Request, state_dict):
+            # Initialize session when app loads
+            action_session_initialized(request=request, state_dict=state_dict)
+            
+            # Restore token from local storage
             app_state = AppState.from_dict(state_dict)
             if config.is_feature_generation_with_token_enabled(): 
                 logger.debug("Restoring token from local storage: %s", app_state.token)
