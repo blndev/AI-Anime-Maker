@@ -4,7 +4,11 @@ from datetime import datetime   # for timestamp
 import numpy as np              # for image manipulation e.g. sepia
 from PIL import Image           # for image handling
 from hashlib import sha1        # generate image hash
+import logging
 from src import config          # for debug check
+
+# Set up module logger
+logger = logging.getLogger(__name__)
 
 def get_all_local_models(model_folder: str, extension: str = ".safetensors"):
     """read all local models to the system"""
@@ -15,16 +19,16 @@ def get_all_local_models(model_folder: str, extension: str = ".safetensors"):
                 if file.endswith(extension):
                     relative_path = "./" + os.path.relpath(os.path.join(root, file))
                     safetensors_files.append(relative_path)
-        print(safetensors_files)
+        logger.debug("Found safetensors files: %s", safetensors_files)
     except Exception as e:
-        print(e)
+        logger.error("Error listing safetensors files: %s", str(e))
     return safetensors_files
 
 
 def download_file_if_not_existing(url, local_path):
     # Check if the file already exists
     if not os.path.exists(local_path):
-        print(f"Downloading {local_path}... this can take some minutes")
+        logger.info("Downloading %s... this can take some minutes", local_path)
         response = requests.get(url)
         response.raise_for_status()  # Check for download errors
 
@@ -34,9 +38,9 @@ def download_file_if_not_existing(url, local_path):
         # Write the file to the specified path
         with open(local_path, 'wb') as file:
             file.write(response.content)
-        print(f"Downloaded {local_path} successfully.")
+        logger.info("Downloaded %s successfully", local_path)
     else:
-        print(f"File {local_path} already exists.")
+        logger.info("File %s already exists", local_path)
 
 
 def save_image_as_file(image: Image.Image, dir: str):
@@ -63,11 +67,10 @@ def save_image_as_file(image: Image.Image, dir: str):
         if not os.path.exists(file_path):
             image.save(file_path, format="JPEG")
 
-        if config.DEBUG:
-            print(f"Image saved to \"{file_path}\"")
+        logger.debug("Image saved to %s", file_path)
         return hash
     except Exception as e:
-        print(f"Error while saving image to cache:\n{e}")
+        logger.error("Error while saving image to cache: %s", str(e))
         return None
 
 
@@ -94,7 +97,7 @@ def save_image_with_timestamp(image, folder_path, ignore_errors=False, reference
         image.save(file_path)
         return file_path
     except Exception as e:
-        print(f"save image failed: {e}")
+        logger.error("Save image failed: %s", str(e))
         if not ignore_errors:
             raise e
 

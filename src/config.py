@@ -1,6 +1,8 @@
 
 from configparser import ConfigParser
 import os
+import logging
+from src.logging_config import setup_logging
 
 # property used from other areas like AI Module
 # can finally be configured in setting GenAI/skip (read while load fuinction)
@@ -9,6 +11,12 @@ import os
 SKIP_AI = os.getenv("SKIP_GENAI") == "1"
 SKIP_ONNX = os.getenv("SKIP_ONNX") == "1"
 DEBUG = False
+
+# Set up module logger
+logger = logging.getLogger(__name__)
+
+# Initialize logging
+setup_logging()
 
 
 # this variable is used from unittests to inject configuration values!
@@ -44,7 +52,7 @@ def read_configuration():
     global current_config, SKIP_AI, DEBUG
     try:
         # Read the INI file
-        print ("read configuration")
+        logger.info("Reading configuration")
         # here is the list of possible places where config file is expected
         # if multiple files exists, the lastet will override values of the others if
         # they define same settings
@@ -60,7 +68,7 @@ def read_configuration():
         DEBUG = get_boolean_config_value("General","debug", DEBUG)
         return current_config
     except Exception as e:
-        print (e)
+        logger.error("Failed to read configuration: %s", str(e))
         return None
 
 #-----------------------------------------------------------------
@@ -246,4 +254,3 @@ def get_modelfile_onnx_gender_googlenet():
     """The path and filename of the onnx model to determine gender"""
     mf = get_model_folder()
     return os.path.join(mf, 'onnx/gender_googlenet.onnx')
-

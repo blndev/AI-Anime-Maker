@@ -1,14 +1,18 @@
 import numpy as np              # for image manipulation e.g. sepia
 from PIL import Image, ImageOps # for image handling
+import logging
 import src.config as config
 import cv2                      # prepare images for face recognition
 import onnxruntime as ort       # for age and gender classification
 #import insightface              # face recognition
 from insightface.app import FaceAnalysis    # face boxes detection
 
+# Set up module logger
+logger = logging.getLogger(__name__)
+
 class FaceAnalyzer:
     def __init__(self):
-        print ("init")
+        logger.debug("Initializing FaceAnalyzer")
         #https://github.com/onnx/models/blob/main/validated/vision/body_analysis/emotion
         # _ferplus/model/emotion-ferplus-2.onnx
         # FIXME V3: we can have a switch here if GPU Memory >20GB(?) then onnx can run on GPU as well
@@ -16,13 +20,16 @@ class FaceAnalyzer:
         self.ctx_id = -1 #to save gpu memory
         #providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
         providers = ['CPUExecutionProvider']
-        #https://github.com/onnx/models/tree/main/validated/vision/body_analysis/age_gender
-        self.age_classifier = ort.InferenceSession(config.get_modelfile_onnx_age_googlenet(),  providers=providers)    #emotions
-        self.gender_classifier = ort.InferenceSession(config.get_modelfile_onnx_gender_googlenet(),  providers=providers)
+        try:
+            #https://github.com/onnx/models/tree/main/validated/vision/body_analysis/age_gender
+            self.age_classifier = ort.InferenceSession(config.get_modelfile_onnx_age_googlenet(),  providers=providers)    #emotions
+            self.gender_classifier = ort.InferenceSession(config.get_modelfile_onnx_gender_googlenet(),  providers=providers)
 
-        self.face_detector = FaceAnalysis(name="buffalo_sc", providers=providers)  # https://github.com/deepinsight/insightface/tree/master/model_zoo
-        self.face_detector.prepare(ctx_id=self.ctx_id, det_size=(512,512))
-        if config.DEBUG: print ("FaceAnalyzer ONNX initialization done")
+            self.face_detector = FaceAnalysis(name="buffalo_sc", providers=providers)  # https://github.com/deepinsight/insightface/tree/master/model_zoo
+            self.face_detector.prepare(ctx_id=self.ctx_id, det_size=(512,512))
+            logger.debug("FaceAnalyzer ONNX initialization done")
+        except Exception as e:
+            logger.error("Error while initializing FaceAnalyzer: %s", str(e))
 
     def _run_classifier(self, classifier, face_only_image):
         image = cv2.cvtColor(face_only_image, cv2.COLOR_BGR2RGB)
@@ -105,8 +112,7 @@ class FaceAnalyzer:
                     "gender": gender_name,
                     "smiling": False
                 })
-            if config.DEBUG:
-                print("Detected Age and Gender: ", retVal)
+            logger.debug("Detected Age and Gender: %s", retVal)
         except Exception as e:
-            print (f"Error while decting face: {e}")
+            logger.error("Error while detecting face: %s", str(e))
         return retVal
