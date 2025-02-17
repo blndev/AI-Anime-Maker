@@ -4,13 +4,17 @@ import matplotlib.image as mpimg  # images
 import seaborn as sns           # Heatmaps etc.
 from user_agents import parse   # Split OS. Browser etc.
 import math  # calc sizes
+import logging
 import src.config as config
+
+# Set up module logger
+logger = logging.getLogger(__name__)
 
 
 def showBar(df: pd.DataFrame, title: str, x_column: str, y_column: str = "SessionCount", x_label: str = None, y_label: str = None, show_x_values=True):
     """generates a bar chart in Jupyter Notebook"""
     if len(df) == 0:
-        print("no data collected")
+        logger.info("No data collected")
         return
 
     try:
@@ -34,7 +38,8 @@ def showBar(df: pd.DataFrame, title: str, x_column: str, y_column: str = "Sessio
             plt.tight_layout()
             plt.show()
     except Exception as e:
-        print(e)
+        logger.error("Error showing bar chart: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
 
 
 def showImage(path: str, name: str = ""):
@@ -48,7 +53,7 @@ def showImage(path: str, name: str = ""):
 
 def showImageGrid(df: pd.DataFrame, path_column: str, name_column: str = None, descr_column: str = None):
     if len(df) == 0:
-        print("no data collected")
+        logger.info("No data collected")
         return
     n_cols = 3
     n_rows = math.ceil(len(df)/n_cols)

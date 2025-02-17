@@ -1,6 +1,10 @@
 from PIL import Image, ImageDraw
 from hashlib import sha1
+import logging
 import src.config as config
+
+# Set up module logger
+logger = logging.getLogger(__name__)
 device = "cpu"  # will be checked and set in main functions
 
 if not config.SKIP_AI:
@@ -10,7 +14,7 @@ if not config.SKIP_AI:
     from xformers.ops import MemoryEfficientAttentionFlashAttentionOp
     from diffusers import StableDiffusionPipeline, StableDiffusionImg2ImgPipeline
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print (f"running on {device}")
+    logger.info("Running on %s", device)
 
 
 
@@ -52,7 +56,8 @@ def describe_image(image):
         value = captioner(image)
         return value[0]['generated_text']
     except Exception as e:
-        print("Error while creating image description", e)
+        logger.error("Error while creating image description: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
         return ""
 
 
@@ -64,19 +69,16 @@ def _load_img2img_model(model=config.get_model(), use_cached_model=True):
     """Load and return the Stable Diffusion model to generate images"""
     global IMAGE_TO_IMAGE_PIPELINE
     if (IMAGE_TO_IMAGE_PIPELINE != None and use_cached_model):
-        if config.DEBUG:
-            print("using cached model")
+        logger.debug("Using cached model")
         return IMAGE_TO_IMAGE_PIPELINE
 
     try:
         # TODO V3: support SDXL or FLux
-        if config.DEBUG:
-            print(f"create pipeline for model {model}")
+        logger.debug("Creating pipeline for model %s", model)
 
         pipeline = None
         if model.endswith("safetensors"):
-            if config.DEBUG:
-                print("use 'from_single_file' to load model from local folder")
+            logger.debug("Using 'from_single_file' to load model from local folder")
             pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
                 model,
                 torch_dtype=torch.float16 if device == "cuda" else torch.float32,
@@ -85,29 +87,27 @@ def _load_img2img_model(model=config.get_model(), use_cached_model=True):
                 # revision="fp16" if device == "cuda" else "",
             )
         else:
-            if config.DEBUG:
-                print("use 'from_pretrained' option to load model from hugging face")
+            logger.debug("Using 'from_pretrained' option to load model from hugging face")
             pipeline = StableDiffusionImg2ImgPipeline.from_pretrained(
                 model,
                 torch_dtype=torch.float16 if device == "cuda" else torch.float32,
                 safety_checker=None, requires_safety_checker=False)
 
-        if config.DEBUG:
-            print(f"--> pipeline initiated")
+        logger.debug("Pipeline initiated")
         pipeline = pipeline.to(device)
         if device == "cuda":
             pipeline.enable_xformers_memory_efficient_attention()
-        if config.DEBUG:
-            print("--> pipeline created")
+        logger.debug("Pipeline created")
         return pipeline
     except Exception as e:
-        print(f"pipeline not be created. Error in load_model: {e}")
+        logger.error("Pipeline could not be created. Error in load_model: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
         raise Exception(message="Error while loading the model.\nSee logfile for details.")
 
 
 def change_text2img_model(model):
     global IMAGE_TO_IMAGE_PIPELINE
-    print(f"Reload model {model}")
+    logger.info("Reloading model %s", model)
     try:
         # TODO (low prio): check better ways to unload a model!
         IMAGE_TO_IMAGE_PIPELINE = None
@@ -118,7 +118,8 @@ def change_text2img_model(model):
         if IMAGE_TO_IMAGE_PIPELINE is None:
             raise Exception("Pipeline is none")
     except Exception as e:
-        print(f"Error while change_text2img_model: {e}")
+        logger.error("Error while changing text2img model: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
         raise (f"Loading new img2img model '{model}' failed", e)
 
 
@@ -129,13 +130,12 @@ def generate_image(image: Image, prompt: str, negative_prompt: str = "", strengt
             raise Exception("no image provided")
         # API Users don't have a request (by documentation)
 
-        if config.DEBUG:
-            print("start AI.generate_image")
+        logger.debug("Starting AI.generate_image")
 
         model = _load_img2img_model()
 
         if (not config.SKIP_AI and model == None):
-            print("error: no model loaded")
+            logger.error("No model loaded")
             raise Exception(message="No model loaded. Generation not available")
 
         max_size = config.get_max_size()
@@ -144,8 +144,7 @@ def generate_image(image: Image, prompt: str, negative_prompt: str = "", strengt
         # create a mask which covers the whole image
         mask = Image.new("L", image.size, 255)
 
-        if config.DEBUG:
-            print(f"Strength: {strength}, Steps: {steps}")
+        logger.debug("Strength: %f, Steps: %d", strength, steps)
 
         # Generate new picture
         result_image = model(
@@ -160,5 +159,6 @@ def generate_image(image: Image, prompt: str, negative_prompt: str = "", strengt
         return result_image
 
     except RuntimeError as e:
-        print(f"RuntimeError: {e}")
+        logger.error("RuntimeError: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
         raise Exception(message="Error while creating the image. More details in log.")

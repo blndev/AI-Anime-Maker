@@ -1,10 +1,14 @@
 import ipaddress
 import sqlite3          # as datastore
+import logging
 import src.config as config           # to get configuration values
 import geoip2.database  # for ip to city
 import os               # to check if files exists
 from threading import Lock  # write to DB must be thread save
 from user_agents import parse as parse_user_agent   # Split OS. Browser etc.
+
+# Set up module logger
+logger = logging.getLogger(__name__)
 
 # read only database for getting location from IP
 _ip_geo_reader = None
@@ -17,11 +21,12 @@ def _load_geo_db():
         if not os.path.exists(db): return
         _ip_geo_reader = geoip2.database.Reader(db)
     except Exception as e:
-        print ("Error while loading geo ip database", e)
+        logger.error("Error while loading geo ip database: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
 
 def _create_tables():
 
-    if config.DEBUG: print ("check or create analytics tables")
+    logger.debug("Checking or creating analytics tables")
     #every user creates a session, even if he is not creating any content
     create_table_session = """
     CREATE TABLE IF NOT EXISTS tblSessions (
@@ -71,12 +76,13 @@ def _create_tables():
                 #cursor.execute(create_table_blocked_source)
                 connection.commit()
     except sqlite3.Error as e:
-        print(f"Error while creating tables: {e}")
+        logger.error("Error while creating tables: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
 
 def _write_thread_save_to_db(query, data):
     """as we running multi threaded we need to avoid conflicts on the database"""
     # for bigger scaling usage suggestion is to use a dedicated database system
-    if config.DEBUG: print("write to db", query, data)
+    logger.debug("Writing to db - Query: %s, Data: %s", query, data)
     try:
         lock = Lock()
         with lock:
@@ -85,24 +91,26 @@ def _write_thread_save_to_db(query, data):
                 cursor.execute(query, data)
                 connection.commit()
     except sqlite3.Error as e:
-        print(f"Error while save session info {e}")
+        logger.error("Error while saving session info: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
 
 def start():
     """this will open or create the database if analytics is enable"""
     global _connection
     if not config.is_analytics_enabled: return
     try:
-        print("check analytics database...", end="")
+        logger.info("Checking analytics database...")
         _create_tables()
         _load_geo_db()
-        print("ready")
+        logger.info("Analytics database ready")
     except Exception as e:
-        print (e)
+        logger.error("Error during analytics startup: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
 
 
 def stop():
     if _ip_geo_reader!=None:
-        if config.DEBUG: print("closing analytics database")
+        logger.debug("Closing analytics database")
         _ip_geo_reader.close()
 
 def save_session(session, ip, user_agent, languages):
@@ -114,7 +122,8 @@ def save_session(session, ip, user_agent, languages):
             languages = languages.split(',')
             languages = languages[0].split(";")[0].strip()
         except Exception as e:
-            if config.DEBUG: print("split languages failed", e)
+            logger.debug("Failed to split languages: %s", str(e))
+            logger.debug("Exception details:", exc_info=True)
     
     continent = "n.a."
     country = "n.a."
@@ -127,7 +136,8 @@ def save_session(session, ip, user_agent, languages):
                 country = ipinfo.country.name
                 city = ipinfo.city.name
         except Exception as e:
-            if config.DEBUG: print("failed to determine country and city", e)
+            logger.debug("Failed to determine country and city: %s", str(e))
+            logger.debug("Exception details:", exc_info=True)
 
     query = """
     insert or ignore into tblSessions 
