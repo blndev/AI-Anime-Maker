@@ -78,7 +78,7 @@ def action_handle_input_file(request: gr.Request, image, state_dict):
     if config.is_analytics_enabled():
         try:
             analytics.save_session(
-                session=request.session_hash, 
+                session=app_state.session, 
                 ip=request.client.host,
                 user_agent=request.headers["user-agent"], 
                 languages=request.headers["accept-language"])
@@ -246,7 +246,7 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
 
         if config.is_analytics_enabled():
             analytics.save_generation_details(
-                request.session_hash,
+                app_state.session,
                 sha1=image_sha1,
                 style=style,
                 prompt=image_description,

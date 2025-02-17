@@ -11,6 +11,7 @@
 - Standardized logging format across all modules
 - Replaced print statements with proper logging levels
 - Added wrapper functions for UI actions to improve code maintainability and reliability
+- Improved session management using AppState instead of request sessions
 
 ## Version 1.1 - 2024-02-17
 
