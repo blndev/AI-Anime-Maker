@@ -117,7 +117,7 @@ def start() -> bool:
     Returns:
         bool: True if initialization was successful, False otherwise
     """
-    if not config.is_analytics_enabled: return True
+    if not config.is_analytics_enabled(): return True
     try:
         logger.info("Checking analytics database...")
         if not _create_tables():
@@ -148,7 +148,7 @@ def save_session(session: str, ip: str, user_agent: str, languages: str = None) 
     Returns:
         bool: True if the session was saved successfully, False otherwise
     """
-    if not config.is_analytics_enabled: return True
+    if not config.is_analytics_enabled(): return True
     
     try:
         if languages!=None: 
@@ -219,7 +219,7 @@ def save_generation_details(session: str, sha1: str, style: str, prompt: str,
     Returns:
         bool: True if the generation details were saved successfully, False otherwise
     """
-    if not config.is_analytics_enabled: return True
+    if not config.is_analytics_enabled(): return True
     
     try:
         data = {
@@ -264,7 +264,7 @@ def save_input_image_details(session: str, sha1: str, cache_path_and_filename: s
     Returns:
         bool: True if the input details were saved successfully, False otherwise
     """
-    if not config.is_analytics_enabled: return True
+    if not config.is_analytics_enabled(): return True
     
     try:
         data = {
