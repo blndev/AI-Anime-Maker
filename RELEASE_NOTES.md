@@ -12,6 +12,7 @@
 - Replaced print statements with proper logging levels
 - Added wrapper functions for UI actions to improve code maintainability and reliability
 - Improved session management using AppState instead of request sessions
+- Added unit tests for UI response wrappers to ensure consistent behavior
 
 ## Version 1.1 - 2024-02-17
 
