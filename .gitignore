@@ -16,7 +16,7 @@ analytics.db
 unittests/tmp/**
 .gradio
 local.config
-
+MagicMock/
 # Distribution / packaging
 .Python
 build/

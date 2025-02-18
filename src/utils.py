@@ -47,7 +47,7 @@ def download_file_if_not_existing(url, local_path):
 def save_image_as_file(image: Image.Image, dir: str):
     """
     saves a image as JPEG to the given directory and uses the SHA1 as filename
-    return value is the hash
+    return value is the full filename
     """
     try:
         if not os.path.exists(dir):
@@ -69,7 +69,7 @@ def save_image_as_file(image: Image.Image, dir: str):
             image.save(file_path, format="JPEG")
 
         logger.debug("Image saved to %s", file_path)
-        return hash
+        return file_path
     except Exception as e:
         logger.error("Error while saving image to cache: %s", str(e))
         logger.debug("Exception details:", exc_info=True)
