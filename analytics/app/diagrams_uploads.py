@@ -151,12 +151,13 @@ def create_top_generated_images_chart(df):
         hovertemplate="<br>".join([
             "SHA1: %{x}",
             "Generations: %{y}",
+            "Input ID: %{customdata[1]}",
             "Path: %{customdata[0]}",
-            "Token: %{customdata[1]}",
-            "Face: %{customdata[2]}",
-            "Gender: %{customdata[3]}"
+            "Token: %{customdata[2]}",
+            "Face: %{customdata[3]}",
+            "Gender: %{customdata[4]}"
         ]),
-        customdata=top_images_df[['CachePath', 'Token', 'Face', 'Gender']].values
+        customdata=top_images_df[['CachePath', 'ID', 'Token', 'Face', 'Gender']].values
     )
     
     # Update layout
