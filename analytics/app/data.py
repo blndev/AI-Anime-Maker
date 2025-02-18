@@ -136,17 +136,29 @@ def get_top_generated_images(df):
         SELECT 
             i.SHA1,
             i.CachePath,
+            i.Token,
+            i.Face,
+            i.Gender,
+            i.MinAge,
+            i.MaxAge,
+            i.Timestamp as UploadTime,
             COUNT(DISTINCT g.Id) as GenerationCount
         FROM tblInput i
         INNER JOIN tblGenerations g ON g.input_SHA1 = i.SHA1
         WHERE i.Session IN ({sessions_str})
-        GROUP BY i.SHA1, i.CachePath
+        GROUP BY i.SHA1, i.CachePath, i.Token, i.Face, i.Gender, i.MinAge, i.MaxAge, i.Timestamp
         HAVING GenerationCount > 0
         ORDER BY GenerationCount DESC
         LIMIT 10
     )
     SELECT 
         CachePath,
+        Token,
+        Face,
+        Gender,
+        MinAge,
+        MaxAge,
+        UploadTime,
         GenerationCount
     FROM ImageGenerations
     """

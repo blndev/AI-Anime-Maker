@@ -13,7 +13,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 import src.config as config
 
 # Import data and diagram modules
-from .data import get_session_data, get_top_uploaded_images
+from .data import get_session_data, get_top_uploaded_images, get_top_generated_images
 from .diagrams_usage import (
     create_sessions_timeline, create_os_chart, create_browser_chart,
     create_mobile_pie, create_generation_status_chart
@@ -225,10 +225,28 @@ app.layout = html.Div(style=LAYOUT_STYLE, children=[
                     html.Div(id='image-grid')
                 ]),
                 
-                # Top Generated Images Section
+                # Top Generated Images Section with Details
                 html.Div([
-                    html.H2("Most Generated From Images", style=HEADER_STYLE),
-                    dcc.Graph(id='top-generated-images-chart', figure=create_top_generated_images_chart(df))
+                    html.H2("Most Used for Generations", style=HEADER_STYLE),
+                    html.Div([
+                        # Left column: Chart
+                        html.Div([
+                            dcc.Graph(id='top-generated-images-chart', figure=create_top_generated_images_chart(df))
+                        ], style={'width': '50%', 'display': 'inline-block'}),
+                        
+                        # Right column: Details
+                        html.Div([
+                            html.H3("Image Details", style=HEADER_STYLE),
+                            html.Div(id='generation-image-details', children=[
+                                html.Div("Select an image to view details", style={
+                                    'color': '#95A5A6',
+                                    'fontStyle': 'italic',
+                                    'textAlign': 'center',
+                                    'marginTop': '20px'
+                                })
+                            ])
+                        ], style={'width': '50%', 'display': 'inline-block', 'verticalAlign': 'top'})
+                    ])
                 ])
             ]
         )
@@ -600,6 +618,104 @@ def update_other_charts(filters_data, start_date, end_date):
         create_top_uploaded_images_chart(filtered_top_images_df),
         create_top_generated_images_chart(filtered_df)
     ]
+
+# Callback to update generation image details
+@app.callback(
+    Output('generation-image-details', 'children'),
+    Input('top-generated-images-chart', 'clickData')
+)
+def update_generation_image_details(click_data):
+    """Update the details display when a bar in the generations chart is clicked."""
+    if not click_data or not click_data.get('points'):
+        return html.Div("Select an image to view details", style={
+            'color': '#95A5A6',
+            'fontStyle': 'italic',
+            'textAlign': 'center',
+            'marginTop': '20px'
+        })
+    
+    # Get the selected image name and full path from the click data
+    selected_name = click_data['points'][0]['x']
+    selected_path = click_data['points'][0]['customdata']
+    logger.debug(f"Selected image name: {selected_name}")
+    logger.debug(f"Selected full path: {selected_path}")
+    
+    # Get the image details from the database
+    df = get_session_data(
+        initial_start_date,
+        initial_end_date,
+        include_generation_status=True,
+        include_input_data=True,
+        timezone=local_tz
+    )
+    
+    # Get the image details from the database using get_top_generated_images
+    df_details = get_top_generated_images(df)
+    
+    # Filter for the selected image
+    filtered_details = df_details[df_details['CachePath'] == selected_path]
+    logger.debug(f"Found {len(filtered_details)} matching images")
+    logger.debug(f"Available paths: {df_details['CachePath'].tolist()}")
+    
+    if len(filtered_details) == 0:
+        return html.Div("Image details not found", style={
+            'color': '#95A5A6',
+            'fontStyle': 'italic',
+            'textAlign': 'center',
+            'marginTop': '20px'
+        })
+    
+    image_data = filtered_details.iloc[0]
+    
+    # Convert upload time to local timezone
+    upload_time = pd.to_datetime(image_data['UploadTime']).tz_localize('GMT').tz_convert(local_tz)
+    
+    # Create details display
+    details = [
+        html.Div([
+            html.Img(
+                src=f'/cache/{os.path.basename(os.path.dirname(selected_path))}/{os.path.basename(selected_path)}',
+                style={
+                    'width': '200px',
+                    'objectFit': 'cover',
+                    'margin': '10px auto',
+                    'display': 'block',
+                    'border': '2px solid #333'
+                }
+            ),
+            html.Div([
+                html.Strong("Token: "),
+                html.Span(image_data['Token'] if pd.notna(image_data['Token']) else 'N/A')
+            ], style={'margin': '5px 0'}),
+            html.Div([
+                html.Strong("Face: "),
+                html.Span("Yes" if image_data['Face'] else "No")
+            ], style={'margin': '5px 0'}),
+            html.Div([
+                html.Strong("Gender: "),
+                html.Span(image_data['Gender'] if pd.notna(image_data['Gender']) else 'N/A')
+            ], style={'margin': '5px 0'}),
+            html.Div([
+                html.Strong("Age Range: "),
+                html.Span(f"{image_data['MinAge'] if pd.notna(image_data['MinAge']) else 'N/A'} - {image_data['MaxAge'] if pd.notna(image_data['MaxAge']) else 'N/A'}")
+            ], style={'margin': '5px 0'}),
+            html.Div([
+                html.Strong("Upload Time: "),
+                html.Span(upload_time.strftime('%Y-%m-%d %H:%M:%S %Z'))
+            ], style={'margin': '5px 0'}),
+            html.Div([
+                html.Strong("Generations: "),
+                html.Span(str(image_data['GenerationCount']))
+            ], style={'margin': '5px 0'})
+        ], style={
+            'backgroundColor': '#2C3E50',
+            'padding': '15px',
+            'borderRadius': '8px',
+            'margin': '10px'
+        })
+    ]
+    
+    return details
 
 # Get server for external use
 server = app.server
