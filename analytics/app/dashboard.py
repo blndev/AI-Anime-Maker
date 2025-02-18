@@ -58,27 +58,21 @@ console_handler.setFormatter(
 )
 logger.addHandler(console_handler)
 
+from flask import send_from_directory
+
 # Initialize the Dash app
 app = dash.Dash(__name__, title="AI Anime Maker Analytics")
 
-# Create assets directory for serving images
-ASSETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets')
-os.makedirs(ASSETS_DIR, exist_ok=True)
+# Get cache directory path from config
+config.read_configuration()
+CACHE_DIR = os.path.abspath(config.get_cache_folder())
 
-def copy_image_to_assets(image_path):
-    """Copy image to assets directory and return the new path."""
-    if not os.path.exists(image_path):
-        return None
-    
-    filename = os.path.basename(image_path)
-    asset_path = os.path.join(ASSETS_DIR, filename)
-    
-    try:
-        import shutil
-        shutil.copy2(image_path, asset_path)
-        return filename
-    except:
-        return None
+# Add route for serving images from cache directory
+@app.server.route('/cache/<path:path>')
+def serve_image(path):
+    """Serve images from cache directory."""
+    print(path)
+    return send_from_directory(CACHE_DIR, path)
 
 def get_session_data(start_date=None, end_date=None, include_generation_status=False, include_input_data=False):
     """Get session data from analytics database.
@@ -538,7 +532,7 @@ app.layout = html.Div(style=LAYOUT_STYLE, children=[
                         html.Div([
                             html.Div([
                                 html.Img(
-                                    src=f'/assets/{copy_image_to_assets(path)}' if copy_image_to_assets(path) else '',
+                                    src=f'/cache/{os.path.basename(path)}' if os.path.exists(path) else '',
                                     style={
                                         'width': '150px',
                                         'height': '150px',
