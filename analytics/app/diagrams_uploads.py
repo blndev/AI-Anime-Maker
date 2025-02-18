@@ -97,7 +97,7 @@ def create_top_uploaded_images_chart(df):
     # Create figure with subplots: bar chart on top, image grid below
     fig = go.Figure()
     
-    # Add bar chart using ID as x-axis labels
+    # Add bar chart using ID as x-axis labels with required format for click handling
     fig.add_trace(go.Bar(
         x=df['ID'].astype(str).apply(lambda x: f"ID: {x}"),
         y=df['UploadCount'],
@@ -108,14 +108,15 @@ def create_top_uploaded_images_chart(df):
     # Add hover text with image details
     fig.update_traces(
         hovertemplate="<br>".join([
-            "ID: %{x}",
+            "Input ID: %{x}",
             "Upload Count: %{y}",
-            "Path: %{customdata[0]}",
-            "Token: %{customdata[1]}",
-            "Face: %{customdata[2]}",
-            "Gender: %{customdata[3]}"
+            "SHA1: %{customdata[0]}",
+            "Path: %{customdata[1]}",
+            "Token: %{customdata[2]}",
+            "Face: %{customdata[3]}",
+            "Gender: %{customdata[4]}"
         ]),
-        customdata=df[['CachePath', 'Token', 'Face', 'Gender']].values
+        customdata=df[['SHA1', 'CachePath', 'Token', 'Face', 'Gender']].values
     )
     
     # Update layout
