@@ -36,38 +36,50 @@ def get_session_data(start_date=None, end_date=None, include_generation_status=F
     
     # Build comprehensive query joining all tables
     query = """
-    WITH SessionInputs AS (
-        -- Get input data per session
+    WITH InputGenerations AS (
+        -- Get generations linked to inputs
         SELECT 
             i.Session,
             i.SHA1,
-            COUNT(*) as ImageUploads,
-            GROUP_CONCAT(i.CachePath) as CachePaths
-        FROM tblInput i
-        GROUP BY i.Session, i.SHA1
-    ),
-    SessionGenerations AS (
-        -- Get generation data linked to inputs
-        SELECT 
-            i.Session,
             COUNT(DISTINCT g.Id) as GenerationCount
         FROM tblInput i
         LEFT JOIN tblGenerations g ON g.input_SHA1 = i.SHA1
+        GROUP BY i.Session, i.SHA1
+    ),
+    DirectGenerations AS (
+        -- Get generations not linked to any input
+        SELECT 
+            s.Session,
+            COUNT(DISTINCT g.Id) as GenerationCount
+        FROM tblSessions s
+        INNER JOIN tblGenerations g ON g.session = s.Session
+        WHERE g.input_SHA1 NOT IN (SELECT SHA1 FROM tblInput)
+        GROUP BY s.Session
+    ),
+    SessionInputs AS (
+        -- Get input data and their generations per session
+        SELECT 
+            i.Session,
+            COUNT(*) as ImageUploads,
+            GROUP_CONCAT(i.CachePath) as CachePaths,
+            SUM(COALESCE(ig.GenerationCount, 0)) as GenerationCount
+        FROM tblInput i
+        LEFT JOIN InputGenerations ig ON ig.Session = i.Session AND ig.SHA1 = i.SHA1
         GROUP BY i.Session
     )
     SELECT 
         s.*,
         date(s.Timestamp) as Date,
         COALESCE(si.ImageUploads, 0) as ImageUploads,
-        COALESCE(sg.GenerationCount, 0) as GenerationCount,
+        COALESCE(si.GenerationCount, 0) + COALESCE(dg.GenerationCount, 0) as GenerationCount,
         CASE 
-            WHEN si.ImageUploads > 0 OR sg.GenerationCount > 0 THEN 1
+            WHEN si.ImageUploads > 0 OR si.GenerationCount > 0 OR dg.GenerationCount > 0 THEN 1
             ELSE 0
         END as HasStartedGeneration,
         si.CachePaths
     FROM tblSessions s
     LEFT JOIN SessionInputs si ON si.Session = s.Session
-    LEFT JOIN SessionGenerations sg ON sg.Session = s.Session
+    LEFT JOIN DirectGenerations dg ON dg.Session = s.Session
     """
     
     if start_date and end_date:
