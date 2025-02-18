@@ -7,8 +7,10 @@ import random
 import uuid
 import hashlib
 from datetime import datetime, timedelta
-from fake_useragent import UserAgent
+from fake_useragent import UserAgent as FakeUserAgent
+from user_agents import parse as parse_user_agent
 import ipaddress
+import sqlite3
 from src import analytics
 from src import config
 
@@ -37,13 +39,56 @@ def generate_past_timestamp(max_days_ago=90):
     random_time = now - timedelta(days=random_days)
     return random_time
 
+def insert_with_timestamp(connection, table, data, base_time):
+    """Insert data into table with a specific timestamp"""
+    if table == "tblSessions":
+        query = """
+        INSERT OR IGNORE INTO tblSessions 
+        (Timestamp, Session, OS, Browser, IsMobile, Language, UserAgent, Continent, Country, City)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+        connection.execute(query, (
+            base_time.strftime("%Y-%m-%d %H:%M:%S"),
+            data['Session'], data['OS'], data['Browser'], data['IsMobile'],
+            data['Language'], data['UserAgent'], data['Continent'],
+            data['Country'], data['City']
+        ))
+    elif table == "tblInput":
+        query = """
+        INSERT OR IGNORE INTO tblInput 
+        (Timestamp, Session, SHA1, CachePath, Face, Gender, MinAge, MaxAge, Token)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+        connection.execute(query, (
+            base_time.strftime("%Y-%m-%d %H:%M:%S"),
+            data['Session'], data['SHA1'], data['CachePath'],
+            1 if data['Face'] else 0, data['Gender'],
+            data['MinAge'], data['MaxAge'], data['Token']
+        ))
+    elif table == "tblGenerations":
+        query = """
+        INSERT OR IGNORE INTO tblGenerations 
+        (Timestamp, Session, Input_SHA1, Style, Userprompt, Output, IsBlocked, BlockReason)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """
+        connection.execute(query, (
+            base_time.strftime("%Y-%m-%d %H:%M:%S"),
+            data['Session'], data['SHA1'], data['Style'],
+            data['Prompt'], data['Output'], data['IsBlocked'],
+            data['BlockReason']
+        ))
+
 def main():
     # Initialize analytics
     if not analytics.start():
         print("Failed to initialize analytics")
         return
 
-    ua = UserAgent()
+    # Connect to the database directly
+    connection = sqlite3.connect(config.get_analytics_db_path())
+    cursor = connection.cursor()
+
+    ua = FakeUserAgent()
     sessions = []
     session_times = {}  # Store session creation times
     
@@ -60,9 +105,28 @@ def main():
         user_agent = ua.random
         language = generate_random_language()
         
-        # Save session with timestamp
-        if not analytics.save_session(session_id, ip, user_agent, language, session_time):
-            print(f"Failed to save session {session_id}")
+        # Parse user agent
+        parsed_ua = parse_user_agent(user_agent)
+        
+        # Prepare session data
+        data = {
+            'Session': session_id,
+            'OS': parsed_ua.os.family,
+            'Browser': parsed_ua.browser.family,
+            'IsMobile': 1 if parsed_ua.is_mobile else 0,
+            'Language': language,
+            'UserAgent': user_agent,
+            'Continent': 'n.a.',
+            'Country': 'n.a.',
+            'City': 'private IP' if ipaddress.ip_address(ip).is_private else 'n.a.'
+        }
+        
+        # Insert session with timestamp
+        try:
+            insert_with_timestamp(cursor, "tblSessions", data, session_time)
+            connection.commit()
+        except Exception as e:
+            print(f"Failed to save session {session_id}: {str(e)}")
             continue
     
     # Sort sessions by timestamp for chronological processing
@@ -101,18 +165,24 @@ def main():
                 min_age = None
                 max_age = None
                 
-            # Save input details with timestamp
-            if not analytics.save_input_image_details(
-                session=session,
-                sha1=sha1,
-                cache_path_and_filename=cache_path,
-                face_detected=face_detected,
-                gender=gender,
-                min_age=min_age,
-                max_age=max_age,
-                timestamp=upload_time
-            ):
-                print(f"Failed to save input details for {sha1}")
+            # Prepare input data
+            input_data = {
+                'Session': session,
+                'SHA1': sha1,
+                'CachePath': cache_path,
+                'Face': face_detected,
+                'Gender': gender,
+                'MinAge': min_age,
+                'MaxAge': max_age,
+                'Token': 0
+            }
+            
+            # Insert input with timestamp
+            try:
+                insert_with_timestamp(cursor, "tblInput", input_data, upload_time)
+                connection.commit()
+            except Exception as e:
+                print(f"Failed to save input details for {sha1}: {str(e)}")
                 continue
                 
             
@@ -139,20 +209,27 @@ def main():
                     minutes=random.randint(5, 60)
                 )
                 
-                if not analytics.save_generation_details(
-                    session=session,
-                    sha1=sha1,
-                    style=style_name,
-                    prompt="generated test data",
-                    output_filename=output_filename,
-                    isBlocked=1 if is_blocked else 0,
-                    block_reason=block_reason,
-                    timestamp=generation_time
-                ):
-                    print(f"Failed to save generation details for {sha1}")
+                # Prepare generation data
+                generation_data = {
+                    'Session': session,
+                    'SHA1': sha1,
+                    'Style': style_name,
+                    'Prompt': "generated test data",
+                    'Output': output_filename,
+                    'IsBlocked': 1 if is_blocked else 0,
+                    'BlockReason': block_reason
+                }
+                
+                # Insert generation with timestamp
+                try:
+                    insert_with_timestamp(cursor, "tblGenerations", generation_data, generation_time)
+                    connection.commit()
+                except Exception as e:
+                    print(f"Failed to save generation details for {sha1}: {str(e)}")
                     continue
 
     print("Test data generation completed!")
+    connection.close()
     analytics.stop()
 
 if __name__ == "__main__":
