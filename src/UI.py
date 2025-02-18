@@ -99,8 +99,8 @@ def action_handle_input_file(request: gr.Request, image, state_dict):
 
     input_file_path = ""
     image_sha1 = sha1(image.tobytes()).hexdigest()
-    if config.is_cache_enabled():
-        dir = config.get_cache_folder()
+    if config.is_input_cache_enabled():
+        dir = config.get_output_folder()
         dir = os.path.join(dir, datetime.now().strftime("%Y%m%d"))
         input_file_path = utils.save_image_as_file(image, dir)
 
@@ -182,7 +182,7 @@ def action_handle_input_file(request: gr.Request, image, state_dict):
         session=app_state.session, 
         sha1=image_sha1, 
         token=new_token,
-        cache_path_and_filename=os.path.relpath(input_file_path, config.get_cache_folder()), 
+        cache_path_and_filename=os.path.relpath(input_file_path, config.get_output_folder()), 
         face_detected=face_detected,
         min_age=min_age,
         max_age=max_age,
@@ -285,7 +285,7 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
                 sha1=image_sha1,
                 style=style,
                 prompt=image_description,
-                output_filename=os.path.relpath(fn, config.get_cache_folder())
+                output_filename=os.path.relpath(fn, config.get_output_folder())
                 )
         app_state.token -= 1
         if app_state.token <= 0: gr.Warning("You running out of Token.\n\nUpload a new image to continue.")

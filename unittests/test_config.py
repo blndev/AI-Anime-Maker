@@ -30,7 +30,6 @@ class TestConfiguration(unittest.TestCase):
                 'save_output': random.choice([True, False]),
                 'output_folder': str(uuid.uuid4()),
                 'cache_enabled': random.choice([True, False]),
-                'cache_folder': str(uuid.uuid4()),
                 'analytics_db_path': str(uuid.uuid4()),
                 'analytics_enabled': random.choice([True, False]),
                 'analytics_city_db': str(uuid.uuid4()),
@@ -119,8 +118,7 @@ class TestConfiguration(unittest.TestCase):
         self.assertEqual(src_config.is_save_output_enabled(), general["save_output"])
         self.assertEqual(src_config.get_output_folder(), general["output_folder"])
 
-        self.assertEqual(src_config.is_cache_enabled(), general["cache_enabled"])
-        self.assertEqual(src_config.get_cache_folder(), general["cache_folder"])
+        self.assertEqual(src_config.is_input_cache_enabled(), general["cache_enabled"])
 
         self.assertEqual(src_config.is_analytics_enabled(), general["analytics_enabled"])
         self.assertEqual(src_config.get_analytics_db_path(), general["analytics_db_path"])
@@ -142,8 +140,7 @@ class TestConfiguration(unittest.TestCase):
         self.assertEqual(src_config.is_save_output_enabled(), False)
         self.assertEqual(src_config.get_output_folder(), "./output/")
 
-        self.assertEqual(src_config.is_cache_enabled(), False)
-        self.assertEqual(src_config.get_cache_folder(), "./cache/")
+        self.assertEqual(src_config.is_input_cache_enabled(), False)
 
         self.assertEqual(src_config.is_analytics_enabled(), False)
         self.assertEqual(src_config.get_analytics_db_path(), "./analytics.db")

@@ -104,13 +104,9 @@ def get_output_folder():
     """The folder where the output should be saved if activated"""
     return get_config_value("General","output_folder", "./output/")
 
-def is_cache_enabled():
+def is_input_cache_enabled():
     """true = enables cache for input images"""
     return get_boolean_config_value("General","cache_enabled", False)
-
-def get_cache_folder():
-    """The folder where the cached files should be stored"""
-    return get_config_value("General","cache_folder", "./cache/")
 
 def is_analytics_enabled():
     """true = advanced analytics is activated"""

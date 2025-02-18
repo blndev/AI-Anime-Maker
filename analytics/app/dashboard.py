@@ -47,7 +47,7 @@ app = dash.Dash(__name__, title="AI Anime Maker Analytics")
 
 # Get cache directory path from config
 config.read_configuration()
-CACHE_DIR = os.path.abspath(config.get_cache_folder())
+CACHE_DIR = os.path.abspath(config.get_output_folder())
 
 # Add route for serving images from cache directory
 @app.server.route('/cache/<path:path>')
