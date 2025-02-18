@@ -85,7 +85,7 @@ is_shared=false
 analytics_enabled=false
 
 # Path to the analytics database (will be created if not existing)
-analytics_db_path=./analytics.db
+analytics_db_path=./analytics/analytics.db
 
 # if available it will be used to determine country and city in analytics
 # official source: https://dev.maxmind.com/geoip/geoip2/geolite2/
