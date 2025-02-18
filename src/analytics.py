@@ -67,7 +67,7 @@ def _create_tables():
         Gender INTEGER,
         MinAge INTEGER,
         MaxAge INTEGER,
-        Token TEXT
+        Token INTEGER  NOT NULL
     );
     """
 
@@ -247,7 +247,7 @@ def save_generation_details(session: str, sha1: str, style: str, prompt: str,
 def save_input_image_details(session: str, sha1: str, cache_path_and_filename: str = None, 
                            face_detected: bool = False, gender: int = 0, 
                            min_age: int = None, max_age: int = None, 
-                           token: str = None) -> bool:
+                           token: int = 0) -> bool:
     """Saves details about an uploaded input image.
 
     Args:
