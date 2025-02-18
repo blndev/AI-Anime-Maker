@@ -227,19 +227,40 @@ app.layout = html.Div(style=LAYOUT_STYLE, children=[
 @app.callback(
     Output('image-grid', 'children'),
     [
+        Input('active-filters-store', 'data'),
         Input('date-range', 'start_date'),
         Input('date-range', 'end_date')
     ]
 )
-def update_image_grid(start_date, end_date):
-    """Update image grid based on selected date range."""
+def update_image_grid(filters_data, start_date, end_date):
+    """Update image grid based on filters and date range."""
     df = get_session_data(
         start_date,
         end_date,
         include_generation_status=True,
         include_input_data=True
     )
-    top_images_df = get_top_images(df)
+    
+    # Apply all filters
+    filtered_df = df.copy()
+    if filters_data:
+        # Geographic filters
+        if filters_data.get('continent'):
+            filtered_df = filtered_df[filtered_df['Continent'] == filters_data['continent']]
+        if filters_data.get('country'):
+            filtered_df = filtered_df[filtered_df['Country'] == filters_data['country']]
+        
+        # Platform filters
+        if filters_data.get('os'):
+            filtered_df = filtered_df[filtered_df['OS'] == filters_data['os']]
+        if filters_data.get('browser'):
+            filtered_df = filtered_df[filtered_df['Browser'] == filters_data['browser']]
+        
+        # Language filter
+        if filters_data.get('language'):
+            filtered_df = filtered_df[filtered_df['Language'] == filters_data['language']]
+    
+    top_images_df = get_top_images(filtered_df)
     
     return html.Div([
         html.Div([
@@ -483,10 +504,23 @@ def update_geographic_charts(filters_data, start_date, end_date):
         include_input_data=True
     )
     
-    # Create updated figures
-    continent_fig = create_continent_chart(df, filters_data.get('continent'))
-    country_fig = create_country_chart(df, filters_data.get('continent'), filters_data.get('country'))
-    city_fig = create_city_chart(df, filters_data.get('continent'), filters_data.get('country'))
+    # Apply non-geographic filters first
+    filtered_df = df.copy()
+    if filters_data:
+        # Platform filters
+        if filters_data.get('os'):
+            filtered_df = filtered_df[filtered_df['OS'] == filters_data['os']]
+        if filters_data.get('browser'):
+            filtered_df = filtered_df[filtered_df['Browser'] == filters_data['browser']]
+        
+        # Language filter
+        if filters_data.get('language'):
+            filtered_df = filtered_df[filtered_df['Language'] == filters_data['language']]
+    
+    # Create updated figures with filtered data
+    continent_fig = create_continent_chart(filtered_df, filters_data.get('continent'))
+    country_fig = create_country_chart(filtered_df, filters_data.get('continent'), filters_data.get('country'))
+    city_fig = create_city_chart(filtered_df, filters_data.get('continent'), filters_data.get('country'))
     
     return continent_fig, country_fig, city_fig
 
