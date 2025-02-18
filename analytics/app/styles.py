@@ -6,7 +6,12 @@ Theme and layout styles for the analytics dashboard.
 PLOTLY_TEMPLATE = 'plotly_dark'
 LAYOUT_THEME = {
     'paper_bgcolor': 'rgba(0,0,0,0)',
-    'plot_bgcolor': 'rgba(0,0,0,0)'
+    'plot_bgcolor': 'rgba(0,0,0,0)',
+    'hoverlabel': {
+        'bgcolor': 'rgba(45, 45, 45, 0.9)',  # Dark semi-transparent background
+        'font_size': 12,
+        'font_color': '#FFFFFF'  # White text
+    }
 }
 
 # Layout styles
