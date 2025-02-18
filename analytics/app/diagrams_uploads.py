@@ -1,34 +1,11 @@
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
-import sqlite3
 import os
-import sys
 
-# Import shared theme settings
+# Import shared theme settings and data access
 from .styles import PLOTLY_TEMPLATE, LAYOUT_THEME
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
-import src.config as config
-
-def get_top_images():
-    """Get top 10 most frequently uploaded images with their paths."""
-    config.read_configuration()
-    connection = sqlite3.connect(config.get_analytics_db_path())
-    
-    query = """
-    SELECT 
-        SHA1,
-        CachePath,
-        COUNT(*) as UploadCount
-    FROM tblInput
-    GROUP BY SHA1, CachePath
-    ORDER BY UploadCount DESC
-    LIMIT 10
-    """
-    
-    df = pd.read_sql_query(query, connection)
-    connection.close()
-    return df
+from .data import get_top_images
 
 def create_image_uploads_timeline(df):
     """Create timeline of image uploads per session."""
