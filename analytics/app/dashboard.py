@@ -633,7 +633,7 @@ def update_other_charts(filters_data, start_date, end_date):
         create_image_uploads_timeline(filtered_df),
         create_top_uploaded_images_chart(filtered_top_images_df),
         create_top_generated_images_chart(filtered_df),
-        create_style_usage_chart(filtered_df)
+        create_style_usage_chart(filtered_df, start_date, end_date)
     ]
 
 # Callback to update image details for both charts

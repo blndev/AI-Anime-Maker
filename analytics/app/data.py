@@ -152,11 +152,13 @@ def get_top_uploaded_images(df):
     
     return top_images
 
-def get_style_usage(df):
-    """Get aggregated counts of generation styles used.
+def get_style_usage(df, start_date=None, end_date=None):
+    """Get aggregated counts of generation styles used with percentages.
     
     Args:
         df: DataFrame containing session data with CachePaths column
+        start_date (str, optional): Start date in YYYY-MM-DD format
+        end_date (str, optional): End date in YYYY-MM-DD format
     """
     config.read_configuration()
     connection = sqlite3.connect(config.get_analytics_db_path())
@@ -165,17 +167,31 @@ def get_style_usage(df):
     sessions = df['Session'].tolist()
     sessions_str = ','.join(f"'{s}'" for s in sessions)
     
+    # Build date filter condition
+    date_filter = "AND date(g.Timestamp) BETWEEN ? AND ?" if start_date and end_date else ""
+    date_params = [start_date, end_date] if start_date and end_date else []
+    
     query = f"""
+    WITH TotalCount AS (
+        SELECT COUNT(*) as Total
+        FROM tblGenerations g
+        WHERE g.Session IN ({sessions_str})
+        {date_filter}
+    )
     SELECT 
         Style,
-        COUNT(*) as Count
-    FROM tblGenerations g
+        COUNT(*) as Count,
+        ROUND(CAST(COUNT(*) AS FLOAT) * 100 / Total, 1) as Percentage
+    FROM tblGenerations g, TotalCount
     WHERE g.Session IN ({sessions_str})
+    {date_filter}
     GROUP BY Style
     ORDER BY Count DESC
     """
     
-    style_usage = pd.read_sql_query(query, connection)
+    # Double the date parameters since we use them twice in the query
+    params = date_params + date_params
+    style_usage = pd.read_sql_query(query, connection, params=params)
     connection.close()
     
     logger.info(f"Style usage data loaded: {len(style_usage)} styles")

@@ -110,13 +110,13 @@ def create_top_uploaded_images_chart(df):
         hovertemplate="<br>".join([
             "Input ID: %{x}",
             "Upload Count: %{y}",
-            "SHA1: %{customdata[0]}",
-            "Path: %{customdata[1]}",
-            "Token: %{customdata[2]}",
-            "Face: %{customdata[3]}",
-            "Gender: %{customdata[4]}"
+            "SHA1: %{customdata[4]}",
+            "Path: %{customdata[0]}",
+            "Token: %{customdata[1]}",
+            "Face: %{customdata[2]}",
+            "Gender: %{customdata[3]}"
         ]),
-        customdata=df[['SHA1', 'CachePath', 'Token', 'Face', 'Gender']].values
+        customdata=df[['CachePath', 'Token', 'Face', 'Gender', 'SHA1']].values
     )
     
     # Update layout
