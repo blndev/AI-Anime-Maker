@@ -111,21 +111,22 @@ def get_top_uploaded_images(df):
     
     query = f"""
     WITH ImageUploads AS (
-        -- Count uploads per image
+        -- Count uploads per unique SHA1
         SELECT 
             i.SHA1,
-            i.ID,
-            i.CachePath,
-            i.Token,
-            i.Face,
-            i.Gender,
-            i.MinAge,
-            i.MaxAge,
-            i.Timestamp as UploadTime,
-            COUNT(*) as UploadCount
+            COUNT(*) as UploadCount,
+            -- Get details from first upload of this image
+            MIN(i.ID) as ID,
+            MIN(i.CachePath) as CachePath,
+            MIN(i.Token) as Token,
+            MIN(i.Face) as Face,
+            MIN(i.Gender) as Gender,
+            MIN(i.MinAge) as MinAge,
+            MIN(i.MaxAge) as MaxAge,
+            MIN(i.Timestamp) as UploadTime
         FROM tblInput i
         WHERE i.Session IN ({sessions_str})
-        GROUP BY i.SHA1, i.ID, i.CachePath, i.Token, i.Face, i.Gender, i.MinAge, i.MaxAge, i.Timestamp
+        GROUP BY i.SHA1
         HAVING UploadCount > 1
         ORDER BY UploadCount DESC
         LIMIT 10
