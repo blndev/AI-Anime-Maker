@@ -8,21 +8,38 @@ from .styles import PLOTLY_TEMPLATE, LAYOUT_THEME
 from .data import get_top_images
 
 def create_image_uploads_timeline(df):
-    """Create timeline of image uploads per session."""
+    """Create timeline of image uploads aggregated by hour with local timezone."""
     # Only include sessions with uploads
     upload_data = df[df['ImageUploads'] > 0].copy()
     
+    # Get timezone info from the timestamp column
+    tz = upload_data['Timestamp'].dt.tz
+    tz_name = str(tz) if tz else 'Local'
+    
+    # Group by hour and sum uploads
+    upload_data['Hour'] = upload_data['Timestamp'].dt.floor('H')
+    hourly_uploads = upload_data.groupby('Hour')['ImageUploads'].sum().reset_index()
+    
     # Create timeline
-    fig = px.scatter(
-        upload_data,
-        x='Timestamp',
+    fig = px.bar(
+        hourly_uploads,
+        x='Hour',
         y='ImageUploads',
-        title='Image Uploads per Session Over Time',
+        title=f'Image Uploads per Hour ({tz_name})',
         labels={
-            'Timestamp': 'Date',
+            'Hour': f'Date & Time ({tz_name})',
             'ImageUploads': 'Number of Uploads'
         },
         template=PLOTLY_TEMPLATE
+    )
+    
+    # Update hover template to show full datetime and upload count
+    fig.update_traces(
+        hovertemplate="<br>".join([
+            "Time: %{x}",
+            "Total Uploads: %{y}",
+            "<extra></extra>"
+        ])
     )
     
     fig.update_layout(**LAYOUT_THEME)

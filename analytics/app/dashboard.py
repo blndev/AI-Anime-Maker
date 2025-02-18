@@ -6,6 +6,7 @@ import os
 import sys
 import logging
 import sqlite3
+from datetime import datetime
 
 # Add parent directory to path to import config
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
@@ -67,12 +68,16 @@ def serve_image(path):
 initial_end_date = pd.Timestamp.now().strftime('%Y-%m-%d')
 initial_start_date = (pd.Timestamp.now() - pd.Timedelta(days=30)).strftime('%Y-%m-%d')
 
+# Get local timezone
+local_tz = datetime.now().astimezone().tzinfo
+
 # Get initial data
 df = get_session_data(
     initial_start_date, 
     initial_end_date, 
     include_generation_status=True, 
-    include_input_data=True
+    include_input_data=True,
+    timezone=local_tz
 )
 top_images_df = get_top_images(df)
 
@@ -238,7 +243,8 @@ def update_image_grid(filters_data, start_date, end_date):
         start_date,
         end_date,
         include_generation_status=True,
-        include_input_data=True
+        include_input_data=True,
+        timezone=local_tz
     )
     
     # Apply all filters
@@ -501,7 +507,8 @@ def update_geographic_charts(filters_data, start_date, end_date):
         start_date,
         end_date,
         include_generation_status=True,
-        include_input_data=True
+        include_input_data=True,
+        timezone=local_tz
     )
     
     # Apply non-geographic filters first
@@ -548,7 +555,8 @@ def update_other_charts(filters_data, start_date, end_date):
         start_date,
         end_date,
         include_generation_status=True,
-        include_input_data=True
+        include_input_data=True,
+        timezone=local_tz
     )
     
     # Apply all filters

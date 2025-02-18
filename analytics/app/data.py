@@ -7,6 +7,12 @@ import sqlite3
 import logging
 import os
 import sys
+from datetime import datetime
+import pytz
+"""
+Data access layer for analytics dashboard.
+Handles all database interactions and DataFrame creation.
+"""
 
 # Add parent directory to path to import config
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
@@ -16,7 +22,7 @@ import src.config as config
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-def get_session_data(start_date=None, end_date=None, include_generation_status=False, include_input_data=False):
+def get_session_data(start_date=None, end_date=None, include_generation_status=False, include_input_data=False, timezone=None):
     """Get session data from analytics database with all related data joined.
     
     Args:
@@ -73,6 +79,16 @@ def get_session_data(start_date=None, end_date=None, include_generation_status=F
     
     df = pd.read_sql_query(query, connection, params=params)
     connection.close()
+    
+    # Convert timestamps from GMT to local timezone
+    if timezone is None:
+        # Default to system timezone if none specified
+        timezone = datetime.now().astimezone().tzinfo
+    elif isinstance(timezone, str):
+        timezone = pytz.timezone(timezone)
+    
+    # Convert Timestamp column from GMT to local time
+    df['Timestamp'] = pd.to_datetime(df['Timestamp']).dt.tz_localize('GMT').dt.tz_convert(timezone)
     
     # Log data loading info
     logger.info(f"Session data loaded: {len(df)} rows")
