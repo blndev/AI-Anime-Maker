@@ -170,49 +170,62 @@ app.layout = html.Div(style=LAYOUT_STYLE, children=[
                     html.H2("Most Uploaded Images", style=HEADER_STYLE),
                     # Bar chart showing upload counts
                     dcc.Graph(id='top-images-chart', figure=create_top_images_chart(top_images_df)),
-                    # Image grid
-                    html.Div([
-                        html.Div([
-                            html.Div([
-                                html.Img(
-                                    src=f'/cache/{os.path.relpath(path, config.get_cache_folder())}' if os.path.exists(path) else '',
-                                    style={
-                                        'width': '150px',
-                                        #'height': '150px',
-                                        'object-fit': 'cover',
-                                        'margin': '5px',
-                                        'border': '2px solid #333'
-                                    }
-                                ),
-                                html.Div(
-                                    f'Uploaded {count} times',
-                                    style={
-                                        'color': '#FFFFFF',
-                                        'textAlign': 'center',
-                                        'marginTop': '5px'
-                                    }
-                                )
-                            ], style={
-                                'display': 'flex',
-                                'flexDirection': 'column',
-                                'alignItems': 'center',
-                                'margin': '10px'
-                            }) for path, count in zip(top_images_df['CachePath'], top_images_df['UploadCount'])
-                        ], style={
-                            'display': 'flex',
-                            'flexWrap': 'wrap',
-                            'justifyContent': 'center',
-                            'gap': '20px',
-                            'margin': '20px 0'
-                        })
-                    ])
+                    # Image grid (updated via callback)
+                    html.Div(id='image-grid')
                 ])
             ]
         )
     ], style={'margin': '20px 0'})
 ])
 
-# Callback to update all charts when date range changes
+# Callback to update image grid
+@app.callback(
+    Output('image-grid', 'children'),
+    [
+        Input('date-range', 'start_date'),
+        Input('date-range', 'end_date')
+    ]
+)
+def update_image_grid(start_date, end_date):
+    """Update image grid based on selected date range."""
+    top_images_df = get_top_images(start_date, end_date)
+    
+    return html.Div([
+        html.Div([
+            html.Div([
+                html.Img(
+                                    src=f'/cache/{os.path.basename(os.path.dirname(path))}/{os.path.basename(path)}' if os.path.exists(path) else '',
+                    style={
+                        'width': '150px',
+                        'object-fit': 'cover',
+                        'margin': '5px',
+                        'border': '2px solid #333'
+                    }
+                ),
+                html.Div(
+                    f'Uploaded {count} times',
+                    style={
+                        'color': '#FFFFFF',
+                        'textAlign': 'center',
+                        'marginTop': '5px'
+                    }
+                )
+            ], style={
+                'display': 'flex',
+                'flexDirection': 'column',
+                'alignItems': 'center',
+                'margin': '10px'
+            }) for path, count in zip(top_images_df['CachePath'], top_images_df['UploadCount'])
+        ], style={
+            'display': 'flex',
+            'flexWrap': 'wrap',
+            'justifyContent': 'center',
+            'gap': '20px',
+            'margin': '20px 0'
+        })
+    ])
+
+# Callback to update all charts
 @app.callback(
     [
         Output('timeline-chart', 'figure'),
