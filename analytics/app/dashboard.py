@@ -75,7 +75,7 @@ top_images_df = get_top_images(df)
 
 # Create layout
 app.layout = html.Div(style=LAYOUT_STYLE, children=[
-    html.H1("AI Anime Maker Analytics Dashboard", style=HEADER_STYLE),
+    html.H1(f"{config.get_app_title()} Analytics Dashboard", style=HEADER_STYLE),
     
     # Date Range Selector
     html.Div([
@@ -91,6 +91,43 @@ app.layout = html.Div(style=LAYOUT_STYLE, children=[
             )
         ], style={'textAlign': 'center', 'margin': '20px'}),
     ]),
+    
+    # Active Filters Display
+    html.Div([
+        html.Div([
+            html.H2("Active Filters", style=HEADER_STYLE),
+            html.Div(id='active-filters', style={
+                'display': 'flex',
+                'alignItems': 'center',
+                'gap': '10px',
+                'marginRight': '20px'
+            }),
+        ], style={'display': 'flex', 'alignItems': 'center'}),
+        html.Button(
+            'Reset Filters',
+            id='reset-geo-filters',
+            style={
+                'backgroundColor': '#4CAF50',
+                'color': 'white',
+                'padding': '10px 20px',
+                'border': 'none',
+                'borderRadius': '4px',
+                'cursor': 'pointer',
+                'marginLeft': 'auto'
+            }
+        )
+    ], style={
+        'display': 'flex',
+        'justifyContent': 'space-between',
+        'alignItems': 'center',
+        'margin': '20px',
+        'padding': '10px',
+        'backgroundColor': '#2C3E50',
+        'borderRadius': '4px'
+    }),
+    
+    # Store for active filters
+    dcc.Store(id='active-filters-store'),
     
     # Tabs
     dcc.Tabs([
@@ -142,22 +179,7 @@ app.layout = html.Div(style=LAYOUT_STYLE, children=[
                 
                 # Geographic Distribution Section
                 html.Div([
-                    html.Div([
-                        html.H2("Geographic Distribution", style=HEADER_STYLE),
-                        html.Button(
-                            'Reset Filters',
-                            id='reset-geo-filters',
-                            style={
-                                'backgroundColor': '#4CAF50',
-                                'color': 'white',
-                                'padding': '10px 20px',
-                                'border': 'none',
-                                'borderRadius': '4px',
-                                'cursor': 'pointer',
-                                'marginLeft': '20px'
-                            }
-                        )
-                    ], style={'display': 'flex', 'alignItems': 'center'}),
+                    html.H2("Geographic Distribution", style=HEADER_STYLE),
                     html.Div([
                         html.Div([
                             dcc.Graph(id='continent-chart', figure=create_continent_chart(df))
@@ -220,7 +242,7 @@ def update_image_grid(start_date, end_date):
         html.Div([
             html.Div([
                 html.Img(
-                                    src=f'/cache/{os.path.basename(os.path.dirname(path))}/{os.path.basename(path)}' if os.path.exists(path) else '',
+                    src=f'/cache/{os.path.basename(os.path.dirname(path))}/{os.path.basename(path)}' if os.path.exists(path) else '',
                     style={
                         'width': '150px',
                         'object-fit': 'cover',
@@ -251,21 +273,108 @@ def update_image_grid(start_date, end_date):
         })
     ])
 
-# Add reset button callback
+# Callback to update active filters store
 @app.callback(
+    Output('active-filters-store', 'data'),
     [
-        Output('continent-chart', 'clickData', allow_duplicate=True),
-        Output('country-chart', 'clickData', allow_duplicate=True)
+        Input('continent-chart', 'clickData'),
+        Input('country-chart', 'clickData'),
+        Input('reset-geo-filters', 'n_clicks')
     ],
-    Input('reset-geo-filters', 'n_clicks'),
     prevent_initial_call=True
 )
-def reset_filters(n_clicks):
-    """Reset geographic filters when reset button is clicked."""
+def update_filters_store(continent_click, country_click, reset_clicks):
+    """Update the active filters store."""
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return dash.no_update
+    
+    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
     global selected_continent, selected_country
-    selected_continent = None
-    selected_country = None
-    return None, None
+    
+    if trigger_id == 'reset-geo-filters':
+        selected_continent = None
+        selected_country = None
+    elif trigger_id == 'continent-chart':
+        if continent_click and len(continent_click['points']) > 0:
+            new_continent = continent_click['points'][0]['x']
+            if new_continent == selected_continent:
+                selected_continent = None
+                selected_country = None
+            else:
+                selected_continent = new_continent
+                selected_country = None
+        else:
+            selected_continent = None
+            selected_country = None
+    elif trigger_id == 'country-chart':
+        if country_click and len(country_click['points']) > 0:
+            new_country = country_click['points'][0]['x']
+            if new_country == selected_country:
+                selected_country = None
+            else:
+                selected_country = new_country
+        else:
+            selected_country = None
+    
+    return {
+        'continent': selected_continent,
+        'country': selected_country
+    }
+
+# Callback to update active filters display
+@app.callback(
+    Output('active-filters', 'children'),
+    Input('active-filters-store', 'data')
+)
+def update_active_filters_display(data):
+    """Update the active filters display."""
+    if not data:
+        return [
+            html.Div("No filters active", style={
+                'color': '#95A5A6',
+                'fontStyle': 'italic'
+            })
+        ]
+    
+    filters = []
+    
+    if data.get('continent'):
+        filters.append(
+            html.Div([
+                html.Strong("Continent: "),
+                html.Span(data['continent'])
+            ], style={
+                'backgroundColor': '#34495E',
+                'padding': '5px 10px',
+                'borderRadius': '4px',
+                'marginRight': '10px'
+            })
+        )
+    
+    if data.get('country'):
+        filters.append(
+            html.Div([
+                html.Strong("Country: "),
+                html.Span(data['country'])
+            ], style={
+                'backgroundColor': '#34495E',
+                'padding': '5px 10px',
+                'borderRadius': '4px',
+                'marginRight': '10px'
+            })
+        )
+    
+    if not filters:
+        filters.append(
+            html.Div("No filters active", style={
+                'color': '#95A5A6',
+                'fontStyle': 'italic'
+            })
+        )
+    
+    return filters
 
 # Callback to handle geographic filtering
 @app.callback(
@@ -275,21 +384,15 @@ def reset_filters(n_clicks):
         Output('city-chart', 'figure')
     ],
     [
-        Input('continent-chart', 'clickData'),
-        Input('country-chart', 'clickData'),
+        Input('active-filters-store', 'data'),
         Input('date-range', 'start_date'),
         Input('date-range', 'end_date')
     ]
 )
-def update_geographic_charts(continent_click, country_click, start_date, end_date):
-    """Update geographic charts based on click events and date range."""
-    global selected_continent, selected_country
-    
-    ctx = dash.callback_context
-    if not ctx.triggered:
+def update_geographic_charts(filters_data, start_date, end_date):
+    """Update geographic charts based on active filters and date range."""
+    if not filters_data:
         return dash.no_update
-    
-    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
     
     # Get current data
     df = get_session_data(
@@ -299,37 +402,10 @@ def update_geographic_charts(continent_click, country_click, start_date, end_dat
         include_input_data=True
     )
     
-    # Handle continent click
-    if trigger_id == 'continent-chart':
-        if continent_click and len(continent_click['points']) > 0:
-            new_continent = continent_click['points'][0]['x']
-            # Toggle selection if clicking the same continent
-            if new_continent == selected_continent:
-                selected_continent = None
-                selected_country = None  # Reset country when deselecting continent
-            else:
-                selected_continent = new_continent
-                selected_country = None  # Reset country when changing continent
-        else:
-            selected_continent = None
-            selected_country = None
-    
-    # Handle country click
-    elif trigger_id == 'country-chart':
-        if country_click and len(country_click['points']) > 0:
-            new_country = country_click['points'][0]['x']
-            # Toggle selection if clicking the same country
-            if new_country == selected_country:
-                selected_country = None
-            else:
-                selected_country = new_country
-        else:
-            selected_country = None
-    
     # Create updated figures
-    continent_fig = create_continent_chart(df, selected_continent)
-    country_fig = create_country_chart(df, selected_continent, selected_country)
-    city_fig = create_city_chart(df, selected_continent, selected_country)
+    continent_fig = create_continent_chart(df, filters_data.get('continent'))
+    country_fig = create_country_chart(df, filters_data.get('continent'), filters_data.get('country'))
+    city_fig = create_city_chart(df, filters_data.get('continent'), filters_data.get('country'))
     
     return continent_fig, country_fig, city_fig
 
@@ -346,14 +422,13 @@ def update_geographic_charts(continent_click, country_click, start_date, end_dat
         Output('top-images-chart', 'figure')
     ],
     [
-        Input('continent-chart', 'clickData'),
-        Input('country-chart', 'clickData'),
+        Input('active-filters-store', 'data'),
         Input('date-range', 'start_date'),
         Input('date-range', 'end_date')
     ]
 )
-def update_other_charts(continent_click, country_click, start_date, end_date):
-    """Update all other charts based on geographic filters and date range."""
+def update_other_charts(filters_data, start_date, end_date):
+    """Update all other charts based on active filters and date range."""
     df = get_session_data(
         start_date,
         end_date,
@@ -361,14 +436,15 @@ def update_other_charts(continent_click, country_click, start_date, end_date):
         include_input_data=True
     )
     
-    # Apply geographic filters consistently
+    # Apply geographic filters
     filtered_df = df.copy()
-    if selected_continent:
-        filtered_df = filtered_df[filtered_df['Continent'] == selected_continent]
-    if selected_country:
-        filtered_df = filtered_df[filtered_df['Country'] == selected_country]
+    if filters_data:
+        if filters_data.get('continent'):
+            filtered_df = filtered_df[filtered_df['Continent'] == filters_data['continent']]
+        if filters_data.get('country'):
+            filtered_df = filtered_df[filtered_df['Country'] == filters_data['country']]
     
-    # Get filtered top images from the filtered DataFrame
+    # Get filtered top images
     filtered_top_images_df = get_top_images(filtered_df)
     
     return [
