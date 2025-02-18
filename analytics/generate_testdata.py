@@ -55,64 +55,69 @@ def main():
             print(f"Failed to save session {session_id}")
             continue
             
-    # Generate 200 inputs
-    print("Generating 200 inputs...")
+    # Get style configuration
     style_count = config.get_style_count()
     if style_count == 0:
         style_count = 5  # fallback if no styles configured
+
+    print("Generating random uploads and generations for each session...")
+    for session in sessions:
+        # Generate 0-8 uploads for each session
+        num_uploads = random.randint(0, 8)
+        print(f"Generating {num_uploads} uploads for session {session}")
         
-    for _ in range(200):
-        # Select random session
-        session = random.choice(sessions)
-        
-        # Generate input data
-        sha1 = generate_random_sha1()
-        cache_path = f"cache/{sha1[:2]}/{sha1[2:4]}/{sha1}.jpg"
-        face_detected = random.choice([True, False])
-        gender = random.choice([0, 1, 2])  # 0=unknown, 1=male, 2=female
-        
-        if face_detected:
-            min_age = random.randint(1, 80)
-            max_age = min_age + random.randint(0, 10)
-        else:
-            min_age = None
-            max_age = None
+        for _ in range(num_uploads):
+            # Generate input data
+            sha1 = generate_random_sha1()
+            cache_path = f"cache/{sha1[:2]}/{sha1[2:4]}/{sha1}.jpg"
+            face_detected = random.choice([True, False])
+            gender = random.choice([0, 1, 2])  # 0=unknown, 1=male, 2=female
             
-        # Save input details
-        if not analytics.save_input_image_details(
-            session=session,
-            sha1=sha1,
-            cache_path_and_filename=cache_path,
-            face_detected=face_detected,
-            gender=gender,
-            min_age=min_age,
-            max_age=max_age
-        ):
-            print(f"Failed to save input details for {sha1}")
-            continue
-            
-        # Generate 1-3 outputs for each input
-        for _ in range(random.randint(1, 3)):
-            style_num = random.randint(0, style_count-1)
-            style_name = config.get_style_name(style_num)
-            
-            output_filename = f"output/{sha1[:2]}/{sha1[2:4]}/{sha1}_{style_name}.jpg"
-            
-            # 5% chance of being blocked
-            is_blocked = random.random() < 0.05
-            block_reason = "NSFW content detected" if is_blocked else None
-            
-            if not analytics.save_generation_details(
+            if face_detected:
+                min_age = random.randint(1, 80)
+                max_age = min_age + random.randint(0, 10)
+            else:
+                min_age = None
+                max_age = None
+                
+            # Save input details
+            if not analytics.save_input_image_details(
                 session=session,
                 sha1=sha1,
-                style=style_name,
-                prompt="generated test data",
-                output_filename=output_filename,
-                isBlocked=1 if is_blocked else 0,
-                block_reason=block_reason
+                cache_path_and_filename=cache_path,
+                face_detected=face_detected,
+                gender=gender,
+                min_age=min_age,
+                max_age=max_age
             ):
-                print(f"Failed to save generation details for {sha1}")
+                print(f"Failed to save input details for {sha1}")
                 continue
+                
+            # Generate 0-30 outputs for each upload
+            num_generations = random.randint(0, 30)
+            print(f"  Generating {num_generations} generations for upload {sha1}")
+            
+            for _ in range(num_generations):
+                style_num = random.randint(0, style_count-1)
+                style_name = config.get_style_name(style_num)
+                
+                output_filename = f"output/{sha1[:2]}/{sha1[2:4]}/{sha1}_{style_name}.jpg"
+                
+                # 5% chance of being blocked
+                is_blocked = random.random() < 0.05
+                block_reason = "NSFW content detected" if is_blocked else None
+                
+                if not analytics.save_generation_details(
+                    session=session,
+                    sha1=sha1,
+                    style=style_name,
+                    prompt="generated test data",
+                    output_filename=output_filename,
+                    isBlocked=1 if is_blocked else 0,
+                    block_reason=block_reason
+                ):
+                    print(f"Failed to save generation details for {sha1}")
+                    continue
 
     print("Test data generation completed!")
     analytics.stop()
