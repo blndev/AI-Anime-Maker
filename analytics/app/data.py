@@ -107,8 +107,10 @@ def get_top_images(df):
     paths_df['CachePath'] = paths_df['CachePaths'].str.split(',')
     paths_df = paths_df.explode('CachePath')
     
-    # Count occurrences of each path
-    top_images = paths_df['CachePath'].value_counts().head(10).reset_index()
+    # Count occurrences of each path and filter for multiple uploads
+    value_counts = paths_df['CachePath'].value_counts()
+    multiple_uploads = value_counts[value_counts > 1]  # Only keep images uploaded more than once
+    top_images = multiple_uploads.head(10).reset_index()
     top_images.columns = ['CachePath', 'UploadCount']
     
     logger.info(f"Top images data loaded: {len(top_images)} rows")
