@@ -66,12 +66,11 @@ app = dash.Dash(__name__, title="AI Anime Maker Analytics")
 # Get cache directory path from config
 config.read_configuration()
 CACHE_DIR = os.path.abspath(config.get_cache_folder())
-
+print (CACHE_DIR)
 # Add route for serving images from cache directory
 @app.server.route('/cache/<path:path>')
 def serve_image(path):
     """Serve images from cache directory."""
-    print(path)
     return send_from_directory(CACHE_DIR, path)
 
 def get_session_data(start_date=None, end_date=None, include_generation_status=False, include_input_data=False):
@@ -532,10 +531,10 @@ app.layout = html.Div(style=LAYOUT_STYLE, children=[
                         html.Div([
                             html.Div([
                                 html.Img(
-                                    src=f'/cache/{os.path.basename(path)}' if os.path.exists(path) else '',
+                                    src=f'/cache/{os.path.relpath(path, config.get_cache_folder())}' if os.path.exists(path) else '',
                                     style={
                                         'width': '150px',
-                                        'height': '150px',
+                                        #'height': '150px',
                                         'object-fit': 'cover',
                                         'margin': '5px',
                                         'border': '2px solid #333'
