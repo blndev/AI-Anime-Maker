@@ -722,6 +722,14 @@ def update_image_details(generation_click, upload_click):
                 }
             ),
             html.Div([
+                html.Strong("Input ID: "),
+                html.Span(str(image_data['ID']) if pd.notna(image_data['ID']) else 'N/A')
+            ], style={'margin': '5px 0'}),
+            html.Div([
+                html.Strong("SHA1: "),
+                html.Span(image_data['SHA1'] if pd.notna(image_data['SHA1']) else 'N/A')
+            ], style={'margin': '5px 0'}),
+            html.Div([
                 html.Strong("Token: "),
                 html.Span(image_data['Token'] if pd.notna(image_data['Token']) else 'N/A')
             ], style={'margin': '5px 0'}),
