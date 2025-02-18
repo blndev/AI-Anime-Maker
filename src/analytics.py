@@ -31,7 +31,7 @@ def _create_tables():
     create_table_session = """
     CREATE TABLE IF NOT EXISTS tblSessions (
         Session TEXT NOT NULL PRIMARY KEY,
-        Timestamp TEXT NOT NULL,
+        Timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         Continent TEXT,
         Country TEXT,
         City TEXT,
@@ -45,15 +45,14 @@ def _create_tables():
     create_table_generations = """
     CREATE TABLE IF NOT EXISTS tblGenerations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        Timestamp TEXT NOT NULL,
+        Timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         Session TEXT NOT NULL,
         Input_SHA1 TEXT NOT NULL,
         Style TEXT,
         Userprompt TEXT,
         Output TEXT,
         IsBlocked INTEGER,
-        BlockReason TEXT,
-        FOREIGN KEY(Session) REFERENCES tblSessions(Session)
+        BlockReason TEXT
     );
     """
 
