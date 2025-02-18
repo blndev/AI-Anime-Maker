@@ -152,6 +152,36 @@ def get_top_uploaded_images(df):
     
     return top_images
 
+def get_style_usage(df):
+    """Get aggregated counts of generation styles used.
+    
+    Args:
+        df: DataFrame containing session data with CachePaths column
+    """
+    config.read_configuration()
+    connection = sqlite3.connect(config.get_analytics_db_path())
+    
+    # Get all session IDs from the filtered DataFrame
+    sessions = df['Session'].tolist()
+    sessions_str = ','.join(f"'{s}'" for s in sessions)
+    
+    query = f"""
+    SELECT 
+        Style,
+        COUNT(*) as Count
+    FROM tblGenerations g
+    WHERE g.Session IN ({sessions_str})
+    GROUP BY Style
+    ORDER BY Count DESC
+    """
+    
+    style_usage = pd.read_sql_query(query, connection)
+    connection.close()
+    
+    logger.info(f"Style usage data loaded: {len(style_usage)} styles")
+    
+    return style_usage
+
 def get_top_generated_images(df):
     """Get top 10 images that were used most for generations.
     

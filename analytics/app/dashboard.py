@@ -27,6 +27,7 @@ from .diagrams_uploads import (
     create_top_uploaded_images_chart,
     create_top_generated_images_chart
 )
+from .diagrams_generations import create_style_usage_chart
 
 # Import styles
 from .styles import (
@@ -204,7 +205,21 @@ app.layout = html.Div(style=LAYOUT_STYLE, children=[
             ]
         ),
         
-        # Tab 3: Image Upload Analysis
+        # Tab 3: Generation Details
+        dcc.Tab(
+            label='Generation Details',
+            style=TAB_STYLE,
+            selected_style=TAB_SELECTED_STYLE,
+            children=[
+                # Style Usage Section
+                html.Div([
+                    html.H2("Generation Style Usage", style=HEADER_STYLE),
+                    dcc.Graph(id='style-usage-chart', figure=create_style_usage_chart(df))
+                ])
+            ]
+        ),
+        
+        # Tab 4: Image Upload Analysis
         dcc.Tab(
             label='Image Upload Analysis',
             style=TAB_STYLE,
@@ -567,7 +582,8 @@ def update_geographic_charts(filters_data, start_date, end_date):
         Output('generation-status-chart', 'figure'),
         Output('image-uploads-timeline', 'figure'),
         Output('top-images-chart', 'figure'),
-        Output('top-generated-images-chart', 'figure')
+        Output('top-generated-images-chart', 'figure'),
+        Output('style-usage-chart', 'figure')
     ],
     [
         Input('active-filters-store', 'data'),
@@ -616,7 +632,8 @@ def update_other_charts(filters_data, start_date, end_date):
         create_generation_status_chart(filtered_df),
         create_image_uploads_timeline(filtered_df),
         create_top_uploaded_images_chart(filtered_top_images_df),
-        create_top_generated_images_chart(filtered_df)
+        create_top_generated_images_chart(filtered_df),
+        create_style_usage_chart(filtered_df)
     ]
 
 # Callback to update image details for both charts
