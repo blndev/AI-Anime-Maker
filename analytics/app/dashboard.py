@@ -5,6 +5,7 @@ import pandas as pd
 import os
 import sys
 import logging
+import sqlite3
 
 # Add parent directory to path to import config
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
@@ -293,13 +294,31 @@ def update_geographic_charts(continent_click, country_click, start_date, end_dat
     )
     
     # Handle continent click
-    if trigger_id == 'continent-chart' and continent_click:
-        selected_continent = continent_click['points'][0]['x']
-        selected_country = None  # Reset country selection
+    if trigger_id == 'continent-chart':
+        if continent_click and len(continent_click['points']) > 0:
+            new_continent = continent_click['points'][0]['x']
+            # Toggle selection if clicking the same continent
+            if new_continent == selected_continent:
+                selected_continent = None
+                selected_country = None  # Reset country when deselecting continent
+            else:
+                selected_continent = new_continent
+                selected_country = None  # Reset country when changing continent
+        else:
+            selected_continent = None
+            selected_country = None
     
     # Handle country click
-    elif trigger_id == 'country-chart' and country_click:
-        selected_country = country_click['points'][0]['x']
+    elif trigger_id == 'country-chart':
+        if country_click and len(country_click['points']) > 0:
+            new_country = country_click['points'][0]['x']
+            # Toggle selection if clicking the same country
+            if new_country == selected_country:
+                selected_country = None
+            else:
+                selected_country = new_country
+        else:
+            selected_country = None
     
     # Create updated figures
     continent_fig = create_continent_chart(df, selected_continent)
@@ -336,23 +355,48 @@ def update_other_charts(continent_click, country_click, start_date, end_date):
         include_input_data=True
     )
     
-    # Apply geographic filters
+    # Apply geographic filters consistently
+    filtered_df = df.copy()
     if selected_continent:
-        df = df[df['Continent'] == selected_continent]
+        filtered_df = filtered_df[filtered_df['Continent'] == selected_continent]
     if selected_country:
-        df = df[df['Country'] == selected_country]
+        filtered_df = filtered_df[filtered_df['Country'] == selected_country]
     
-    top_images_df = get_top_images(start_date, end_date)
+    # Get filtered top images
+    if selected_continent or selected_country:
+        # Get sessions from filtered data
+        filtered_sessions = filtered_df['Session'].unique()
+        # Get filtered top images using SQL to ensure proper joining
+        connection = sqlite3.connect(config.get_analytics_db_path())
+        query = """
+        SELECT 
+            i.SHA1,
+            i.CachePath,
+            COUNT(*) as UploadCount
+        FROM tblInput i
+        JOIN tblSessions s ON i.Session = s.Session
+        WHERE s.Session IN ({})
+        AND date(s.Timestamp) BETWEEN ? AND ?
+        GROUP BY i.SHA1, i.CachePath
+        ORDER BY UploadCount DESC
+        LIMIT 10
+        """.format(','.join('?' * len(filtered_sessions)))
+        
+        params = list(filtered_sessions) + [start_date, end_date]
+        filtered_top_images_df = pd.read_sql_query(query, connection, params=params)
+        connection.close()
+    else:
+        filtered_top_images_df = get_top_images(start_date, end_date)
     
     return [
-        create_sessions_timeline(df),
-        create_os_chart(df),
-        create_browser_chart(df),
-        create_mobile_pie(df),
-        create_language_chart(df),
-        create_generation_status_chart(df),
-        create_image_uploads_timeline(df),
-        create_top_images_chart(top_images_df)
+        create_sessions_timeline(filtered_df),
+        create_os_chart(filtered_df),
+        create_browser_chart(filtered_df),
+        create_mobile_pie(filtered_df),
+        create_language_chart(filtered_df),
+        create_generation_status_chart(filtered_df),
+        create_image_uploads_timeline(filtered_df),
+        create_top_images_chart(filtered_top_images_df)
     ]
 
 # Get server for external use

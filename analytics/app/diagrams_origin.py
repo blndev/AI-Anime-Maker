@@ -33,7 +33,8 @@ def create_continent_chart(df, selected_continent=None):
     )
     fig.update_layout(
         **LAYOUT_THEME,
-        clickmode='event'
+        clickmode='event',
+        dragmode='select'  # Enable selection mode
     )
     # Highlight selected continent if any
     if selected_continent:
@@ -63,7 +64,8 @@ def create_country_chart(df, selected_continent=None, selected_country=None):
     )
     fig.update_layout(
         **LAYOUT_THEME,
-        clickmode='event'
+        clickmode='event',
+        dragmode='select'  # Enable selection mode
     )
     # Highlight selected country if any
     if selected_country:
