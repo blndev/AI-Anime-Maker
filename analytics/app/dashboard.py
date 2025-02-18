@@ -45,6 +45,10 @@ logger.addHandler(console_handler)
 # Initialize the Dash app
 app = dash.Dash(__name__, title="AI Anime Maker Analytics")
 
+# Initialize global state for geographic filters
+selected_continent = None
+selected_country = None
+
 # Get cache directory path from config
 config.read_configuration()
 CACHE_DIR = os.path.abspath(config.get_output_folder())
@@ -137,7 +141,22 @@ app.layout = html.Div(style=LAYOUT_STYLE, children=[
                 
                 # Geographic Distribution Section
                 html.Div([
-                    html.H2("Geographic Distribution", style=HEADER_STYLE),
+                    html.Div([
+                        html.H2("Geographic Distribution", style=HEADER_STYLE),
+                        html.Button(
+                            'Reset Filters',
+                            id='reset-geo-filters',
+                            style={
+                                'backgroundColor': '#4CAF50',
+                                'color': 'white',
+                                'padding': '10px 20px',
+                                'border': 'none',
+                                'borderRadius': '4px',
+                                'cursor': 'pointer',
+                                'marginLeft': '20px'
+                            }
+                        )
+                    ], style={'display': 'flex', 'alignItems': 'center'}),
                     html.Div([
                         html.Div([
                             dcc.Graph(id='continent-chart', figure=create_continent_chart(df))
@@ -225,43 +244,111 @@ def update_image_grid(start_date, end_date):
         })
     ])
 
-# Callback to update all charts
+# Add reset button callback
+@app.callback(
+    [
+        Output('continent-chart', 'clickData', allow_duplicate=True),
+        Output('country-chart', 'clickData', allow_duplicate=True)
+    ],
+    Input('reset-geo-filters', 'n_clicks'),
+    prevent_initial_call=True
+)
+def reset_filters(n_clicks):
+    """Reset geographic filters when reset button is clicked."""
+    global selected_continent, selected_country
+    selected_continent = None
+    selected_country = None
+    return None, None
+
+# Callback to handle geographic filtering
+@app.callback(
+    [
+        Output('continent-chart', 'figure'),
+        Output('country-chart', 'figure'),
+        Output('city-chart', 'figure')
+    ],
+    [
+        Input('continent-chart', 'clickData'),
+        Input('country-chart', 'clickData'),
+        Input('date-range', 'start_date'),
+        Input('date-range', 'end_date')
+    ]
+)
+def update_geographic_charts(continent_click, country_click, start_date, end_date):
+    """Update geographic charts based on click events and date range."""
+    global selected_continent, selected_country
+    
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return dash.no_update
+    
+    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    # Get current data
+    df = get_session_data(
+        start_date,
+        end_date,
+        include_generation_status=True,
+        include_input_data=True
+    )
+    
+    # Handle continent click
+    if trigger_id == 'continent-chart' and continent_click:
+        selected_continent = continent_click['points'][0]['x']
+        selected_country = None  # Reset country selection
+    
+    # Handle country click
+    elif trigger_id == 'country-chart' and country_click:
+        selected_country = country_click['points'][0]['x']
+    
+    # Create updated figures
+    continent_fig = create_continent_chart(df, selected_continent)
+    country_fig = create_country_chart(df, selected_continent, selected_country)
+    city_fig = create_city_chart(df, selected_continent, selected_country)
+    
+    return continent_fig, country_fig, city_fig
+
+# Callback to update all other charts
 @app.callback(
     [
         Output('timeline-chart', 'figure'),
         Output('os-chart', 'figure'),
         Output('browser-chart', 'figure'),
         Output('mobile-chart', 'figure'),
-        Output('continent-chart', 'figure'),
-        Output('country-chart', 'figure'),
-        Output('city-chart', 'figure'),
         Output('language-chart', 'figure'),
         Output('generation-status-chart', 'figure'),
         Output('image-uploads-timeline', 'figure'),
         Output('top-images-chart', 'figure')
     ],
     [
+        Input('continent-chart', 'clickData'),
+        Input('country-chart', 'clickData'),
         Input('date-range', 'start_date'),
         Input('date-range', 'end_date')
     ]
 )
-def update_charts(start_date, end_date):
-    """Update all charts based on selected date range."""
+def update_other_charts(continent_click, country_click, start_date, end_date):
+    """Update all other charts based on geographic filters and date range."""
     df = get_session_data(
-        start_date, 
-        end_date, 
-        include_generation_status=True, 
+        start_date,
+        end_date,
+        include_generation_status=True,
         include_input_data=True
     )
+    
+    # Apply geographic filters
+    if selected_continent:
+        df = df[df['Continent'] == selected_continent]
+    if selected_country:
+        df = df[df['Country'] == selected_country]
+    
     top_images_df = get_top_images(start_date, end_date)
+    
     return [
         create_sessions_timeline(df),
         create_os_chart(df),
         create_browser_chart(df),
         create_mobile_pie(df),
-        create_continent_chart(df),
-        create_country_chart(df),
-        create_city_chart(df),
         create_language_chart(df),
         create_generation_status_chart(df),
         create_image_uploads_timeline(df),
