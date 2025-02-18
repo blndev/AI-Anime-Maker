@@ -14,17 +14,11 @@ from src import config
 
 def generate_random_ip():
     """Generate a random valid IP address (both IPv4 and IPv6)"""
-    if random.choice([True, False]):  # 50% chance for IPv4 or IPv6
-        # Generate IPv4
+    # Generate IPv4
+    ip = ipaddress.IPv4Address(random.randint(0, 2**32-1))
+    # Avoid private and reserved ranges
+    while ip.is_private or ip.is_reserved or ip.is_multicast:
         ip = ipaddress.IPv4Address(random.randint(0, 2**32-1))
-        # Avoid private and reserved ranges
-        while ip.is_private or ip.is_reserved or ip.is_multicast:
-            ip = ipaddress.IPv4Address(random.randint(0, 2**32-1))
-    else:
-        # Generate IPv6
-        ip = ipaddress.IPv6Address(random.randint(0, 2**128-1))
-        while ip.is_private or ip.is_reserved or ip.is_multicast:
-            ip = ipaddress.IPv6Address(random.randint(0, 2**128-1))
     return str(ip)
 
 def generate_random_sha1():
