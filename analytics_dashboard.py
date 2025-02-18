@@ -26,7 +26,7 @@ def main():
         logger.info(f"Debug mode: {debug}")
         
         app.run_server(
-            host='0.0.0.0',  # Make server accessible externally
+            host='127.0.0.1',  # Make server accessible externally
             port=port,
             debug=debug
         )
