@@ -97,31 +97,31 @@ def create_top_uploaded_images_chart(df):
     # Create figure with subplots: bar chart on top, image grid below
     fig = go.Figure()
     
-    # Extract image names from paths for x-axis labels
-    df['ImageName'] = df['CachePath'].apply(lambda x: os.path.basename(x) if pd.notna(x) else 'Unknown')
-    
-    # Add bar chart
+    # Add bar chart using ID as x-axis labels
     fig.add_trace(go.Bar(
-        x=df['ImageName'],
+        x=df['ID'].astype(str).apply(lambda x: f"ID: {x}"),
         y=df['UploadCount'],
         name='Upload Count',
         marker_color='#4B89DC'
     ))
     
-    # Add hover text with image paths
+    # Add hover text with image details
     fig.update_traces(
         hovertemplate="<br>".join([
-            "Image: %{x}",
+            "ID: %{x}",
             "Upload Count: %{y}",
-            "Path: %{customdata}"
+            "Path: %{customdata[0]}",
+            "Token: %{customdata[1]}",
+            "Face: %{customdata[2]}",
+            "Gender: %{customdata[3]}"
         ]),
-        customdata=df['CachePath']
+        customdata=df[['CachePath', 'Token', 'Face', 'Gender']].values
     )
     
     # Update layout
     fig.update_layout(
         title='Top 10 Most Frequently Uploaded Images',
-        xaxis_title='Image Name',
+        xaxis_title='Image ID',
         yaxis_title='Number of Uploads',
         template=PLOTLY_TEMPLATE,
         **LAYOUT_THEME
@@ -137,31 +137,31 @@ def create_top_generated_images_chart(df):
     # Get top generated images data
     top_images_df = get_top_generated_images(df)
     
-    # Extract image names from paths for x-axis labels
-    top_images_df['ImageName'] = top_images_df['CachePath'].apply(lambda x: os.path.basename(x) if pd.notna(x) else 'Unknown')
-    
-    # Add bar chart
+    # Add bar chart using SHA1 as x-axis labels
     fig.add_trace(go.Bar(
-        x=top_images_df['ImageName'],
+        x=top_images_df['SHA1'].apply(lambda x: f"SHA1: {x[:8]}..."),
         y=top_images_df['GenerationCount'],
         name='Generation Count',
         marker_color='#E74C3C'  # Red to match generation line in timeline
     ))
     
-    # Add hover text with image paths
+    # Add hover text with image details
     fig.update_traces(
         hovertemplate="<br>".join([
-            "Image: %{x}",
+            "SHA1: %{x}",
             "Generations: %{y}",
-            "Path: %{customdata}"
+            "Path: %{customdata[0]}",
+            "Token: %{customdata[1]}",
+            "Face: %{customdata[2]}",
+            "Gender: %{customdata[3]}"
         ]),
-        customdata=top_images_df['CachePath']
+        customdata=top_images_df[['CachePath', 'Token', 'Face', 'Gender']].values
     )
     
     # Update layout
     fig.update_layout(
         title='Top 10 Most Generated From Images',
-        xaxis_title='Image Name',
+        xaxis_title='Image SHA1',
         yaxis_title='Number of Generations',
         template=PLOTLY_TEMPLATE,
         **LAYOUT_THEME

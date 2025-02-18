@@ -97,23 +97,57 @@ def get_session_data(start_date=None, end_date=None, include_generation_status=F
     return df
 
 def get_top_uploaded_images(df):
-    """Get top 10 most frequently uploaded images from the session data.
+    """Get top 10 most frequently uploaded images with their details.
     
     Args:
         df: DataFrame containing session data with CachePaths column
     """
-    # Split CachePaths into rows (it's stored as comma-separated string)
-    paths_df = df[df['CachePaths'].notna()].copy()
-    paths_df['CachePath'] = paths_df['CachePaths'].str.split(',')
-    paths_df = paths_df.explode('CachePath')
+    config.read_configuration()
+    connection = sqlite3.connect(config.get_analytics_db_path())
     
-    # Count occurrences of each path and filter for multiple uploads
-    value_counts = paths_df['CachePath'].value_counts()
-    multiple_uploads = value_counts[value_counts > 1]  # Only keep images uploaded more than once
-    top_images = multiple_uploads.head(10).reset_index()
-    top_images.columns = ['CachePath', 'UploadCount']
+    # Get all session IDs from the filtered DataFrame
+    sessions = df['Session'].tolist()
+    sessions_str = ','.join(f"'{s}'" for s in sessions)
     
-    logger.info(f"Top images data loaded: {len(top_images)} rows")
+    query = f"""
+    WITH ImageUploads AS (
+        -- Count uploads per image
+        SELECT 
+            i.SHA1,
+            i.ID,
+            i.CachePath,
+            i.Token,
+            i.Face,
+            i.Gender,
+            i.MinAge,
+            i.MaxAge,
+            i.Timestamp as UploadTime,
+            COUNT(*) as UploadCount
+        FROM tblInput i
+        WHERE i.Session IN ({sessions_str})
+        GROUP BY i.SHA1, i.ID, i.CachePath, i.Token, i.Face, i.Gender, i.MinAge, i.MaxAge, i.Timestamp
+        HAVING UploadCount > 1
+        ORDER BY UploadCount DESC
+        LIMIT 10
+    )
+    SELECT 
+        SHA1,
+        ID,
+        CachePath,
+        Token,
+        Face,
+        Gender,
+        MinAge,
+        MaxAge,
+        UploadTime,
+        UploadCount
+    FROM ImageUploads
+    """
+    
+    top_images = pd.read_sql_query(query, connection)
+    connection.close()
+    
+    logger.info(f"Top uploaded images data loaded: {len(top_images)} rows")
     
     return top_images
 
@@ -152,6 +186,7 @@ def get_top_generated_images(df):
         LIMIT 10
     )
     SELECT 
+        SHA1,
         CachePath,
         Token,
         Face,

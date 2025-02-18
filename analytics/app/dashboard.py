@@ -619,13 +619,28 @@ def update_other_charts(filters_data, start_date, end_date):
         create_top_generated_images_chart(filtered_df)
     ]
 
-# Callback to update generation image details
+# Callback to update image details for both charts
 @app.callback(
     Output('generation-image-details', 'children'),
-    Input('top-generated-images-chart', 'clickData')
+    [
+        Input('top-generated-images-chart', 'clickData'),
+        Input('top-images-chart', 'clickData')
+    ]
 )
-def update_generation_image_details(click_data):
-    """Update the details display when a bar in the generations chart is clicked."""
+def update_image_details(generation_click, upload_click):
+    """Update the details display when a bar in either chart is clicked."""
+    # Use the most recent click data
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return html.Div("Select an image to view details", style={
+            'color': '#95A5A6',
+            'fontStyle': 'italic',
+            'textAlign': 'center',
+            'marginTop': '20px'
+        })
+    
+    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    click_data = generation_click if trigger_id == 'top-generated-images-chart' else upload_click
     if not click_data or not click_data.get('points'):
         return html.Div("Select an image to view details", style={
             'color': '#95A5A6',
@@ -634,11 +649,23 @@ def update_generation_image_details(click_data):
             'marginTop': '20px'
         })
     
-    # Get the selected image name and full path from the click data
-    selected_name = click_data['points'][0]['x']
-    selected_path = click_data['points'][0]['customdata']
-    logger.debug(f"Selected image name: {selected_name}")
-    logger.debug(f"Selected full path: {selected_path}")
+    if not click_data or not click_data.get('points'):
+        return html.Div("Select an image to view details", style={
+            'color': '#95A5A6',
+            'fontStyle': 'italic',
+            'textAlign': 'center',
+            'marginTop': '20px'
+        })
+    
+    # Get the selected image details from the click data
+    selected_id = click_data['points'][0]['x']
+    selected_path = click_data['points'][0]['customdata'][0]
+    selected_token = click_data['points'][0]['customdata'][1]
+    selected_face = click_data['points'][0]['customdata'][2]
+    selected_gender = click_data['points'][0]['customdata'][3]
+    
+    logger.debug(f"Selected ID/SHA1: {selected_id}")
+    logger.debug(f"Selected path: {selected_path}")
     
     # Get the image details from the database
     df = get_session_data(
@@ -649,13 +676,21 @@ def update_generation_image_details(click_data):
         timezone=local_tz
     )
     
-    # Get the image details from the database using get_top_generated_images
-    df_details = get_top_generated_images(df)
+    # Get details based on which chart was clicked
+    if trigger_id == 'top-generated-images-chart':
+        # Extract SHA1 from "SHA1: {sha1}..." format
+        raw_sha1 = selected_id.split(': ')[1].split('...')[0]
+        logger.debug(f"Extracted SHA1: {raw_sha1}")
+        df_details = get_top_generated_images(df)
+        filtered_details = df_details[df_details['SHA1'].str.contains(raw_sha1, regex=False)]
+    else:
+        # Extract ID from "ID: {id}" format
+        raw_id = selected_id.split(': ')[1]
+        logger.debug(f"Extracted ID: {raw_id}")
+        df_details = get_top_uploaded_images(df)
+        filtered_details = df_details[df_details['ID'].astype(str) == raw_id]
     
-    # Filter for the selected image
-    filtered_details = df_details[df_details['CachePath'] == selected_path]
     logger.debug(f"Found {len(filtered_details)} matching images")
-    logger.debug(f"Available paths: {df_details['CachePath'].tolist()}")
     
     if len(filtered_details) == 0:
         return html.Div("Image details not found", style={
@@ -667,10 +702,13 @@ def update_generation_image_details(click_data):
     
     image_data = filtered_details.iloc[0]
     
-    # Convert upload time to local timezone
-    upload_time = pd.to_datetime(image_data['UploadTime']).tz_localize('GMT').tz_convert(local_tz)
+    # Convert upload time to local timezone if available
+    upload_time = pd.to_datetime(image_data['UploadTime']).tz_localize('GMT').tz_convert(local_tz) if 'UploadTime' in image_data else None
     
-    # Create details display
+    # Create details display with count label based on chart type
+    count_label = "Generations" if trigger_id == 'top-generated-images-chart' else "Uploads"
+    count_value = image_data['GenerationCount'] if trigger_id == 'top-generated-images-chart' else image_data['UploadCount']
+    
     details = [
         html.Div([
             html.Img(
@@ -699,13 +737,13 @@ def update_generation_image_details(click_data):
                 html.Strong("Age Range: "),
                 html.Span(f"{image_data['MinAge'] if pd.notna(image_data['MinAge']) else 'N/A'} - {image_data['MaxAge'] if pd.notna(image_data['MaxAge']) else 'N/A'}")
             ], style={'margin': '5px 0'}),
-            html.Div([
+            *([html.Div([
                 html.Strong("Upload Time: "),
                 html.Span(upload_time.strftime('%Y-%m-%d %H:%M:%S %Z'))
-            ], style={'margin': '5px 0'}),
+            ], style={'margin': '5px 0'})] if upload_time is not None else []),
             html.Div([
-                html.Strong("Generations: "),
-                html.Span(str(image_data['GenerationCount']))
+                html.Strong(f"{count_label}: "),
+                html.Span(str(count_value))
             ], style={'margin': '5px 0'})
         ], style={
             'backgroundColor': '#2C3E50',
