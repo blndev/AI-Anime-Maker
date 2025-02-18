@@ -33,9 +33,12 @@ def create_top_images_chart(df):
     # Create figure with subplots: bar chart on top, image grid below
     fig = go.Figure()
     
+    # Extract image names from paths for x-axis labels
+    df['ImageName'] = df['CachePath'].apply(lambda x: os.path.basename(x) if pd.notna(x) else 'Unknown')
+    
     # Add bar chart
     fig.add_trace(go.Bar(
-        x=df['SHA1'],
+        x=df['ImageName'],
         y=df['UploadCount'],
         name='Upload Count',
         marker_color='#4B89DC'
@@ -44,7 +47,7 @@ def create_top_images_chart(df):
     # Add hover text with image paths
     fig.update_traces(
         hovertemplate="<br>".join([
-            "Image Hash: %{x}",
+            "Image: %{x}",
             "Upload Count: %{y}",
             "Path: %{customdata}"
         ]),
@@ -54,7 +57,7 @@ def create_top_images_chart(df):
     # Update layout
     fig.update_layout(
         title='Top 10 Most Frequently Uploaded Images',
-        xaxis_title='Image Hash',
+        xaxis_title='Image Name',
         yaxis_title='Number of Uploads',
         template=PLOTLY_TEMPLATE,
         **LAYOUT_THEME

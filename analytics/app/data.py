@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 def get_session_data(start_date=None, end_date=None, include_generation_status=False, include_input_data=False):
-    """Get session data from analytics database.
+    """Get session data from analytics database with all related data joined.
     
     Args:
         start_date (str, optional): Start date in YYYY-MM-DD format
@@ -28,42 +28,47 @@ def get_session_data(start_date=None, end_date=None, include_generation_status=F
     config.read_configuration()
     connection = sqlite3.connect(config.get_analytics_db_path())
     
-    # Handle datetime format YYYY-MM-DD HH:MM:SS
-    base_query = """
+    # Build comprehensive query joining all tables
+    query = """
+    WITH SessionInputs AS (
+        -- Get input data per session
+        SELECT 
+            i.Session,
+            i.SHA1,
+            COUNT(*) as ImageUploads,
+            GROUP_CONCAT(i.CachePath) as CachePaths
+        FROM tblInput i
+        GROUP BY i.Session, i.SHA1
+    ),
+    SessionGenerations AS (
+        -- Get generation data linked to inputs
+        SELECT 
+            i.Session,
+            COUNT(DISTINCT g.Id) as GenerationCount
+        FROM tblInput i
+        LEFT JOIN tblGenerations g ON g.input_SHA1 = i.SHA1
+        GROUP BY i.Session
+    )
     SELECT 
         s.*,
-        date(s.Timestamp) as Date
+        date(s.Timestamp) as Date,
+        COALESCE(si.ImageUploads, 0) as ImageUploads,
+        COALESCE(sg.GenerationCount, 0) as GenerationCount,
+        CASE 
+            WHEN si.ImageUploads > 0 OR sg.GenerationCount > 0 THEN 1
+            ELSE 0
+        END as HasStartedGeneration,
+        si.CachePaths
+    FROM tblSessions s
+    LEFT JOIN SessionInputs si ON si.Session = s.Session
+    LEFT JOIN SessionGenerations sg ON sg.Session = s.Session
     """
     
-    if include_generation_status:
-        base_query += """,
-        CASE 
-            WHEN EXISTS (
-                SELECT 1 FROM tblGenerations g WHERE g.Session = s.Session
-                UNION
-                SELECT 1 FROM tblInput i WHERE i.Session = s.Session
-            ) THEN 1
-            ELSE 0
-        END as HasStartedGeneration
-        """
-    
-    if include_input_data:
-        base_query += """,
-        (
-            SELECT COUNT(*)
-            FROM tblInput i
-            WHERE i.Session = s.Session
-        ) as ImageUploads
-        """
-    
-    base_query += " FROM tblSessions s"
-    
     if start_date and end_date:
-        base_query += " WHERE date(s.Timestamp) BETWEEN ? AND ?"
+        query += " WHERE date(s.Timestamp) BETWEEN ? AND ?"
     
-    base_query += " ORDER BY s.Timestamp"
+    query += " ORDER BY s.Timestamp"
     
-    query = base_query
     params = [start_date, end_date] if start_date and end_date else []
     
     df = pd.read_sql_query(query, connection, params=params)
@@ -77,39 +82,21 @@ def get_session_data(start_date=None, end_date=None, include_generation_status=F
     
     return df
 
-def get_top_images(start_date=None, end_date=None):
-    """Get top 10 most frequently uploaded images with their paths.
+def get_top_images(df):
+    """Get top 10 most frequently uploaded images from the session data.
     
     Args:
-        start_date (str, optional): Start date in YYYY-MM-DD format
-        end_date (str, optional): End date in YYYY-MM-DD format
+        df: DataFrame containing session data with CachePaths column
     """
-    config.read_configuration()
-    connection = sqlite3.connect(config.get_analytics_db_path())
+    # Split CachePaths into rows (it's stored as comma-separated string)
+    paths_df = df[df['CachePaths'].notna()].copy()
+    paths_df['CachePath'] = paths_df['CachePaths'].str.split(',')
+    paths_df = paths_df.explode('CachePath')
     
-    query = """
-    SELECT 
-        i.SHA1,
-        i.CachePath,
-        COUNT(*) as UploadCount
-    FROM tblInput i
-    JOIN tblSessions s ON i.Session = s.Session
-    """
+    # Count occurrences of each path
+    top_images = paths_df['CachePath'].value_counts().head(10).reset_index()
+    top_images.columns = ['CachePath', 'UploadCount']
     
-    if start_date and end_date:
-        query += " WHERE date(s.Timestamp) BETWEEN ? AND ?"
+    logger.info(f"Top images data loaded: {len(top_images)} rows")
     
-    query += """
-    GROUP BY i.SHA1, i.CachePath
-    ORDER BY UploadCount DESC
-    LIMIT 10
-    """
-    
-    params = [start_date, end_date] if start_date and end_date else []
-    
-    df = pd.read_sql_query(query, connection, params=params)
-    connection.close()
-    
-    logger.info(f"Top images data loaded: {len(df)} rows")
-    
-    return df
+    return top_images

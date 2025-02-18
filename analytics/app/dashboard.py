@@ -71,7 +71,7 @@ df = get_session_data(
     include_generation_status=True, 
     include_input_data=True
 )
-top_images_df = get_top_images(initial_start_date, initial_end_date)
+top_images_df = get_top_images(df)
 
 # Create layout
 app.layout = html.Div(style=LAYOUT_STYLE, children=[
@@ -208,7 +208,13 @@ app.layout = html.Div(style=LAYOUT_STYLE, children=[
 )
 def update_image_grid(start_date, end_date):
     """Update image grid based on selected date range."""
-    top_images_df = get_top_images(start_date, end_date)
+    df = get_session_data(
+        start_date,
+        end_date,
+        include_generation_status=True,
+        include_input_data=True
+    )
+    top_images_df = get_top_images(df)
     
     return html.Div([
         html.Div([
@@ -362,31 +368,8 @@ def update_other_charts(continent_click, country_click, start_date, end_date):
     if selected_country:
         filtered_df = filtered_df[filtered_df['Country'] == selected_country]
     
-    # Get filtered top images
-    if selected_continent or selected_country:
-        # Get sessions from filtered data
-        filtered_sessions = filtered_df['Session'].unique()
-        # Get filtered top images using SQL to ensure proper joining
-        connection = sqlite3.connect(config.get_analytics_db_path())
-        query = """
-        SELECT 
-            i.SHA1,
-            i.CachePath,
-            COUNT(*) as UploadCount
-        FROM tblInput i
-        JOIN tblSessions s ON i.Session = s.Session
-        WHERE s.Session IN ({})
-        AND date(s.Timestamp) BETWEEN ? AND ?
-        GROUP BY i.SHA1, i.CachePath
-        ORDER BY UploadCount DESC
-        LIMIT 10
-        """.format(','.join('?' * len(filtered_sessions)))
-        
-        params = list(filtered_sessions) + [start_date, end_date]
-        filtered_top_images_df = pd.read_sql_query(query, connection, params=params)
-        connection.close()
-    else:
-        filtered_top_images_df = get_top_images(start_date, end_date)
+    # Get filtered top images from the filtered DataFrame
+    filtered_top_images_df = get_top_images(filtered_df)
     
     return [
         create_sessions_timeline(filtered_df),
