@@ -96,7 +96,7 @@ def get_session_data(start_date=None, end_date=None, include_generation_status=F
     
     return df
 
-def get_top_images(df):
+def get_top_uploaded_images(df):
     """Get top 10 most frequently uploaded images from the session data.
     
     Args:
@@ -114,5 +114,46 @@ def get_top_images(df):
     top_images.columns = ['CachePath', 'UploadCount']
     
     logger.info(f"Top images data loaded: {len(top_images)} rows")
+    
+    return top_images
+
+def get_top_generated_images(df):
+    """Get top 10 images that were used most for generations.
+    
+    Args:
+        df: DataFrame containing session data with CachePaths column
+    """
+    config.read_configuration()
+    connection = sqlite3.connect(config.get_analytics_db_path())
+    
+    # Get all session IDs from the filtered DataFrame
+    sessions = df['Session'].tolist()
+    sessions_str = ','.join(f"'{s}'" for s in sessions)
+    
+    query = f"""
+    WITH ImageGenerations AS (
+        -- Count generations per input image
+        SELECT 
+            i.SHA1,
+            i.CachePath,
+            COUNT(DISTINCT g.Id) as GenerationCount
+        FROM tblInput i
+        INNER JOIN tblGenerations g ON g.input_SHA1 = i.SHA1
+        WHERE i.Session IN ({sessions_str})
+        GROUP BY i.SHA1, i.CachePath
+        HAVING GenerationCount > 0
+        ORDER BY GenerationCount DESC
+        LIMIT 10
+    )
+    SELECT 
+        CachePath,
+        GenerationCount
+    FROM ImageGenerations
+    """
+    
+    top_images = pd.read_sql_query(query, connection)
+    connection.close()
+    
+    logger.info(f"Top generated images data loaded: {len(top_images)} rows")
     
     return top_images

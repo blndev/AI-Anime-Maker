@@ -13,7 +13,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 import src.config as config
 
 # Import data and diagram modules
-from .data import get_session_data, get_top_images
+from .data import get_session_data, get_top_uploaded_images
 from .diagrams_usage import (
     create_sessions_timeline, create_os_chart, create_browser_chart,
     create_mobile_pie, create_generation_status_chart
@@ -24,7 +24,8 @@ from .diagrams_origin import (
 )
 from .diagrams_uploads import (
     create_image_uploads_timeline,
-    create_top_images_chart
+    create_top_uploaded_images_chart,
+    create_top_generated_images_chart
 )
 
 # Import styles
@@ -79,7 +80,7 @@ df = get_session_data(
     include_input_data=True,
     timezone=local_tz
 )
-top_images_df = get_top_images(df)
+top_images_df = get_top_uploaded_images(df)
 
 # Create layout
 app.layout = html.Div(style=LAYOUT_STYLE, children=[
@@ -219,9 +220,15 @@ app.layout = html.Div(style=LAYOUT_STYLE, children=[
                 html.Div([
                     html.H2("Most Uploaded Images", style=HEADER_STYLE),
                     # Bar chart showing upload counts
-                    dcc.Graph(id='top-images-chart', figure=create_top_images_chart(top_images_df)),
+                    dcc.Graph(id='top-images-chart', figure=create_top_uploaded_images_chart(top_images_df)),
                     # Image grid (updated via callback)
                     html.Div(id='image-grid')
+                ]),
+                
+                # Top Generated Images Section
+                html.Div([
+                    html.H2("Most Generated From Images", style=HEADER_STYLE),
+                    dcc.Graph(id='top-generated-images-chart', figure=create_top_generated_images_chart(df))
                 ])
             ]
         )
@@ -266,7 +273,7 @@ def update_image_grid(filters_data, start_date, end_date):
         if filters_data.get('language'):
             filtered_df = filtered_df[filtered_df['Language'] == filters_data['language']]
     
-    top_images_df = get_top_images(filtered_df)
+    top_images_df = get_top_uploaded_images(filtered_df)
     
     return html.Div([
         html.Div([
@@ -541,7 +548,8 @@ def update_geographic_charts(filters_data, start_date, end_date):
         Output('language-chart', 'figure'),
         Output('generation-status-chart', 'figure'),
         Output('image-uploads-timeline', 'figure'),
-        Output('top-images-chart', 'figure')
+        Output('top-images-chart', 'figure'),
+        Output('top-generated-images-chart', 'figure')
     ],
     [
         Input('active-filters-store', 'data'),
@@ -579,7 +587,7 @@ def update_other_charts(filters_data, start_date, end_date):
             filtered_df = filtered_df[filtered_df['Language'] == filters_data['language']]
     
     # Get filtered top images
-    filtered_top_images_df = get_top_images(filtered_df)
+    filtered_top_images_df = get_top_uploaded_images(filtered_df)
     
     return [
         create_sessions_timeline(filtered_df),
@@ -589,7 +597,8 @@ def update_other_charts(filters_data, start_date, end_date):
         create_language_chart(filtered_df),
         create_generation_status_chart(filtered_df),
         create_image_uploads_timeline(filtered_df),
-        create_top_images_chart(filtered_top_images_df)
+        create_top_uploaded_images_chart(filtered_top_images_df),
+        create_top_generated_images_chart(filtered_df)
     ]
 
 # Get server for external use
