@@ -46,9 +46,12 @@ logger.addHandler(console_handler)
 # Initialize the Dash app
 app = dash.Dash(__name__, title="AI Anime Maker Analytics")
 
-# Initialize global state for geographic filters
+# Initialize global state for filters
 selected_continent = None
 selected_country = None
+selected_os = None
+selected_browser = None
+selected_language = None
 
 # Get cache directory path from config
 config.read_configuration()
@@ -279,11 +282,14 @@ def update_image_grid(start_date, end_date):
     [
         Input('continent-chart', 'clickData'),
         Input('country-chart', 'clickData'),
+        Input('os-chart', 'clickData'),
+        Input('browser-chart', 'clickData'),
+        Input('language-chart', 'clickData'),
         Input('reset-geo-filters', 'n_clicks')
     ],
     prevent_initial_call=True
 )
-def update_filters_store(continent_click, country_click, reset_clicks):
+def update_filters_store(continent_click, country_click, os_click, browser_click, language_click, reset_clicks):
     """Update the active filters store."""
     ctx = dash.callback_context
     if not ctx.triggered:
@@ -291,11 +297,14 @@ def update_filters_store(continent_click, country_click, reset_clicks):
     
     trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
     
-    global selected_continent, selected_country
+    global selected_continent, selected_country, selected_os, selected_browser, selected_language
     
     if trigger_id == 'reset-geo-filters':
         selected_continent = None
         selected_country = None
+        selected_os = None
+        selected_browser = None
+        selected_language = None
     elif trigger_id == 'continent-chart':
         if continent_click and len(continent_click['points']) > 0:
             new_continent = continent_click['points'][0]['x']
@@ -317,10 +326,40 @@ def update_filters_store(continent_click, country_click, reset_clicks):
                 selected_country = new_country
         else:
             selected_country = None
+    elif trigger_id == 'os-chart':
+        if os_click and len(os_click['points']) > 0:
+            new_os = os_click['points'][0]['x']
+            if new_os == selected_os:
+                selected_os = None
+            else:
+                selected_os = new_os
+        else:
+            selected_os = None
+    elif trigger_id == 'browser-chart':
+        if browser_click and len(browser_click['points']) > 0:
+            new_browser = browser_click['points'][0]['x']
+            if new_browser == selected_browser:
+                selected_browser = None
+            else:
+                selected_browser = new_browser
+        else:
+            selected_browser = None
+    elif trigger_id == 'language-chart':
+        if language_click and len(language_click['points']) > 0:
+            new_language = language_click['points'][0]['x']
+            if new_language == selected_language:
+                selected_language = None
+            else:
+                selected_language = new_language
+        else:
+            selected_language = None
     
     return {
         'continent': selected_continent,
-        'country': selected_country
+        'country': selected_country,
+        'os': selected_os,
+        'browser': selected_browser,
+        'language': selected_language
     }
 
 # Callback to update active filters display
@@ -340,6 +379,7 @@ def update_active_filters_display(data):
     
     filters = []
     
+    # Geographic filters
     if data.get('continent'):
         filters.append(
             html.Div([
@@ -360,6 +400,47 @@ def update_active_filters_display(data):
                 html.Span(data['country'])
             ], style={
                 'backgroundColor': '#34495E',
+                'padding': '5px 10px',
+                'borderRadius': '4px',
+                'marginRight': '10px'
+            })
+        )
+    
+    # Platform filters
+    if data.get('os'):
+        filters.append(
+            html.Div([
+                html.Strong("OS: "),
+                html.Span(data['os'])
+            ], style={
+                'backgroundColor': '#2980B9',
+                'padding': '5px 10px',
+                'borderRadius': '4px',
+                'marginRight': '10px'
+            })
+        )
+    
+    if data.get('browser'):
+        filters.append(
+            html.Div([
+                html.Strong("Browser: "),
+                html.Span(data['browser'])
+            ], style={
+                'backgroundColor': '#2980B9',
+                'padding': '5px 10px',
+                'borderRadius': '4px',
+                'marginRight': '10px'
+            })
+        )
+    
+    # Language filter
+    if data.get('language'):
+        filters.append(
+            html.Div([
+                html.Strong("Language: "),
+                html.Span(data['language'])
+            ], style={
+                'backgroundColor': '#8E44AD',
                 'padding': '5px 10px',
                 'borderRadius': '4px',
                 'marginRight': '10px'
@@ -436,13 +517,24 @@ def update_other_charts(filters_data, start_date, end_date):
         include_input_data=True
     )
     
-    # Apply geographic filters
+    # Apply all filters
     filtered_df = df.copy()
     if filters_data:
+        # Geographic filters
         if filters_data.get('continent'):
             filtered_df = filtered_df[filtered_df['Continent'] == filters_data['continent']]
         if filters_data.get('country'):
             filtered_df = filtered_df[filtered_df['Country'] == filters_data['country']]
+        
+        # Platform filters
+        if filters_data.get('os'):
+            filtered_df = filtered_df[filtered_df['OS'] == filters_data['os']]
+        if filters_data.get('browser'):
+            filtered_df = filtered_df[filtered_df['Browser'] == filters_data['browser']]
+        
+        # Language filter
+        if filters_data.get('language'):
+            filtered_df = filtered_df[filtered_df['Language'] == filters_data['language']]
     
     # Get filtered top images
     filtered_top_images_df = get_top_images(filtered_df)
