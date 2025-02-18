@@ -28,6 +28,21 @@ HEADER_STYLE = {
     'color': '#FFFFFF'
 }
 
+# Define tab styles
+TAB_STYLE = {
+    'backgroundColor': '#1e1e1e',
+    'color': '#cccccc',
+    'padding': '10px',
+    'border': '1px solid #333333'
+}
+
+TAB_SELECTED_STYLE = {
+    'backgroundColor': '#2d2d2d',
+    'color': '#ffffff',
+    'padding': '10px',
+    'border': '1px solid #444444'
+}
+
 # Add parent directory to path to import config
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 import src.config as config
@@ -173,8 +188,7 @@ def create_sessions_timeline(df):
         bargap=0.1,
         template=PLOTLY_TEMPLATE
     )
-    fig.update_layout(**LAYOUT_THEME
-    )
+    fig.update_layout(**LAYOUT_THEME)
     
     return fig
 
@@ -190,8 +204,7 @@ def create_os_chart(df):
         labels={'OS': 'Operating System', 'Count': 'Number of Sessions'},
         template=PLOTLY_TEMPLATE
     )
-    fig.update_layout(**LAYOUT_THEME
-    )
+    fig.update_layout(**LAYOUT_THEME)
     return fig
 
 def create_browser_chart(df):
@@ -206,8 +219,7 @@ def create_browser_chart(df):
         labels={'Browser': 'Browser', 'Count': 'Number of Sessions'},
         template=PLOTLY_TEMPLATE
     )
-    fig.update_layout(**LAYOUT_THEME
-    )
+    fig.update_layout(**LAYOUT_THEME)
     return fig
 
 def create_mobile_pie(df):
@@ -223,8 +235,7 @@ def create_mobile_pie(df):
         title="Desktop vs Mobile Usage",
         template=PLOTLY_TEMPLATE
     )
-    fig.update_layout(**LAYOUT_THEME
-    )
+    fig.update_layout(**LAYOUT_THEME)
     return fig
 
 def create_continent_chart(df):
@@ -239,8 +250,7 @@ def create_continent_chart(df):
         labels={'Continent': 'Continent', 'Count': 'Number of Sessions'},
         template=PLOTLY_TEMPLATE
     )
-    fig.update_layout(**LAYOUT_THEME
-    )
+    fig.update_layout(**LAYOUT_THEME)
     return fig
 
 def create_country_chart(df):
@@ -255,8 +265,7 @@ def create_country_chart(df):
         labels={'Country': 'Country', 'Count': 'Number of Sessions'},
         template=PLOTLY_TEMPLATE
     )
-    fig.update_layout(**LAYOUT_THEME
-    )
+    fig.update_layout(**LAYOUT_THEME)
     return fig
 
 def create_language_chart(df):
@@ -271,8 +280,7 @@ def create_language_chart(df):
         labels={'Language': 'Language', 'Count': 'Number of Sessions'},
         template=PLOTLY_TEMPLATE
     )
-    fig.update_layout(**LAYOUT_THEME
-    )
+    fig.update_layout(**LAYOUT_THEME)
     return fig
 
 def create_city_chart(df):
@@ -287,8 +295,7 @@ def create_city_chart(df):
         labels={'City': 'City', 'Count': 'Number of Sessions'},
         template=PLOTLY_TEMPLATE
     )
-    fig.update_layout(**LAYOUT_THEME
-    )
+    fig.update_layout(**LAYOUT_THEME)
     return fig
 
 def create_generation_status_chart(df):
@@ -336,53 +343,72 @@ app.layout = html.Div(style=LAYOUT_STYLE, children=[
         ], style={'textAlign': 'center', 'margin': '20px'}),
     ]),
     
-    # Sessions Timeline
-    html.Div([
-        dcc.Graph(id='timeline-chart', figure=create_sessions_timeline(df))
-    ]),
-    
-    # Platform Statistics Section
-    html.Div([
-        html.H2("Platform Statistics", style=HEADER_STYLE),
-        html.Div([
-            html.Div([
-                dcc.Graph(id='os-chart', figure=create_os_chart(df))
-            ], style={'width': '50%', 'display': 'inline-block'}),
-            html.Div([
-                dcc.Graph(id='browser-chart', figure=create_browser_chart(df))
-            ], style={'width': '50%', 'display': 'inline-block'})
-        ]),
-        html.Div([
-            html.Div([
-                dcc.Graph(id='mobile-chart', figure=create_mobile_pie(df))
-            ], style={'width': '50%', 'display': 'inline-block'}),
-            html.Div([
-                dcc.Graph(id='generation-status-chart', figure=create_generation_status_chart(df))
-            ], style={'width': '50%', 'display': 'inline-block'})
-        ])
-    ]),
-    
-    # Geographic Distribution Section
-    html.Div([
-        html.H2("Geographic Distribution", style=HEADER_STYLE),
-        html.Div([
-            html.Div([
-                dcc.Graph(id='continent-chart', figure=create_continent_chart(df))
-            ], style={'width': '50%', 'display': 'inline-block'}),
-            html.Div([
-                dcc.Graph(id='country-chart', figure=create_country_chart(df))
-            ], style={'width': '50%', 'display': 'inline-block'})
-        ]),
-        html.Div([
-            dcc.Graph(id='city-chart', figure=create_city_chart(df))
-        ])
-    ]),
-    
-    # Language Distribution Section
-    html.Div([
-        html.H2("Language Distribution", style=HEADER_STYLE),
-        dcc.Graph(id='language-chart', figure=create_language_chart(df))
-    ])
+    # Tabs
+    dcc.Tabs([
+        # Tab 1: Usage Statistics
+        dcc.Tab(
+            label='Usage Statistics',
+            style=TAB_STYLE,
+            selected_style=TAB_SELECTED_STYLE,
+            children=[
+                # Sessions Timeline
+                html.Div([
+                    dcc.Graph(id='timeline-chart', figure=create_sessions_timeline(df))
+                ]),
+                
+                # Platform Statistics Section
+                html.Div([
+                    html.H2("Platform Statistics", style=HEADER_STYLE),
+                    html.Div([
+                        html.Div([
+                            dcc.Graph(id='os-chart', figure=create_os_chart(df))
+                        ], style={'width': '50%', 'display': 'inline-block'}),
+                        html.Div([
+                            dcc.Graph(id='browser-chart', figure=create_browser_chart(df))
+                        ], style={'width': '50%', 'display': 'inline-block'})
+                    ]),
+                    html.Div([
+                        html.Div([
+                            dcc.Graph(id='mobile-chart', figure=create_mobile_pie(df))
+                        ], style={'width': '50%', 'display': 'inline-block'}),
+                        html.Div([
+                            dcc.Graph(id='generation-status-chart', figure=create_generation_status_chart(df))
+                        ], style={'width': '50%', 'display': 'inline-block'})
+                    ])
+                ])
+            ]
+        ),
+        
+        # Tab 2: Language and Geographic Distribution
+        dcc.Tab(
+            label='Language & Geographic Distribution',
+            style=TAB_STYLE,
+            selected_style=TAB_SELECTED_STYLE,
+            children=[
+                # Language Distribution Section
+                html.Div([
+                    html.H2("Language Distribution", style=HEADER_STYLE),
+                    dcc.Graph(id='language-chart', figure=create_language_chart(df))
+                ]),
+                
+                # Geographic Distribution Section
+                html.Div([
+                    html.H2("Geographic Distribution", style=HEADER_STYLE),
+                    html.Div([
+                        html.Div([
+                            dcc.Graph(id='continent-chart', figure=create_continent_chart(df))
+                        ], style={'width': '50%', 'display': 'inline-block'}),
+                        html.Div([
+                            dcc.Graph(id='country-chart', figure=create_country_chart(df))
+                        ], style={'width': '50%', 'display': 'inline-block'})
+                    ]),
+                    html.Div([
+                        dcc.Graph(id='city-chart', figure=create_city_chart(df))
+                    ])
+                ])
+            ]
+        )
+    ], style={'margin': '20px 0'})
 ])
 
 # Callback to update all charts when date range changes
