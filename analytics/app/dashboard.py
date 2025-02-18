@@ -61,7 +61,26 @@ logger.addHandler(console_handler)
 # Initialize the Dash app
 app = dash.Dash(__name__, title="AI Anime Maker Analytics")
 
-def get_session_data(start_date=None, end_date=None, include_generation_status=False):
+# Create assets directory for serving images
+ASSETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets')
+os.makedirs(ASSETS_DIR, exist_ok=True)
+
+def copy_image_to_assets(image_path):
+    """Copy image to assets directory and return the new path."""
+    if not os.path.exists(image_path):
+        return None
+    
+    filename = os.path.basename(image_path)
+    asset_path = os.path.join(ASSETS_DIR, filename)
+    
+    try:
+        import shutil
+        shutil.copy2(image_path, asset_path)
+        return filename
+    except:
+        return None
+
+def get_session_data(start_date=None, end_date=None, include_generation_status=False, include_input_data=False):
     """Get session data from analytics database.
     
     Args:
@@ -72,29 +91,41 @@ def get_session_data(start_date=None, end_date=None, include_generation_status=F
     connection = sqlite3.connect(config.get_analytics_db_path())
     
     # Handle datetime format YYYY-MM-DD HH:MM:SS
+    base_query = """
+    SELECT 
+        s.*,
+        date(s.Timestamp) as Date
+    """
+    
     if include_generation_status:
-        query = """
-        SELECT 
-            s.*,
-            date(s.Timestamp) as Date,
-            CASE 
-                WHEN EXISTS (
-                    SELECT 1 FROM tblGenerations g WHERE g.Session = s.Session
-                    UNION
-                    SELECT 1 FROM tblInput i WHERE i.Session = s.Session
-                ) THEN 1
-                ELSE 0
-            END as HasStartedGeneration
-        FROM tblSessions s
+        base_query += """,
+        CASE 
+            WHEN EXISTS (
+                SELECT 1 FROM tblGenerations g WHERE g.Session = s.Session
+                UNION
+                SELECT 1 FROM tblInput i WHERE i.Session = s.Session
+            ) THEN 1
+            ELSE 0
+        END as HasStartedGeneration
         """
-        if start_date and end_date:
-            query += " WHERE date(s.Timestamp) BETWEEN ? AND ?"
-        query += " ORDER BY s.Timestamp"
-    else:
-        query = "SELECT *, date(Timestamp) as Date FROM tblSessions"
-        if start_date and end_date:
-            query += " WHERE date(Timestamp) BETWEEN ? AND ?"
-        query += " ORDER BY Timestamp"
+    
+    if include_input_data:
+        base_query += """,
+        (
+            SELECT COUNT(*)
+            FROM tblInput i
+            WHERE i.Session = s.Session
+        ) as ImageUploads
+        """
+    
+    base_query += " FROM tblSessions s"
+    
+    if start_date and end_date:
+        base_query += " WHERE date(s.Timestamp) BETWEEN ? AND ?"
+    
+    base_query += " ORDER BY s.Timestamp"
+    
+    query = base_query
     
     params = [start_date, end_date] if start_date and end_date else []
     
@@ -317,12 +348,88 @@ def create_generation_status_chart(df):
     fig.update_layout(**LAYOUT_THEME)
     return fig
 
+def get_top_images():
+    """Get top 10 most frequently uploaded images with their paths."""
+    config.read_configuration()
+    connection = sqlite3.connect(config.get_analytics_db_path())
+    
+    query = """
+    SELECT 
+        SHA1,
+        CachePath,
+        COUNT(*) as UploadCount
+    FROM tblInput
+    GROUP BY SHA1, CachePath
+    ORDER BY UploadCount DESC
+    LIMIT 10
+    """
+    
+    df = pd.read_sql_query(query, connection)
+    connection.close()
+    return df
+
+def create_image_uploads_timeline(df):
+    """Create timeline of image uploads per session."""
+    # Only include sessions with uploads
+    upload_data = df[df['ImageUploads'] > 0].copy()
+    
+    # Create timeline
+    fig = px.scatter(
+        upload_data,
+        x='Timestamp',
+        y='ImageUploads',
+        title='Image Uploads per Session Over Time',
+        labels={
+            'Timestamp': 'Date',
+            'ImageUploads': 'Number of Uploads'
+        },
+        template=PLOTLY_TEMPLATE
+    )
+    
+    fig.update_layout(**LAYOUT_THEME)
+    return fig
+
+def create_top_images_chart(df):
+    """Create bar chart of top uploaded images with thumbnails."""
+    # Create figure with subplots: bar chart on top, image grid below
+    fig = go.Figure()
+    
+    # Add bar chart
+    fig.add_trace(go.Bar(
+        x=df['SHA1'],
+        y=df['UploadCount'],
+        name='Upload Count',
+        marker_color='#4B89DC'
+    ))
+    
+    # Add hover text with image paths
+    fig.update_traces(
+        hovertemplate="<br>".join([
+            "Image Hash: %{x}",
+            "Upload Count: %{y}",
+            "Path: %{customdata}"
+        ]),
+        customdata=df['CachePath']
+    )
+    
+    # Update layout
+    fig.update_layout(
+        title='Top 10 Most Frequently Uploaded Images',
+        xaxis_title='Image Hash',
+        yaxis_title='Number of Uploads',
+        template=PLOTLY_TEMPLATE,
+        **LAYOUT_THEME
+    )
+    
+    return fig
+
 # Initialize with last 30 days of data
 initial_end_date = pd.Timestamp.now().strftime('%Y-%m-%d')
 initial_start_date = (pd.Timestamp.now() - pd.Timedelta(days=30)).strftime('%Y-%m-%d')
 
 # Get initial data
-df = get_session_data(initial_start_date, initial_end_date, include_generation_status=True)
+df = get_session_data(initial_start_date, initial_end_date, include_generation_status=True, include_input_data=True)
+top_images_df = get_top_images()
 
 # Create layout
 app.layout = html.Div(style=LAYOUT_STYLE, children=[
@@ -407,6 +514,63 @@ app.layout = html.Div(style=LAYOUT_STYLE, children=[
                     ])
                 ])
             ]
+        ),
+        
+        # Tab 3: Image Upload Analysis
+        dcc.Tab(
+            label='Image Upload Analysis',
+            style=TAB_STYLE,
+            selected_style=TAB_SELECTED_STYLE,
+            children=[
+                # Image Uploads Timeline
+                html.Div([
+                    html.H2("Image Upload Patterns", style=HEADER_STYLE),
+                    dcc.Graph(id='image-uploads-timeline', figure=create_image_uploads_timeline(df))
+                ]),
+                
+                # Top Images Section
+                html.Div([
+                    html.H2("Most Uploaded Images", style=HEADER_STYLE),
+                    # Bar chart showing upload counts
+                    dcc.Graph(id='top-images-chart', figure=create_top_images_chart(top_images_df)),
+                    # Image grid
+                    html.Div([
+                        html.Div([
+                            html.Div([
+                                html.Img(
+                                    src=f'/assets/{copy_image_to_assets(path)}' if copy_image_to_assets(path) else '',
+                                    style={
+                                        'width': '150px',
+                                        'height': '150px',
+                                        'object-fit': 'cover',
+                                        'margin': '5px',
+                                        'border': '2px solid #333'
+                                    }
+                                ),
+                                html.Div(
+                                    f'Uploaded {count} times',
+                                    style={
+                                        'color': '#FFFFFF',
+                                        'textAlign': 'center',
+                                        'marginTop': '5px'
+                                    }
+                                )
+                            ], style={
+                                'display': 'flex',
+                                'flexDirection': 'column',
+                                'alignItems': 'center',
+                                'margin': '10px'
+                            }) for path, count in zip(top_images_df['CachePath'], top_images_df['UploadCount'])
+                        ], style={
+                            'display': 'flex',
+                            'flexWrap': 'wrap',
+                            'justifyContent': 'center',
+                            'gap': '20px',
+                            'margin': '20px 0'
+                        })
+                    ])
+                ])
+            ]
         )
     ], style={'margin': '20px 0'})
 ])
@@ -422,7 +586,9 @@ app.layout = html.Div(style=LAYOUT_STYLE, children=[
         Output('country-chart', 'figure'),
         Output('city-chart', 'figure'),
         Output('language-chart', 'figure'),
-        Output('generation-status-chart', 'figure')
+        Output('generation-status-chart', 'figure'),
+        Output('image-uploads-timeline', 'figure'),
+        Output('top-images-chart', 'figure')
     ],
     [
         Input('date-range', 'start_date'),
@@ -431,7 +597,8 @@ app.layout = html.Div(style=LAYOUT_STYLE, children=[
 )
 def update_charts(start_date, end_date):
     """Update all charts based on selected date range."""
-    df = get_session_data(start_date, end_date, include_generation_status=True)
+    df = get_session_data(start_date, end_date, include_generation_status=True, include_input_data=True)
+    top_images_df = get_top_images()
     return [
         create_sessions_timeline(df),
         create_os_chart(df),
@@ -441,7 +608,9 @@ def update_charts(start_date, end_date):
         create_country_chart(df),
         create_city_chart(df),
         create_language_chart(df),
-        create_generation_status_chart(df)
+        create_generation_status_chart(df),
+        create_image_uploads_timeline(df),
+        create_top_images_chart(top_images_df)
     ]
 
 # Get server for external use
