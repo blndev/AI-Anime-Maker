@@ -1,4 +1,4 @@
-from dash import html, dcc, Input, Output, State, callback
+from dash import html, dcc, Input, Output, State, callback, ctx, ALL
 import dash
 import plotly.graph_objects as go
 import plotly.express as px
@@ -68,6 +68,36 @@ class GenerationDetailsTab:
     def create_layout(self, initial_start_date, initial_end_date):
         """Create the layout for the Generation Details tab."""
         return [
+            # Modal for full-size image view
+            dcc.Store(id='current-image-src', data=None),
+            html.Div(
+                id='image-modal',
+                style={
+                    'display': 'none',
+                    'position': 'fixed',
+                    'zIndex': 1000,
+                    'left': 0,
+                    'top': 0,
+                    'width': '100%',
+                    'height': '100%',
+                    'backgroundColor': 'rgba(0,0,0,0.9)',
+                    'cursor': 'pointer'
+                },
+                children=[
+                    html.Img(
+                        id='modal-image',
+                        style={
+                            'margin': 'auto',
+                            'display': 'block',
+                            'maxWidth': '90%',
+                            'maxHeight': '90%',
+                            'position': 'relative',
+                            'top': '50%',
+                            'transform': 'translateY(-50%)'
+                        }
+                    )
+                ]
+            ),
             # Search Section
             html.Div([
                 html.H2("Search by Input ID or SHA1", style=HEADER_STYLE),
@@ -104,7 +134,12 @@ class GenerationDetailsTab:
         return html.Div([
             html.H3("Image Details"),
             html.Div([
-                html.Img(src=image_data['CachePath'], style={'maxWidth': '200px', 'marginRight': '20px'}),
+                html.Img(
+                    src=image_data['CachePath'],
+                    style={'maxWidth': '200px', 'marginRight': '20px', 'cursor': 'pointer'},
+                    id={'type': 'preview-image', 'index': 'input-image'},
+                    title='Click to enlarge'
+                ),
                 html.Div([
                     html.P(f"Input ID: {image_data['ID']}"),
                     html.P(f"SHA1: {image_data['SHA1']}"),
@@ -134,7 +169,15 @@ class GenerationDetailsTab:
                 ),
                 html.Tbody([
                     html.Tr([
-                        html.Td(html.Img(src=row['GeneratedImagePath'], style={'maxWidth': '100px'}), style=TABLE_CELL_STYLE),
+                        html.Td(
+                            html.Img(
+                                src=row['GeneratedImagePath'],
+                                style={'maxWidth': '100px', 'cursor': 'pointer'},
+                                id={'type': 'preview-image', 'index': f"gen-{row['GenerationId']}"},
+                                title='Click to enlarge'
+                            ),
+                            style=TABLE_CELL_STYLE
+                        ),
                         html.Td(row['Style'], style=TABLE_CELL_STYLE),
                         html.Td(row['Prompt'], style=TABLE_CELL_STYLE),
                         html.Td(pd.to_datetime(row['Timestamp']).strftime('%Y-%m-%d %H:%M:%S'), style=TABLE_CELL_STYLE)
@@ -145,6 +188,53 @@ class GenerationDetailsTab:
     
     def register_callbacks(self):
         """Register callbacks for the Generation Details tab."""
+        @self.app.callback(
+            [
+                Output('image-modal', 'style'),
+                Output('modal-image', 'src'),
+                Output('current-image-src', 'data')
+            ],
+            [
+                Input({'type': 'preview-image', 'index': ALL}, 'n_clicks'),
+                Input('image-modal', 'n_clicks')
+            ],
+            [
+                State({'type': 'preview-image', 'index': ALL}, 'src'),
+                State('current-image-src', 'data')
+            ]
+        )
+        def toggle_image_modal(image_clicks, modal_clicks, image_srcs, current_src):
+            """Handle image preview clicks to show/hide modal."""
+            triggered = ctx.triggered_id
+            modal_style = {
+                'display': 'none',
+                'position': 'fixed',
+                'zIndex': 1000,
+                'left': 0,
+                'top': 0,
+                'width': '100%',
+                'height': '100%',
+                'backgroundColor': 'rgba(0,0,0,0.9)',
+                'cursor': 'pointer'
+            }
+            
+            # If modal background was clicked, hide it
+            if triggered == 'image-modal':
+                return modal_style, None, None
+            
+            # If an image was clicked
+            if triggered and isinstance(triggered, dict) and triggered.get('type') == 'preview-image':
+                # Show modal
+                modal_style['display'] = 'block'
+                
+                # Find which image was clicked and get its source
+                for i, clicks in enumerate(image_clicks):
+                    if clicks:
+                        return modal_style, image_srcs[i], image_srcs[i]
+            
+            # Default - no change
+            return modal_style, current_src, current_src
+
         @self.app.callback(
             [
                 Output('search-results', 'children'),
