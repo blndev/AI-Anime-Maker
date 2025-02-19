@@ -56,7 +56,12 @@ cd ai-anime-maker
 ```sh 
 ./run.sh
 ```
-3. Have fun
+
+The script will:
+- Check for available version updates (tags starting with 'V', e.g., V1.0)
+- Show the latest version and its creation date if available
+- Ask if you want to update to the latest version
+- Continue with your chosen version (latest or current)
 
 Note: The first run might take a while as it downloads multiple gigabytes of AI models and required libraries. Patience, young grasshopper! 🐢
 
