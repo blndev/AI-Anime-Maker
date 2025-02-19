@@ -118,7 +118,7 @@ class Dashboard:
             dcc.Tabs([
                 # Tab 1: Usage Statistics
                 dcc.Tab(
-                    label='Usage Statistics',
+                    label='Usage',
                     style=TAB_STYLE,
                     selected_style=TAB_SELECTED_STYLE,
                     children=self.usage_stats_tab.create_layout(self.initial_df)
