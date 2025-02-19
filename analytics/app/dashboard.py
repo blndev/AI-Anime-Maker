@@ -67,7 +67,7 @@ class Dashboard:
         self.usage_stats_tab = UsageStatisticsTab(self.data_manager, self.app)
         self.geo_dist_tab = GeographicDistributionTab(self.data_manager, self.app)
         self.gen_details_tab = GenerationDetailsTab(self.data_manager)
-        self.image_upload_tab = ImageUploadAnalysisTab(self.data_manager, self.cache_dir)
+        self.image_upload_tab = ImageUploadAnalysisTab(self.data_manager, self.cache_dir, self.app)
         
         # Create layout
         self.app.layout = self.create_layout()
@@ -132,18 +132,7 @@ class Dashboard:
                     children=self.geo_dist_tab.create_layout(self.initial_df)
                 ),
                 
-                # Tab 3: Generation Details
-                dcc.Tab(
-                    label='Generation Details',
-                    style=TAB_STYLE,
-                    selected_style=TAB_SELECTED_STYLE,
-                    children=self.gen_details_tab.create_layout(
-                        self.initial_start_date,
-                        self.initial_end_date
-                    )
-                ),
-                
-                # Tab 4: Image Upload Analysis
+                # Tab 3: Image Upload Analysis
                 dcc.Tab(
                     label='Image Upload Analysis',
                     style=TAB_STYLE,
@@ -152,7 +141,19 @@ class Dashboard:
                         self.initial_df,
                         self.initial_top_images_df
                     )
+                ),
+
+                # Tab 4: Generation Details
+                dcc.Tab(
+                    label='Generation Details',
+                    style=TAB_STYLE,
+                    selected_style=TAB_SELECTED_STYLE,
+                    children=self.gen_details_tab.create_layout(
+                        self.initial_start_date,
+                        self.initial_end_date
+                    )
                 )
+                
             ], style=TABS_CONTAINER_STYLE)
         ])
     
@@ -160,7 +161,6 @@ class Dashboard:
         """Register all callbacks."""
         # Register tab-specific callbacks
         self.gen_details_tab.register_callbacks(self.app)
-        self.image_upload_tab.register_callbacks(self.app)
 
 # Create dashboard instance for external use
 dashboard = Dashboard()
