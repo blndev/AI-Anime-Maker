@@ -4,7 +4,7 @@ import pandas as pd
 # Import shared theme settings
 from .styles import PLOTLY_TEMPLATE, LAYOUT_THEME
 
-def create_language_chart(df):
+def create_language_chart(df, selected_language=None):
     """Create language distribution chart."""
     fig = px.bar(
         pd.DataFrame({'Language': [], 'Count': []}),
@@ -34,7 +34,20 @@ def create_language_chart(df):
         labels={'Language': 'Language', 'Count': 'Number of Sessions'},
         template=PLOTLY_TEMPLATE
     )
-    fig.update_layout(**LAYOUT_THEME)
+    fig.update_layout(
+        **LAYOUT_THEME,
+        clickmode='event',
+        dragmode='select'
+    )
+    
+    # Highlight selected language if any
+    if selected_language:
+        fig.update_traces(
+            marker_color=[
+                '#1f77b4' if x == selected_language else '#7fdbff' 
+                for x in language_counts['Language']
+            ]
+        )
     return fig
 
 def create_continent_chart(df, selected_continent=None):

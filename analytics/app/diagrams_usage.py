@@ -87,7 +87,7 @@ def create_sessions_timeline(df):
     
     return fig
 
-def create_os_chart(df):
+def create_os_chart(df, selected_os=None):
     """Create operating system distribution chart."""
     fig = px.bar(
         pd.DataFrame({'OS': [], 'Count': []}),
@@ -117,10 +117,23 @@ def create_os_chart(df):
         labels={'OS': 'Operating System', 'Count': 'Number of Sessions'},
         template=PLOTLY_TEMPLATE
     )
-    fig.update_layout(**LAYOUT_THEME)
+    fig.update_layout(
+        **LAYOUT_THEME,
+        clickmode='event',
+        dragmode='select'
+    )
+    
+    # Highlight selected OS if any
+    if selected_os:
+        fig.update_traces(
+            marker_color=[
+                '#1f77b4' if x == selected_os else '#7fdbff' 
+                for x in os_counts['OS']
+            ]
+        )
     return fig
 
-def create_browser_chart(df):
+def create_browser_chart(df, selected_browser=None):
     """Create browser distribution chart."""
     fig = px.bar(
         pd.DataFrame({'Browser': [], 'Count': []}),
@@ -150,7 +163,20 @@ def create_browser_chart(df):
         labels={'Browser': 'Browser', 'Count': 'Number of Sessions'},
         template=PLOTLY_TEMPLATE
     )
-    fig.update_layout(**LAYOUT_THEME)
+    fig.update_layout(
+        **LAYOUT_THEME,
+        clickmode='event',
+        dragmode='select'
+    )
+    
+    # Highlight selected browser if any
+    if selected_browser:
+        fig.update_traces(
+            marker_color=[
+                '#1f77b4' if x == selected_browser else '#7fdbff' 
+                for x in browser_counts['Browser']
+            ]
+        )
     return fig
 
 def create_mobile_pie(df):
