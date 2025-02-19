@@ -6,8 +6,26 @@ from .styles import PLOTLY_TEMPLATE, LAYOUT_THEME
 
 def create_language_chart(df):
     """Create language distribution chart."""
+    fig = px.bar(
+        pd.DataFrame({'Language': [], 'Count': []}),
+        x='Language',
+        y='Count',
+        title="Top 10 Languages",
+        labels={'Language': 'Language', 'Count': 'Number of Sessions'},
+        template=PLOTLY_TEMPLATE
+    )
+    
+    if len(df) == 0:
+        fig.update_layout(
+            title="Top 10 Languages (No data available)",
+            **LAYOUT_THEME,
+            showlegend=False
+        )
+        return fig
+    
     language_counts = df['Language'].fillna('Unknown').value_counts().head(10).reset_index()
     language_counts.columns = ['Language', 'Count']
+    
     fig = px.bar(
         language_counts,
         x='Language',
@@ -21,8 +39,26 @@ def create_language_chart(df):
 
 def create_continent_chart(df, selected_continent=None):
     """Create continent distribution chart."""
+    fig = px.bar(
+        pd.DataFrame({'Continent': [], 'Count': []}),
+        x='Continent',
+        y='Count',
+        title="Geographic Distribution by Continent (Click to Filter)",
+        labels={'Continent': 'Continent', 'Count': 'Number of Sessions'},
+        template=PLOTLY_TEMPLATE
+    )
+    
+    if len(df) == 0:
+        fig.update_layout(
+            title="Geographic Distribution by Continent (No data available)",
+            **LAYOUT_THEME,
+            showlegend=False
+        )
+        return fig
+    
     continent_counts = df['Continent'].fillna('Unknown').value_counts().reset_index()
     continent_counts.columns = ['Continent', 'Count']
+    
     fig = px.bar(
         continent_counts,
         x='Continent',
@@ -48,12 +84,30 @@ def create_continent_chart(df, selected_continent=None):
 
 def create_country_chart(df, selected_continent=None, selected_country=None):
     """Create country distribution chart."""
+    fig = px.bar(
+        pd.DataFrame({'Country': [], 'Count': []}),
+        x='Country',
+        y='Count',
+        title="Top 10 Countries by Usage (Click to Filter)",
+        labels={'Country': 'Country', 'Count': 'Number of Sessions'},
+        template=PLOTLY_TEMPLATE
+    )
+    
+    if len(df) == 0:
+        fig.update_layout(
+            title="Top 10 Countries by Usage (No data available)",
+            **LAYOUT_THEME,
+            showlegend=False
+        )
+        return fig
+    
     # Filter by continent if selected
     if selected_continent:
         df = df[df['Continent'] == selected_continent]
     
     country_counts = df['Country'].fillna('Unknown').value_counts().head(10).reset_index()
     country_counts.columns = ['Country', 'Count']
+    
     fig = px.bar(
         country_counts,
         x='Country',
@@ -79,6 +133,23 @@ def create_country_chart(df, selected_continent=None, selected_country=None):
 
 def create_city_chart(df, selected_continent=None, selected_country=None):
     """Create city distribution chart."""
+    fig = px.bar(
+        pd.DataFrame({'City': [], 'Count': []}),
+        x='City',
+        y='Count',
+        title="Top 10 Cities by Usage",
+        labels={'City': 'City', 'Count': 'Number of Sessions'},
+        template=PLOTLY_TEMPLATE
+    )
+    
+    if len(df) == 0:
+        fig.update_layout(
+            title="Top 10 Cities by Usage (No data available)",
+            **LAYOUT_THEME,
+            showlegend=False
+        )
+        return fig
+    
     # Apply filters
     if selected_continent:
         df = df[df['Continent'] == selected_continent]
@@ -87,6 +158,7 @@ def create_city_chart(df, selected_continent=None, selected_country=None):
     
     city_counts = df['City'].fillna('Unknown').value_counts().head(10).reset_index()
     city_counts.columns = ['City', 'Count']
+    
     fig = px.bar(
         city_counts,
         x='City',

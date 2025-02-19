@@ -3,12 +3,25 @@ import plotly.graph_objects as go
 import pandas as pd
 import os
 
-# Import shared theme settings and data access
+# Import shared theme settings
 from .styles import PLOTLY_TEMPLATE, LAYOUT_THEME
-from .data import get_top_uploaded_images, get_top_generated_images
 
 def create_image_uploads_timeline(df):
     """Create timeline of image uploads and generations aggregated by hour with local timezone."""
+    # Create figure
+    fig = go.Figure()
+    
+    if len(df) == 0:
+        fig.update_layout(
+            title='Activity per Hour (No data available)',
+            xaxis_title='Date & Time',
+            yaxis_title='Count',
+            template=PLOTLY_TEMPLATE,
+            showlegend=False
+        )
+        fig.update_layout(**LAYOUT_THEME)
+        return fig
+    
     # Create a copy of the dataframe
     data = df.copy()
     
@@ -97,6 +110,17 @@ def create_top_uploaded_images_chart(df):
     # Create figure with subplots: bar chart on top, image grid below
     fig = go.Figure()
     
+    if len(df) == 0:
+        fig.update_layout(
+            title='Top 10 Most Frequently Uploaded Images (No data available)',
+            xaxis_title='Image ID',
+            yaxis_title='Number of Uploads',
+            template=PLOTLY_TEMPLATE,
+            showlegend=False
+        )
+        fig.update_layout(**LAYOUT_THEME)
+        return fig
+    
     # Add bar chart using ID as x-axis labels with required format for click handling
     fig.add_trace(go.Bar(
         x=df['ID'].astype(str).apply(lambda x: f"ID: {x}"),
@@ -135,13 +159,21 @@ def create_top_generated_images_chart(df):
     # Create figure
     fig = go.Figure()
     
-    # Get top generated images data
-    top_images_df = get_top_generated_images(df)
+    if len(df) == 0:
+        fig.update_layout(
+            title='Top 10 Most Generated From Images (No data available)',
+            xaxis_title='Image SHA1',
+            yaxis_title='Number of Generations',
+            template=PLOTLY_TEMPLATE,
+            showlegend=False
+        )
+        fig.update_layout(**LAYOUT_THEME)
+        return fig
     
     # Add bar chart using SHA1 as x-axis labels
     fig.add_trace(go.Bar(
-        x=top_images_df['SHA1'].apply(lambda x: f"SHA1: {x[:8]}..."),
-        y=top_images_df['GenerationCount'],
+        x=df['SHA1'].apply(lambda x: f"SHA1: {x[:8]}..."),
+        y=df['GenerationCount'],
         name='Generation Count',
         marker_color='#E74C3C'  # Red to match generation line in timeline
     ))
@@ -157,7 +189,7 @@ def create_top_generated_images_chart(df):
             "Face: %{customdata[3]}",
             "Gender: %{customdata[4]}"
         ]),
-        customdata=top_images_df[['CachePath', 'ID', 'Token', 'Face', 'Gender']].values
+        customdata=df[['CachePath', 'ID', 'Token', 'Face', 'Gender']].values
     )
     
     # Update layout

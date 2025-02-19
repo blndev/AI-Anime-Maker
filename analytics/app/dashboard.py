@@ -12,8 +12,8 @@ from datetime import datetime
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 import src.config as config
 
-# Import data and diagram modules
-from .data import get_session_data, get_top_uploaded_images, get_top_generated_images
+# Import data manager and diagram modules
+from .data_manager import DataManager
 from .diagrams_usage import (
     create_sessions_timeline, create_os_chart, create_browser_chart,
     create_mobile_pie, create_generation_status_chart
@@ -73,15 +73,12 @@ initial_start_date = (pd.Timestamp.now() - pd.Timedelta(days=30)).strftime('%Y-%
 # Get local timezone
 local_tz = datetime.now().astimezone().tzinfo
 
+# Initialize DataManager
+data_manager = DataManager()
+
 # Get initial data
-df = get_session_data(
-    initial_start_date, 
-    initial_end_date, 
-    include_generation_status=True, 
-    include_input_data=True,
-    timezone=local_tz
-)
-top_images_df = get_top_uploaded_images(df)
+df = data_manager.prepare_filtered_data(initial_start_date, initial_end_date)
+top_images_df = data_manager.get_top_uploaded_images()
 
 # Create layout
 app.layout = html.Div(style=LAYOUT_STYLE, children=[
@@ -214,7 +211,7 @@ app.layout = html.Div(style=LAYOUT_STYLE, children=[
                 # Style Usage Section
                 html.Div([
                     html.H2("Generation Style Usage", style=HEADER_STYLE),
-                    dcc.Graph(id='style-usage-chart', figure=create_style_usage_chart(df))
+                    dcc.Graph(id='style-usage-chart', figure=create_style_usage_chart(data_manager.get_style_usage(initial_start_date, initial_end_date)))
                 ])
             ]
         ),
@@ -246,7 +243,7 @@ app.layout = html.Div(style=LAYOUT_STYLE, children=[
                     html.Div([
                         # Left column: Chart
                         html.Div([
-                            dcc.Graph(id='top-generated-images-chart', figure=create_top_generated_images_chart(df))
+                            dcc.Graph(id='top-generated-images-chart', figure=create_top_generated_images_chart(data_manager.get_top_generated_images()))
                         ], style={'width': '50%', 'display': 'inline-block'}),
                         
                         # Right column: Details
@@ -279,34 +276,8 @@ app.layout = html.Div(style=LAYOUT_STYLE, children=[
 )
 def update_image_grid(filters_data, start_date, end_date):
     """Update image grid based on filters and date range."""
-    df = get_session_data(
-        start_date,
-        end_date,
-        include_generation_status=True,
-        include_input_data=True,
-        timezone=local_tz
-    )
-    
-    # Apply all filters
-    filtered_df = df.copy()
-    if filters_data:
-        # Geographic filters
-        if filters_data.get('continent'):
-            filtered_df = filtered_df[filtered_df['Continent'] == filters_data['continent']]
-        if filters_data.get('country'):
-            filtered_df = filtered_df[filtered_df['Country'] == filters_data['country']]
-        
-        # Platform filters
-        if filters_data.get('os'):
-            filtered_df = filtered_df[filtered_df['OS'] == filters_data['os']]
-        if filters_data.get('browser'):
-            filtered_df = filtered_df[filtered_df['Browser'] == filters_data['browser']]
-        
-        # Language filter
-        if filters_data.get('language'):
-            filtered_df = filtered_df[filtered_df['Language'] == filters_data['language']]
-    
-    top_images_df = get_top_uploaded_images(filtered_df)
+    data_manager.prepare_filtered_data(start_date, end_date, filters_data)
+    top_images_df = data_manager.get_top_uploaded_images()
     
     return html.Div([
         html.Div([
@@ -542,27 +513,9 @@ def update_geographic_charts(filters_data, start_date, end_date):
     if not filters_data:
         return dash.no_update
     
-    # Get current data
-    df = get_session_data(
-        start_date,
-        end_date,
-        include_generation_status=True,
-        include_input_data=True,
-        timezone=local_tz
-    )
-    
-    # Apply non-geographic filters first
-    filtered_df = df.copy()
-    if filters_data:
-        # Platform filters
-        if filters_data.get('os'):
-            filtered_df = filtered_df[filtered_df['OS'] == filters_data['os']]
-        if filters_data.get('browser'):
-            filtered_df = filtered_df[filtered_df['Browser'] == filters_data['browser']]
-        
-        # Language filter
-        if filters_data.get('language'):
-            filtered_df = filtered_df[filtered_df['Language'] == filters_data['language']]
+    # Get filtered data excluding geographic filters
+    geo_filters = {k: v for k, v in filters_data.items() if k not in ['continent', 'country']}
+    filtered_df = data_manager.prepare_filtered_data(start_date, end_date, geo_filters)
     
     # Create updated figures with filtered data
     continent_fig = create_continent_chart(filtered_df, filters_data.get('continent'))
@@ -593,35 +546,8 @@ def update_geographic_charts(filters_data, start_date, end_date):
 )
 def update_other_charts(filters_data, start_date, end_date):
     """Update all other charts based on active filters and date range."""
-    df = get_session_data(
-        start_date,
-        end_date,
-        include_generation_status=True,
-        include_input_data=True,
-        timezone=local_tz
-    )
-    
-    # Apply all filters
-    filtered_df = df.copy()
-    if filters_data:
-        # Geographic filters
-        if filters_data.get('continent'):
-            filtered_df = filtered_df[filtered_df['Continent'] == filters_data['continent']]
-        if filters_data.get('country'):
-            filtered_df = filtered_df[filtered_df['Country'] == filters_data['country']]
-        
-        # Platform filters
-        if filters_data.get('os'):
-            filtered_df = filtered_df[filtered_df['OS'] == filters_data['os']]
-        if filters_data.get('browser'):
-            filtered_df = filtered_df[filtered_df['Browser'] == filters_data['browser']]
-        
-        # Language filter
-        if filters_data.get('language'):
-            filtered_df = filtered_df[filtered_df['Language'] == filters_data['language']]
-    
-    # Get filtered top images
-    filtered_top_images_df = get_top_uploaded_images(filtered_df)
+    filtered_df = data_manager.prepare_filtered_data(start_date, end_date, filters_data)
+    filtered_top_images_df = data_manager.get_top_uploaded_images()
     
     return [
         create_sessions_timeline(filtered_df),
@@ -632,8 +558,8 @@ def update_other_charts(filters_data, start_date, end_date):
         create_generation_status_chart(filtered_df),
         create_image_uploads_timeline(filtered_df),
         create_top_uploaded_images_chart(filtered_top_images_df),
-        create_top_generated_images_chart(filtered_df),
-        create_style_usage_chart(filtered_df, start_date, end_date)
+        create_top_generated_images_chart(data_manager.get_top_generated_images()),
+        create_style_usage_chart(data_manager.get_style_usage(start_date, end_date))
     ]
 
 # Callback to update image details for both charts
@@ -684,27 +610,21 @@ def update_image_details(generation_click, upload_click):
     logger.debug(f"Selected ID/SHA1: {selected_id}")
     logger.debug(f"Selected path: {selected_path}")
     
-    # Get the image details from the database
-    df = get_session_data(
-        initial_start_date,
-        initial_end_date,
-        include_generation_status=True,
-        include_input_data=True,
-        timezone=local_tz
-    )
+    # Get filtered data and details
+    data_manager.prepare_filtered_data(initial_start_date, initial_end_date)
     
     # Get details based on which chart was clicked
     if trigger_id == 'top-generated-images-chart':
         # Extract SHA1 from "SHA1: {sha1}..." format
         raw_sha1 = selected_id.split(': ')[1].split('...')[0]
         logger.debug(f"Extracted SHA1: {raw_sha1}")
-        df_details = get_top_generated_images(df)
+        df_details = data_manager.get_top_generated_images()
         filtered_details = df_details[df_details['SHA1'].str.contains(raw_sha1, regex=False)]
     else:
         # Extract ID from "ID: {id}" format
         raw_id = selected_id.split(': ')[1]
         logger.debug(f"Extracted ID: {raw_id}")
-        df_details = get_top_uploaded_images(df)
+        df_details = data_manager.get_top_uploaded_images()
         filtered_details = df_details[df_details['ID'].astype(str) == raw_id]
     
     logger.debug(f"Found {len(filtered_details)} matching images")
