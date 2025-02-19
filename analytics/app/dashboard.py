@@ -65,7 +65,7 @@ class Dashboard:
         
         # Initialize tabs
         self.usage_stats_tab = UsageStatisticsTab(self.data_manager)
-        self.geo_dist_tab = GeographicDistributionTab(self.data_manager)
+        self.geo_dist_tab = GeographicDistributionTab(self.data_manager, self.app)
         self.gen_details_tab = GenerationDetailsTab(self.data_manager)
         self.image_upload_tab = ImageUploadAnalysisTab(self.data_manager, self.cache_dir)
         
@@ -126,7 +126,7 @@ class Dashboard:
                 
                 # Tab 2: Language and Geographic Distribution
                 dcc.Tab(
-                    label='Language & Geographic Distribution',
+                    label='Geographic',
                     style=TAB_STYLE,
                     selected_style=TAB_SELECTED_STYLE,
                     children=self.geo_dist_tab.create_layout(self.initial_df)
@@ -160,7 +160,6 @@ class Dashboard:
         """Register all callbacks."""
         # Register tab-specific callbacks
         self.usage_stats_tab.register_callbacks(self.app)
-        self.geo_dist_tab.register_callbacks(self.app)
         self.gen_details_tab.register_callbacks(self.app)
         self.image_upload_tab.register_callbacks(self.app)
 
