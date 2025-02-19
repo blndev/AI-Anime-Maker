@@ -25,12 +25,44 @@ class DataManager:
         self.db_path = config.get_analytics_db_path()
         self.timezone = datetime.now().astimezone().tzinfo
         self._df = None  # Cache for the current filtered DataFrame
+        self._filters = {
+            'continent': None,
+            'country': None,
+            'os': None,
+            'browser': None,
+            'language': None
+        }
+    
+    def add_filter(self, filter_type, value):
+        """Add or update a filter."""
+        if filter_type not in self._filters:
+            raise ValueError(f"Invalid filter type: {filter_type}")
+        self._filters[filter_type] = value
+        
+    def remove_filter(self, filter_type):
+        """Remove a filter."""
+        if filter_type not in self._filters:
+            raise ValueError(f"Invalid filter type: {filter_type}")
+        self._filters[filter_type] = None
+        
+    def reset_filters(self):
+        """Reset all filters."""
+        for key in self._filters:
+            self._filters[key] = None
+    
+    def get_active_filters(self):
+        """Get current active filters."""
+        return {k: v for k, v in self._filters.items() if v is not None}
         
     def _get_connection(self):
         """Get a database connection."""
         return sqlite3.connect(self.db_path)
 
     def prepare_filtered_data(self, start_date=None, end_date=None, filters=None):
+        """
+        Main function to prepare filtered DataFrame based on global parameters.
+        If filters is None, uses internal filter state.
+        """
         """
         Main function to prepare filtered DataFrame based on global parameters.
         
@@ -47,18 +79,21 @@ class DataManager:
         # Get base dataset
         df = self._get_session_data(start_date, end_date)
         
-        # Apply filters if provided
-        if filters:
-            if filters.get('continent'):
-                df = df[df['Continent'] == filters['continent']]
-            if filters.get('country'):
-                df = df[df['Country'] == filters['country']]
-            if filters.get('os'):
-                df = df[df['OS'] == filters['os']]
-            if filters.get('browser'):
-                df = df[df['Browser'] == filters['browser']]
-            if filters.get('language'):
-                df = df[df['Language'] == filters['language']]
+        # Use provided filters or internal filter state
+        active_filters = filters if filters is not None else self._filters
+        
+        # Apply active filters
+        if active_filters:
+            if active_filters.get('continent'):
+                df = df[df['Continent'] == active_filters['continent']]
+            if active_filters.get('country'):
+                df = df[df['Country'] == active_filters['country']]
+            if active_filters.get('os'):
+                df = df[df['OS'] == active_filters['os']]
+            if active_filters.get('browser'):
+                df = df[df['Browser'] == active_filters['browser']]
+            if active_filters.get('language'):
+                df = df[df['Language'] == active_filters['language']]
         
         # Cache the filtered DataFrame
         self._df = df

@@ -114,9 +114,6 @@ class Dashboard:
                 )
             ], style=FILTER_CONTAINER_STYLE),
             
-            # Store for active filters
-            dcc.Store(id='active-filters-store'),
-            
             # Tabs
             dcc.Tabs([
                 # Tab 1: Usage Statistics
@@ -166,111 +163,6 @@ class Dashboard:
         self.geo_dist_tab.register_callbacks(self.app)
         self.gen_details_tab.register_callbacks(self.app)
         self.image_upload_tab.register_callbacks(self.app)
-        
-        # Register filter callbacks
-        self.register_filter_callbacks()
-    
-    def register_filter_callbacks(self):
-        """Register callbacks for filter management."""
-        @self.app.callback(
-            Output('active-filters-store', 'data'),
-            [
-                Input('continent-chart', 'clickData'),
-                Input('country-chart', 'clickData'),
-                Input('os-chart', 'clickData'),
-                Input('browser-chart', 'clickData'),
-                Input('language-chart', 'clickData'),
-                Input('reset-geo-filters', 'n_clicks')
-            ],
-            prevent_initial_call=True
-        )
-        def update_filters_store(continent_click, country_click, os_click, browser_click, language_click, reset_clicks):
-            """Update the active filters store."""
-            ctx = dash.callback_context
-            if not ctx.triggered:
-                return dash.no_update
-            
-            trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-            
-            # Initialize filter values
-            filters = {
-                'continent': None,
-                'country': None,
-                'os': None,
-                'browser': None,
-                'language': None
-            }
-            
-            if trigger_id != 'reset-geo-filters':
-                # Handle chart clicks
-                if trigger_id == 'continent-chart' and continent_click:
-                    filters['continent'] = continent_click['points'][0]['x']
-                elif trigger_id == 'country-chart' and country_click:
-                    filters['country'] = country_click['points'][0]['x']
-                elif trigger_id == 'os-chart' and os_click:
-                    filters['os'] = os_click['points'][0]['x']
-                elif trigger_id == 'browser-chart' and browser_click:
-                    filters['browser'] = browser_click['points'][0]['x']
-                elif trigger_id == 'language-chart' and language_click:
-                    filters['language'] = language_click['points'][0]['x']
-            
-            return filters
-        
-        @self.app.callback(
-            Output('active-filters', 'children'),
-            Input('active-filters-store', 'data')
-        )
-        def update_active_filters_display(data):
-            """Update the active filters display."""
-            if not data or not any(data.values()):
-                return [html.Div("No filters active", style=NO_DATA_STYLE)]
-            
-            filters = []
-            
-            # Geographic filters
-            if data.get('continent'):
-                filters.append(
-                    html.Div([
-                        html.Strong("Continent: "),
-                        html.Span(data['continent'])
-                    ], style=FILTER_TAG_STYLE)
-                )
-            
-            if data.get('country'):
-                filters.append(
-                    html.Div([
-                        html.Strong("Country: "),
-                        html.Span(data['country'])
-                    ], style=FILTER_TAG_STYLE)
-                )
-            
-            # Platform filters
-            if data.get('os'):
-                filters.append(
-                    html.Div([
-                        html.Strong("OS: "),
-                        html.Span(data['os'])
-                    ], style=PLATFORM_FILTER_STYLE)
-                )
-            
-            if data.get('browser'):
-                filters.append(
-                    html.Div([
-                        html.Strong("Browser: "),
-                        html.Span(data['browser'])
-                    ], style=PLATFORM_FILTER_STYLE)
-                )
-            
-            # Language filter
-            if data.get('language'):
-                filters.append(
-                    html.Div([
-                        html.Strong("Language: "),
-                        html.Span(data['language'])
-                    ], style=LANGUAGE_FILTER_STYLE)
-                )
-            
-            return filters
 
 # Create dashboard instance for external use
 dashboard = Dashboard()
