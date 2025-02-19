@@ -66,7 +66,7 @@ class Dashboard:
         # Initialize tabs
         self.usage_stats_tab = UsageStatisticsTab(self.data_manager, self.app)
         self.geo_dist_tab = GeographicDistributionTab(self.data_manager, self.app)
-        self.gen_details_tab = GenerationDetailsTab(self.data_manager)
+        self.gen_details_tab = GenerationDetailsTab(self.data_manager, self.app)
         self.image_upload_tab = ImageUploadAnalysisTab(self.data_manager, self.cache_dir, self.app)
         
         # Create layout
@@ -159,8 +159,7 @@ class Dashboard:
     
     def register_callbacks(self):
         """Register all callbacks."""
-        # Register tab-specific callbacks
-        self.gen_details_tab.register_callbacks(self.app)
+        # No more callbacks to register
 
 # Create dashboard instance for external use
 dashboard = Dashboard()
