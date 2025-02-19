@@ -2,44 +2,71 @@
 Theme and layout styles for the analytics dashboard.
 """
 
+# Color palette
+COLORS = {
+    # Primary colors
+    'PRIMARY': '#4CAF50',  # Green
+    'SECONDARY': '#2980B9', # Blue
+    'ACCENT': '#8E44AD',   # Purple
+    
+    # Background colors
+    'BG_DARK': '#111111',   # Main background
+    'BG_MEDIUM': '#2C3E50', # Container background
+    'BG_LIGHT': '#34495E',  # Light container background
+    
+    # Tab colors
+    'TAB_BG': '#1e1e1e',
+    'TAB_BG_SELECTED': '#2d2d2d',
+    'TAB_BORDER': '#333333',
+    'TAB_BORDER_SELECTED': '#444444',
+    
+    # Text colors
+    'TEXT_PRIMARY': '#FFFFFF',
+    'TEXT_SECONDARY': '#cccccc',
+    'TEXT_MUTED': '#95A5A6',
+    
+    # Border colors
+    'BORDER_DARK': '#333'
+}
+
 # Theme settings for plotly charts
 PLOTLY_TEMPLATE = 'plotly_dark'
 LAYOUT_THEME = {
     'paper_bgcolor': 'rgba(0,0,0,0)',
     'plot_bgcolor': 'rgba(0,0,0,0)',
     'hoverlabel': {
-        'bgcolor': 'rgba(45, 45, 45, 0.9)',  # Dark semi-transparent background
+        'bgcolor': 'rgba(45, 45, 45, 0.9)',
         'font_size': 12,
-        'font_color': '#FFFFFF'  # White text
+        'font_color': COLORS['TEXT_PRIMARY']
     }
 }
 
 # Layout styles
 LAYOUT_STYLE = {
-    'backgroundColor': '#111111',
-    'color': '#FFFFFF',
+    'backgroundColor': COLORS['BG_DARK'],
+    'color': COLORS['TEXT_PRIMARY'],
     'minHeight': '100vh',
     'padding': '20px'
 }
 
 HEADER_STYLE = {
     'textAlign': 'center',
-    'color': '#FFFFFF'
+    'color': COLORS['TEXT_PRIMARY']
 }
 
 # Tab styles
 TAB_STYLE = {
-    'backgroundColor': '#1e1e1e',
-    'color': '#cccccc',
+    'backgroundColor': COLORS['TAB_BG'],
+    'color': COLORS['TEXT_SECONDARY'],
     'padding': '10px',
-    'border': '1px solid #333333'
+    'border': f"1px solid {COLORS['TAB_BORDER']}"
 }
 
 TAB_SELECTED_STYLE = {
-    'backgroundColor': '#2d2d2d',
-    'color': '#ffffff',
+    'backgroundColor': COLORS['TAB_BG_SELECTED'],
+    'color': COLORS['TEXT_PRIMARY'],
     'padding': '10px',
-    'border': '1px solid #444444'
+    'border': f"1px solid {COLORS['TAB_BORDER_SELECTED']}"
 }
 
 # Filter styles
@@ -49,13 +76,13 @@ FILTER_CONTAINER_STYLE = {
     'alignItems': 'center',
     'margin': '20px',
     'padding': '10px',
-    'backgroundColor': '#2C3E50',
+    'backgroundColor': COLORS['BG_MEDIUM'],
     'borderRadius': '4px'
 }
 
 FILTER_BUTTON_STYLE = {
-    'backgroundColor': '#4CAF50',
-    'color': 'white',
+    'backgroundColor': COLORS['PRIMARY'],
+    'color': COLORS['TEXT_PRIMARY'],
     'padding': '10px 20px',
     'border': 'none',
     'borderRadius': '4px',
@@ -71,7 +98,7 @@ FILTER_DISPLAY_STYLE = {
 }
 
 FILTER_TAG_STYLE = {
-    'backgroundColor': '#34495E',
+    'backgroundColor': COLORS['BG_LIGHT'],
     'padding': '5px 10px',
     'borderRadius': '4px',
     'marginRight': '10px'
@@ -81,7 +108,7 @@ FILTER_TAG_STYLE = {
 CHART_CONTAINER_STYLE = {
     'margin': '20px 0',
     'padding': '15px',
-    'backgroundColor': '#2C3E50',
+    'backgroundColor': COLORS['BG_MEDIUM'],
     'borderRadius': '8px'
 }
 
@@ -105,12 +132,12 @@ IMAGE_STYLE = {
     'width': '150px',
     'objectFit': 'cover',
     'margin': '5px',
-    'border': '2px solid #333'
+    'border': f"2px solid {COLORS['BORDER_DARK']}"
 }
 
 # Text styles
 NO_DATA_STYLE = {
-    'color': '#95A5A6',
+    'color': COLORS['TEXT_MUTED'],
     'fontStyle': 'italic',
     'textAlign': 'center',
     'marginTop': '20px'
@@ -124,7 +151,7 @@ DATE_PICKER_CONTAINER_STYLE = {
 
 # Platform-specific filter styles
 PLATFORM_FILTER_STYLE = {
-    'backgroundColor': '#2980B9',
+    'backgroundColor': COLORS['SECONDARY'],
     'padding': '5px 10px',
     'borderRadius': '4px',
     'marginRight': '10px'
@@ -132,7 +159,7 @@ PLATFORM_FILTER_STYLE = {
 
 # Language filter style
 LANGUAGE_FILTER_STYLE = {
-    'backgroundColor': '#8E44AD',
+    'backgroundColor': COLORS['ACCENT'],
     'padding': '5px 10px',
     'borderRadius': '4px',
     'marginRight': '10px'
@@ -140,7 +167,7 @@ LANGUAGE_FILTER_STYLE = {
 
 # Details container style
 DETAILS_CONTAINER_STYLE = {
-    'backgroundColor': '#2C3E50',
+    'backgroundColor': COLORS['BG_MEDIUM'],
     'padding': '15px',
     'borderRadius': '8px',
     'margin': '10px'
