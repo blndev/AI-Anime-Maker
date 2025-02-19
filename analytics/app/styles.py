@@ -178,6 +178,63 @@ DETAIL_ITEM_STYLE = {
     'margin': '5px 0'
 }
 
+# Table styles
+TABLE_STYLE = {
+    'width': '100%',
+    'borderCollapse': 'collapse',
+    'backgroundColor': COLORS['BG_MEDIUM'],
+    'borderRadius': '8px',
+    'overflow': 'hidden'
+}
+
+TABLE_HEADER_STYLE = {
+    'backgroundColor': COLORS['BG_LIGHT'],
+    'padding': '12px',
+    'textAlign': 'left',
+    'color': COLORS['TEXT_PRIMARY'],
+    'borderBottom': f"2px solid {COLORS['BORDER_DARK']}"
+}
+
+TABLE_CELL_STYLE = {
+    'padding': '12px',
+    'borderBottom': f"1px solid {COLORS['BORDER_DARK']}",
+    'color': COLORS['TEXT_SECONDARY']
+}
+
+# Search section styles
+SEARCH_CONTAINER_STYLE = {
+    'backgroundColor': COLORS['BG_MEDIUM'],
+    'padding': '20px',
+    'borderRadius': '8px',
+    'marginBottom': '20px'
+}
+
+SEARCH_INPUT_STYLE = {
+    'backgroundColor': COLORS['BG_LIGHT'],
+    'color': COLORS['TEXT_PRIMARY'],
+    'border': f"1px solid {COLORS['BORDER_DARK']}",
+    'borderRadius': '4px',
+    'padding': '8px 12px',
+    'marginRight': '10px'
+}
+
+SEARCH_BUTTON_STYLE = {
+    'backgroundColor': COLORS['PRIMARY'],
+    'color': COLORS['TEXT_PRIMARY'],
+    'padding': '8px 16px',
+    'border': 'none',
+    'borderRadius': '4px',
+    'cursor': 'pointer'
+}
+
+# Content style
+CONTENT_STYLE = {
+    'margin': '20px',
+    'padding': '20px',
+    'backgroundColor': COLORS['BG_DARK'],
+    'borderRadius': '8px'
+}
+
 # Filter header style
 FILTER_HEADER_STYLE = {
     'display': 'flex',

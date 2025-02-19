@@ -278,6 +278,62 @@ class DataManager:
                 ])
             return df
 
+    def get_image_by_id_or_sha1(self, search_value):
+        """Get image details and its generations by input ID or SHA1."""
+        if not search_value:
+            return None, pd.DataFrame()
+
+        # Query to get image details - search in both ID and SHA1
+        image_query = """
+        SELECT 
+            i.ID,
+            i.SHA1,
+            i.CachePath,
+            i.Token,
+            i.Face,
+            i.Gender,
+            i.MinAge,
+            i.MaxAge,
+            i.Timestamp
+        FROM tblInput i
+        WHERE i.ID = ? OR i.SHA1 = ?
+        LIMIT 1
+        """
+
+        # Query to get all generations using this input
+        generations_query = """
+        SELECT 
+            g.Id as GenerationId,
+            g.Style,
+            g.Userprompt as Prompt,
+            g.Output as GeneratedImagePath,
+            g.Timestamp
+        FROM tblGenerations g
+        WHERE g.Input_SHA1 = ?
+        ORDER BY g.Timestamp DESC
+        """
+
+        try:
+            with self._get_connection() as conn:
+                # Try to parse as integer for ID search, use as string for SHA1
+                try:
+                    id_value = int(search_value)
+                except ValueError:
+                    id_value = -1  # Invalid ID that won't match anything
+                
+                # Get image details
+                image_df = pd.read_sql_query(image_query, conn, params=[id_value, search_value])
+                if len(image_df) == 0:
+                    return None, pd.DataFrame()
+                
+                # Get generations using this image's SHA1
+                generations_df = pd.read_sql_query(generations_query, conn, params=[image_df.iloc[0]['SHA1']])
+                
+                return image_df.iloc[0], generations_df
+        except Exception as e:
+            logger.error(f"Database error in get_image_by_id_or_sha1: {str(e)}")
+            return None, pd.DataFrame()
+
     def get_style_usage(self, start_date=None, end_date=None):
         """Get aggregated counts of generation styles used with percentages."""
         if self._df is None:
