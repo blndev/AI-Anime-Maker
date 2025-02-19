@@ -21,7 +21,11 @@ from .tabs.image_upload_analysis import ImageUploadAnalysisTab
 # Import styles
 from .styles import (
     PLOTLY_TEMPLATE, LAYOUT_THEME, LAYOUT_STYLE,
-    HEADER_STYLE, TAB_STYLE, TAB_SELECTED_STYLE
+    HEADER_STYLE, TAB_STYLE, TAB_SELECTED_STYLE,
+    FILTER_CONTAINER_STYLE, FILTER_BUTTON_STYLE, FILTER_DISPLAY_STYLE,
+    FILTER_TAG_STYLE, PLATFORM_FILTER_STYLE, LANGUAGE_FILTER_STYLE,
+    NO_DATA_STYLE, DATE_PICKER_CONTAINER_STYLE, FILTER_HEADER_STYLE,
+    CHART_CONTAINER_STYLE, TABS_CONTAINER_STYLE
 )
 
 # Set up logging
@@ -94,42 +98,21 @@ class Dashboard:
                         end_date=self.initial_end_date,
                         display_format='YYYY-MM-DD'
                     )
-                ], style={'textAlign': 'center', 'margin': '20px'}),
+                ], style=DATE_PICKER_CONTAINER_STYLE),
             ]),
             
             # Active Filters Display
             html.Div([
                 html.Div([
                     html.H2("Active Filters", style=HEADER_STYLE),
-                    html.Div(id='active-filters', style={
-                        'display': 'flex',
-                        'alignItems': 'center',
-                        'gap': '10px',
-                        'marginRight': '20px'
-                    }),
-                ], style={'display': 'flex', 'alignItems': 'center'}),
+                    html.Div(id='active-filters', style=FILTER_DISPLAY_STYLE),
+                ], style=FILTER_HEADER_STYLE),
                 html.Button(
                     'Reset Filters',
                     id='reset-geo-filters',
-                    style={
-                        'backgroundColor': '#4CAF50',
-                        'color': 'white',
-                        'padding': '10px 20px',
-                        'border': 'none',
-                        'borderRadius': '4px',
-                        'cursor': 'pointer',
-                        'marginLeft': 'auto'
-                    }
+                    style=FILTER_BUTTON_STYLE
                 )
-            ], style={
-                'display': 'flex',
-                'justifyContent': 'space-between',
-                'alignItems': 'center',
-                'margin': '20px',
-                'padding': '10px',
-                'backgroundColor': '#2C3E50',
-                'borderRadius': '4px'
-            }),
+            ], style=FILTER_CONTAINER_STYLE),
             
             # Store for active filters
             dcc.Store(id='active-filters-store'),
@@ -173,7 +156,7 @@ class Dashboard:
                         self.initial_top_images_df
                     )
                 )
-            ], style={'margin': '20px 0'})
+            ], style=TABS_CONTAINER_STYLE)
         ])
     
     def register_callbacks(self):
@@ -240,12 +223,7 @@ class Dashboard:
         def update_active_filters_display(data):
             """Update the active filters display."""
             if not data or not any(data.values()):
-                return [
-                    html.Div("No filters active", style={
-                        'color': '#95A5A6',
-                        'fontStyle': 'italic'
-                    })
-                ]
+                return [html.Div("No filters active", style=NO_DATA_STYLE)]
             
             filters = []
             
@@ -255,12 +233,7 @@ class Dashboard:
                     html.Div([
                         html.Strong("Continent: "),
                         html.Span(data['continent'])
-                    ], style={
-                        'backgroundColor': '#34495E',
-                        'padding': '5px 10px',
-                        'borderRadius': '4px',
-                        'marginRight': '10px'
-                    })
+                    ], style=FILTER_TAG_STYLE)
                 )
             
             if data.get('country'):
@@ -268,12 +241,7 @@ class Dashboard:
                     html.Div([
                         html.Strong("Country: "),
                         html.Span(data['country'])
-                    ], style={
-                        'backgroundColor': '#34495E',
-                        'padding': '5px 10px',
-                        'borderRadius': '4px',
-                        'marginRight': '10px'
-                    })
+                    ], style=FILTER_TAG_STYLE)
                 )
             
             # Platform filters
@@ -282,12 +250,7 @@ class Dashboard:
                     html.Div([
                         html.Strong("OS: "),
                         html.Span(data['os'])
-                    ], style={
-                        'backgroundColor': '#2980B9',
-                        'padding': '5px 10px',
-                        'borderRadius': '4px',
-                        'marginRight': '10px'
-                    })
+                    ], style=PLATFORM_FILTER_STYLE)
                 )
             
             if data.get('browser'):
@@ -295,12 +258,7 @@ class Dashboard:
                     html.Div([
                         html.Strong("Browser: "),
                         html.Span(data['browser'])
-                    ], style={
-                        'backgroundColor': '#2980B9',
-                        'padding': '5px 10px',
-                        'borderRadius': '4px',
-                        'marginRight': '10px'
-                    })
+                    ], style=PLATFORM_FILTER_STYLE)
                 )
             
             # Language filter
@@ -309,12 +267,7 @@ class Dashboard:
                     html.Div([
                         html.Strong("Language: "),
                         html.Span(data['language'])
-                    ], style={
-                        'backgroundColor': '#8E44AD',
-                        'padding': '5px 10px',
-                        'borderRadius': '4px',
-                        'marginRight': '10px'
-                    })
+                    ], style=LANGUAGE_FILTER_STYLE)
                 )
             
             return filters
