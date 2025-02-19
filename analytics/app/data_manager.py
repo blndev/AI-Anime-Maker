@@ -25,6 +25,7 @@ class DataManager:
         self.db_path = config.get_analytics_db_path()
         self.timezone = datetime.now().astimezone().tzinfo
         self._df = None  # Cache for the current filtered DataFrame
+        self._city_coords = self._load_city_coordinates()  # Load city coordinates
         self._filters = {
             'continent': None,
             'country': None,
@@ -32,6 +33,47 @@ class DataManager:
             'browser': None,
             'language': None
         }
+
+    def _load_city_coordinates(self):
+        """Load city coordinates from cities.csv."""
+        try:
+            cities_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'cities.csv')
+            if os.path.exists(cities_path):
+                df = pd.read_csv(cities_path)
+                city_coords = {}
+                for _, row in df.iterrows():
+                    if pd.notna(row['City']) and pd.notna(row['Country']):
+                        # Create key with state if available
+                        if pd.notna(row['State']):
+                            key = f"{row['City']}, {row['State']}, {row['Country']}"
+                        else:
+                            key = f"{row['City']}, {row['Country']}"
+                        city_coords[key] = (row['Longitude'], row['Latitude'])
+                return city_coords
+            else:
+                logger.warning(f"Cities file not found at {cities_path}")
+                return {}
+        except Exception as e:
+            logger.error(f"Error loading city coordinates: {e}")
+            return {}
+
+    def get_city_coordinates(self, city, country):
+        """Get coordinates for a city, return (longitude, latitude, state) if found."""
+        if not city or city == 'Unknown':
+            return None
+        
+        # Try with just city and country
+        key = f"{city}, {country}"
+        coords = self._city_coords.get(key)
+        if coords:
+            return coords
+        
+        # Try all state variations for this city and country
+        for full_key in self._city_coords.keys():
+            if full_key.startswith(f"{city}, ") and full_key.endswith(f", {country}"):
+                return self._city_coords[full_key]
+        
+        return None
     
     def add_filter(self, filter_type, value):
         """Add or update a filter."""
@@ -274,6 +316,91 @@ class DataManager:
                     'Style', 'Count', 'Percentage'
                 ])
             return df
+
+    def get_country_code_from_country(self, country, language=None):
+        """Convert country name or language to ISO 3166-1 alpha-3 code."""
+        country_code_map = {
+            # Country mappings
+            'United States': 'USA',
+            'United Kingdom': 'GBR',
+            'Germany': 'DEU',
+            'France': 'FRA',
+            'Italy': 'ITA',
+            'Spain': 'ESP',
+            'Canada': 'CAN',
+            'Australia': 'AUS',
+            'Japan': 'JPN',
+            'China': 'CHN',
+            'India': 'IND',
+            'Brazil': 'BRA',
+            'Russia': 'RUS',
+            'South Korea': 'KOR',
+            'Mexico': 'MEX',
+            'Netherlands': 'NLD',
+            'Sweden': 'SWE',
+            'Switzerland': 'CHE',
+            'Poland': 'POL',
+            'Belgium': 'BEL',
+            'Austria': 'AUT',
+            'Norway': 'NOR',
+            'Denmark': 'DNK',
+            'Finland': 'FIN',
+            'Singapore': 'SGP',
+            'Ireland': 'IRL',
+            'New Zealand': 'NZL',
+            'Turkey': 'TUR',
+        }
+        
+        language_country_map = {
+            'en': 'USA',  # English -> United States
+            'en-US': 'USA',
+            'en-GB': 'GBR',
+            'de': 'DEU',  # German -> Germany
+            'de-DE': 'DEU',
+            'de-AT': 'AUT',  # Austrian German
+            'de-CH': 'CHE',  # Swiss German
+            'fr': 'FRA',  # French -> France
+            'fr-FR': 'FRA',
+            'fr-CA': 'CAN',  # Canadian French
+            'fr-BE': 'BEL',  # Belgian French
+            'it': 'ITA',  # Italian -> Italy
+            'es': 'ESP',  # Spanish -> Spain
+            'es-ES': 'ESP',
+            'es-MX': 'MEX',  # Mexican Spanish
+            'ja': 'JPN',  # Japanese -> Japan
+            'zh': 'CHN',  # Chinese -> China
+            'zh-CN': 'CHN',
+            'hi': 'IND',  # Hindi -> India
+            'pt': 'BRA',  # Portuguese -> Brazil
+            'pt-BR': 'BRA',
+            'ru': 'RUS',  # Russian -> Russia
+            'ko': 'KOR',  # Korean -> South Korea
+            'nl': 'NLD',  # Dutch -> Netherlands
+            'sv': 'SWE',  # Swedish -> Sweden
+            'pl': 'POL',  # Polish -> Poland
+            'no': 'NOR',  # Norwegian -> Norway
+            'da': 'DNK',  # Danish -> Denmark
+            'fi': 'FIN',  # Finnish -> Finland
+            'tr': 'TUR',  # Turkish -> Turkey
+        }
+        
+        # Try to get from country map first
+        code = country_code_map.get(country)
+        if code:
+            return code
+        else:
+            logger.warning(f"Did not found a country-code for {country}")
+            
+        # If language is provided and no country match, try language map
+        if language:
+            code = language_country_map.get(language)
+            if code:
+                return code
+            else:
+                logger.warning(f"Did not found a country for language {language}")
+            
+        # Fallback to first 3 letters of country uppercase
+        return country[:3].upper() if country else None
 
     def get_filter_options(self):
         """Get available filter options from the current dataset."""

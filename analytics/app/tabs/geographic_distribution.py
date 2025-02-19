@@ -5,6 +5,7 @@ Handles geographic data visualization and filter management.
 from dash import html, dcc, Input, Output
 import dash
 import plotly.express as px
+import plotly.graph_objects as go
 import pandas as pd
 from ..styles import (
     HEADER_STYLE, NO_DATA_STYLE,
@@ -18,6 +19,139 @@ class GeographicDistributionTab:
         self.data_manager = data_manager
         self.app = app
         self.register_callbacks()
+
+    def create_choropleth_map(self, df):
+        """Create choropleth map showing global session distribution."""
+        fig = go.Figure()
+        
+        if len(df) == 0:
+            fig.update_layout(
+                title="Global Session Distribution (No data available)",
+                template=PLOTLY_TEMPLATE,
+                **LAYOUT_THEME,
+                showlegend=False
+            )
+            return fig
+        
+        # Aggregate data by country
+        country_data = df.groupby(['Country'])['Session'].nunique().reset_index()
+        country_data = country_data.rename(columns={'Session': 'Sessions'})
+        
+        # Get country codes using both country and language
+        country_data['Language'] = country_data['Country'].apply(
+            lambda x: df[df['Country'] == x]['Language'].iloc[0] if len(df[df['Country'] == x]) > 0 else None
+        )
+        country_data['CountryCode'] = country_data.apply(
+            lambda x: self.data_manager.get_country_code_from_country(x['Country'], x['Language']),
+            axis=1
+        )
+        
+        # Filter out any invalid country codes
+        country_data = country_data.dropna(subset=['CountryCode'])
+        
+        # First add choropleth map for countries
+        fig.add_trace(go.Choropleth(
+            locations=country_data['CountryCode'],
+            z=country_data['Sessions'],
+            text=country_data['Country'],
+            colorscale=[
+                [0, '#E8F5E9'],  # Light green for low values
+                [0.5, '#66BB6A'],  # Medium green
+                [1, '#1B5E20']  # Dark green for high values
+            ],
+            autocolorscale=False,
+            marker_line_color='darkgray',
+            marker_line_width=0.5,
+            colorbar_title='Number of Sessions',
+            customdata=country_data['Language'],
+            hovertemplate="<b>%{text}</b><br>Sessions: %{z:,}<br>Language: %{customdata}<extra></extra>"
+        ))
+        
+        # Then add city markers on top
+        city_data = df.groupby(['City', 'Country'])['Session'].nunique().reset_index()
+        city_data = city_data.rename(columns={'Session': 'Sessions'})
+        
+        # Add city markers if we have any
+        if len(city_data) > 0:
+            # Filter out 'Unknown' cities
+            city_data = city_data[city_data['City'] != 'Unknown']
+            
+            # Add coordinates from cities.csv
+            city_coords = []
+            for _, row in city_data.iterrows():
+                coords = self.data_manager.get_city_coordinates(row['City'], row['Country'])
+                if coords:
+                    city_coords.append({
+                        'City': row['City'],
+                        'Country': row['Country'],
+                        'Sessions': row['Sessions'],
+                        'Longitude': coords[0],
+                        'Latitude': coords[1]
+                    })
+            
+            if city_coords:
+                city_coords_df = pd.DataFrame(city_coords)
+                
+                # Calculate marker sizes with better scaling
+                max_sessions = city_coords_df['Sessions'].max()
+                min_size = 8
+                max_size = 25
+                city_coords_df['MarkerSize'] = city_coords_df['Sessions'].apply(
+                    lambda x: min_size + (max_size - min_size) * (x / max_sessions)
+                )
+                
+                fig.add_trace(go.Scattergeo(
+                    lon=city_coords_df['Longitude'],
+                    lat=city_coords_df['Latitude'],
+                    text=city_coords_df.apply(lambda x: f"{x['City']}, {x['Country']}", axis=1),
+                    mode='markers',
+                    name='Cities',
+                    marker=dict(
+                        size=city_coords_df['MarkerSize'],
+                        color='#E74C3C',  # Red color for visibility
+                        line=dict(width=1, color='white'),
+                        sizemode='diameter',
+                        sizeref=1.0
+                    ),
+                    hovertemplate="<b>%{text}</b><br>Sessions: %{marker.size:,.0f}<extra></extra>"
+                ))
+        
+        # Update layout
+        fig.update_layout(
+            title={
+                'text': "Global Session Distribution",
+                'y': 0.95,
+                'x': 0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'
+            },
+            template=PLOTLY_TEMPLATE,
+            **LAYOUT_THEME,
+            geo=dict(
+                showframe=False,
+                showcoastlines=True,
+                coastlinecolor='lightgray',
+                showland=True,
+                landcolor='rgb(250, 250, 250)',
+                showocean=True,
+                oceancolor='rgb(245, 250, 255)',
+                projection_type='natural earth',
+                projection_scale=1.2,
+                center=dict(lon=0, lat=30),  # Center the map slightly north
+                showlakes=True,
+                lakecolor='rgb(245, 250, 255)',
+                showcountries=True,
+                countrycolor='lightgray',
+                countrywidth=0.5,
+                showsubunits=True,
+                subunitcolor='lightgray',
+                subunitwidth=0.5
+            ),
+            height=600,  # Make the map taller
+            margin=dict(l=0, r=0, t=50, b=0)  # Reduce margins
+        )
+        
+        return fig
 
     def create_language_chart(self, df, selected_language=None):
         """Create language distribution chart."""
@@ -202,11 +336,19 @@ class GeographicDistributionTab:
         """Create the layout for the Geographic Distribution tab."""
         active_filters = self.data_manager.get_active_filters()
         return [
-            # Geographic Distribution Section
-            html.Div([
-                html.H2("Geographic Distribution", style=HEADER_STYLE),
-                
-                # Continent and Country charts side by side
+                # Geographic Distribution Section
+                html.Div([
+                    html.H2("Geographic Distribution", style=HEADER_STYLE),
+                    
+                    # Bubble Map
+                    html.Div([
+                        dcc.Graph(
+                            id='geo_choropleth_map',
+                            figure=self.create_choropleth_map(initial_df)
+                        )
+                    ]),
+                    
+                    # Continent and Country charts side by side
                 html.Div([
                     html.Div([
                         dcc.Graph(
@@ -253,6 +395,7 @@ class GeographicDistributionTab:
         """Register callbacks for the Geographic Distribution tab."""
         @self.app.callback(
             [
+                Output('geo_choropleth_map', 'figure'),
                 Output('geo_continent', 'figure'),
                 Output('geo_country', 'figure'),
                 Output('geo_city', 'figure'),
@@ -294,6 +437,7 @@ class GeographicDistributionTab:
             
             # Update all charts with active filters
             return [
+                self.create_choropleth_map(filtered_df),
                 self.create_continent_chart(filtered_df, selected_continent=active_filters.get('continent')),
                 self.create_country_chart(filtered_df, 
                                         selected_continent=active_filters.get('continent'),
