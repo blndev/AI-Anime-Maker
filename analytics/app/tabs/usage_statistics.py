@@ -4,161 +4,254 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 from ..styles import HEADER_STYLE, FILTER_CONTAINER_STYLE, PLOTLY_TEMPLATE, LAYOUT_THEME
-from ..diagrams_usage import create_os_chart, create_browser_chart
-
-def create_sessions_timeline(df):
-    """Create timeline of sessions."""
-    # Create figure
-    fig = go.Figure()
-    
-    if len(df) == 0:
-        fig.update_layout(
-            title="Sessions Over Time (No data available)",
-            xaxis_title="Date",
-            yaxis_title="Number of Sessions",
-            template=PLOTLY_TEMPLATE,
-            **LAYOUT_THEME,
-            showlegend=False
-        )
-        return fig
-    
-    # Convert and extract date from Timestamp
-    df['Date'] = pd.to_datetime(df['Timestamp']).dt.date
-    
-    # Create a complete date range
-    date_range = pd.date_range(
-        start=min(df['Date']),
-        end=max(df['Date']),
-        freq='D'
-    )
-    
-    # Create a DataFrame with all dates
-    all_dates = pd.DataFrame({'Date': date_range.date})
-    
-    # Count sessions per date
-    daily_counts = df.groupby('Date').size().reset_index(name='Count')
-    
-    # Merge with all dates to include zeros for missing dates
-    daily_counts = pd.merge(
-        all_dates,
-        daily_counts,
-        on='Date',
-        how='left'
-    ).fillna(0)
-    
-    # Convert Count to integer
-    daily_counts['Count'] = daily_counts['Count'].astype(int)
-    
-    # Convert date objects to datetime for plotting
-    daily_counts['Date'] = pd.to_datetime(daily_counts['Date'])
-    
-    # Sort by date
-    daily_counts = daily_counts.sort_values('Date')
-    
-    # Create combined line and bar chart
-    fig = go.Figure()
-    
-    # Add bar chart
-    fig.add_trace(go.Bar(
-        x=daily_counts['Date'],
-        y=daily_counts['Count'],
-        name='Daily Sessions',
-        marker_color='#4B89DC'
-    ))
-    
-    # Add line chart
-    fig.add_trace(go.Scatter(
-        x=daily_counts['Date'],
-        y=daily_counts['Count'],
-        name='Trend',
-        line=dict(color='#A0D468'),
-        mode='lines'
-    ))
-    
-    # Update layout
-    fig.update_layout(
-        title="Sessions Over Time",
-        xaxis_title="Date",
-        yaxis_title="Number of Sessions",
-        barmode='overlay',
-        bargap=0.1,
-        template=PLOTLY_TEMPLATE
-    )
-    fig.update_layout(**LAYOUT_THEME)
-    
-    return fig
-
-def create_mobile_pie(df):
-    """Create mobile vs desktop pie chart."""
-    fig = px.pie(
-        pd.DataFrame({'Type': [], 'Count': []}),
-        values='Count',
-        names='Type',
-        title="Desktop vs Mobile Usage",
-        template=PLOTLY_TEMPLATE
-    )
-    
-    if len(df) == 0:
-        fig.update_layout(
-            title="Desktop vs Mobile Usage (No data available)",
-            **LAYOUT_THEME,
-            showlegend=False
-        )
-        return fig
-    
-    mobile_counts = df['IsMobile'].value_counts().reset_index()
-    mobile_counts.columns = ['Type', 'Count']
-    mobile_counts['Type'] = mobile_counts['Type'].map({0: 'Desktop', 1: 'Mobile'})
-    
-    fig = px.pie(
-        mobile_counts,
-        values='Count',
-        names='Type',
-        title="Desktop vs Mobile Usage",
-        template=PLOTLY_TEMPLATE
-    )
-    fig.update_layout(**LAYOUT_THEME)
-    return fig
-
-def create_generation_status_chart(df):
-    """Create pie chart showing ratio of users who started/didn't start generations."""
-    fig = px.pie(
-        pd.DataFrame({'Status': [], 'Count': []}),
-        values='Count',
-        names='Status',
-        title="Users Who Started Generations",
-        template=PLOTLY_TEMPLATE
-    )
-    
-    if len(df) == 0:
-        fig.update_layout(
-            title="Users Who Started Generations (No data available)",
-            **LAYOUT_THEME,
-            showlegend=False
-        )
-        return fig
-    
-    status_counts = df['HasStartedGeneration'].value_counts().reset_index()
-    status_counts.columns = ['Status', 'Count']
-    status_counts['Status'] = status_counts['Status'].map({
-        1: 'Started Generation',
-        0: 'No Generation Started'
-    })
-    
-    fig = px.pie(
-        status_counts,
-        values='Count',
-        names='Status',
-        title="Users Who Started Generations",
-        template=PLOTLY_TEMPLATE
-    )
-    fig.update_layout(**LAYOUT_THEME)
-    return fig
 
 class UsageStatisticsTab:
-    def __init__(self, data_manager):
+    def __init__(self, data_manager, app):
         """Initialize the Usage Statistics tab with a DataManager instance."""
         self.data_manager = data_manager
+        self.app = app
+        self.register_callbacks()
+
+    def create_sessions_timeline(self, df):
+        """Create timeline of sessions."""
+        # Create figure
+        fig = go.Figure()
+        
+        if len(df) == 0:
+            fig.update_layout(
+                title="Sessions Over Time (No data available)",
+                xaxis_title="Date",
+                yaxis_title="Number of Sessions",
+                template=PLOTLY_TEMPLATE,
+                **LAYOUT_THEME,
+                showlegend=False
+            )
+            return fig
+        
+        # Convert and extract date from Timestamp
+        df['Date'] = pd.to_datetime(df['Timestamp']).dt.date
+        
+        # Create a complete date range
+        date_range = pd.date_range(
+            start=min(df['Date']),
+            end=max(df['Date']),
+            freq='D'
+        )
+        
+        # Create a DataFrame with all dates
+        all_dates = pd.DataFrame({'Date': date_range.date})
+        
+        # Count sessions per date
+        daily_counts = df.groupby('Date').size().reset_index(name='Count')
+        
+        # Merge with all dates to include zeros for missing dates
+        daily_counts = pd.merge(
+            all_dates,
+            daily_counts,
+            on='Date',
+            how='left'
+        ).fillna(0)
+        
+        # Convert Count to integer
+        daily_counts['Count'] = daily_counts['Count'].astype(int)
+        
+        # Convert date objects to datetime for plotting
+        daily_counts['Date'] = pd.to_datetime(daily_counts['Date'])
+        
+        # Sort by date
+        daily_counts = daily_counts.sort_values('Date')
+        
+        # Create combined line and bar chart
+        fig = go.Figure()
+        
+        # Add bar chart
+        fig.add_trace(go.Bar(
+            x=daily_counts['Date'],
+            y=daily_counts['Count'],
+            name='Daily Sessions',
+            marker_color='#4B89DC'
+        ))
+        
+        # Add line chart
+        fig.add_trace(go.Scatter(
+            x=daily_counts['Date'],
+            y=daily_counts['Count'],
+            name='Trend',
+            line=dict(color='#A0D468'),
+            mode='lines'
+        ))
+        
+        # Update layout
+        fig.update_layout(
+            title="Sessions Over Time",
+            xaxis_title="Date",
+            yaxis_title="Number of Sessions",
+            barmode='overlay',
+            bargap=0.1,
+            template=PLOTLY_TEMPLATE
+        )
+        fig.update_layout(**LAYOUT_THEME)
+        
+        return fig
+
+    def create_mobile_pie(self, df):
+        """Create mobile vs desktop pie chart."""
+        fig = px.pie(
+            pd.DataFrame({'Type': [], 'Count': []}),
+            values='Count',
+            names='Type',
+            title="Desktop vs Mobile Usage",
+            template=PLOTLY_TEMPLATE
+        )
+        
+        if len(df) == 0:
+            fig.update_layout(
+                title="Desktop vs Mobile Usage (No data available)",
+                **LAYOUT_THEME,
+                showlegend=False
+            )
+            return fig
+        
+        mobile_counts = df['IsMobile'].value_counts().reset_index()
+        mobile_counts.columns = ['Type', 'Count']
+        mobile_counts['Type'] = mobile_counts['Type'].map({0: 'Desktop', 1: 'Mobile'})
+        
+        fig = px.pie(
+            mobile_counts,
+            values='Count',
+            names='Type',
+            title="Desktop vs Mobile Usage",
+            template=PLOTLY_TEMPLATE
+        )
+        fig.update_layout(**LAYOUT_THEME)
+        return fig
+
+    def create_generation_status_chart(self, df):
+        """Create pie chart showing ratio of users who started/didn't start generations."""
+        fig = px.pie(
+            pd.DataFrame({'Status': [], 'Count': []}),
+            values='Count',
+            names='Status',
+            title="Users Who Started Generations",
+            template=PLOTLY_TEMPLATE
+        )
+        
+        if len(df) == 0:
+            fig.update_layout(
+                title="Users Who Started Generations (No data available)",
+                **LAYOUT_THEME,
+                showlegend=False
+            )
+            return fig
+        
+        status_counts = df['HasStartedGeneration'].value_counts().reset_index()
+        status_counts.columns = ['Status', 'Count']
+        status_counts['Status'] = status_counts['Status'].map({
+            1: 'Started Generation',
+            0: 'No Generation Started'
+        })
+        
+        fig = px.pie(
+            status_counts,
+            values='Count',
+            names='Status',
+            title="Users Who Started Generations",
+            template=PLOTLY_TEMPLATE
+        )
+        fig.update_layout(**LAYOUT_THEME)
+        return fig
+
+    def create_os_chart(self, df, selected_os=None):
+        """Create operating system distribution chart."""
+        fig = px.bar(
+            pd.DataFrame({'OS': [], 'Count': []}),
+            x='OS',
+            y='Count',
+            title="Operating System Distribution",
+            labels={'OS': 'Operating System', 'Count': 'Number of Sessions'},
+            template=PLOTLY_TEMPLATE
+        )
+        
+        if len(df) == 0:
+            fig.update_layout(
+                title="Operating System Distribution (No data available)",
+                **LAYOUT_THEME,
+                showlegend=False
+            )
+            return fig
+        
+        os_counts = df['OS'].value_counts().reset_index()
+        os_counts.columns = ['OS', 'Count']
+        
+        fig = px.bar(
+            os_counts,
+            x='OS',
+            y='Count',
+            title="Operating System Distribution",
+            labels={'OS': 'Operating System', 'Count': 'Number of Sessions'},
+            template=PLOTLY_TEMPLATE
+        )
+        fig.update_layout(
+            **LAYOUT_THEME,
+            clickmode='event',
+            dragmode='select'
+        )
+        
+        # Highlight selected OS if any
+        if selected_os:
+            fig.update_traces(
+                marker_color=[
+                    '#1f77b4' if x == selected_os else '#7fdbff' 
+                    for x in os_counts['OS']
+                ]
+            )
+        return fig
+
+    def create_browser_chart(self, df, selected_browser=None):
+        """Create browser distribution chart."""
+        fig = px.bar(
+            pd.DataFrame({'Browser': [], 'Count': []}),
+            x='Browser',
+            y='Count',
+            title="Browser Distribution",
+            labels={'Browser': 'Browser', 'Count': 'Number of Sessions'},
+            template=PLOTLY_TEMPLATE
+        )
+        
+        if len(df) == 0:
+            fig.update_layout(
+                title="Browser Distribution (No data available)",
+                **LAYOUT_THEME,
+                showlegend=False
+            )
+            return fig
+        
+        browser_counts = df['Browser'].value_counts().reset_index()
+        browser_counts.columns = ['Browser', 'Count']
+        
+        fig = px.bar(
+            browser_counts,
+            x='Browser',
+            y='Count',
+            title="Browser Distribution",
+            labels={'Browser': 'Browser', 'Count': 'Number of Sessions'},
+            template=PLOTLY_TEMPLATE
+        )
+        fig.update_layout(
+            **LAYOUT_THEME,
+            clickmode='event',
+            dragmode='select'
+        )
+        
+        # Highlight selected browser if any
+        if selected_browser:
+            fig.update_traces(
+                marker_color=[
+                    '#1f77b4' if x == selected_browser else '#7fdbff' 
+                    for x in browser_counts['Browser']
+                ]
+            )
+        return fig
         
     def create_layout(self, initial_df):
         """Create the layout for the Usage Statistics tab."""
@@ -168,7 +261,7 @@ class UsageStatisticsTab:
         return [
             # Sessions Timeline
             html.Div([
-                dcc.Graph(id='usage_timeline', figure=create_sessions_timeline(initial_df))
+                dcc.Graph(id='usage_timeline', figure=self.create_sessions_timeline(initial_df))
             ]),
             
             # Platform Statistics Section
@@ -178,28 +271,28 @@ class UsageStatisticsTab:
                 # OS and Browser Charts
                 html.Div([
                     html.Div([
-                        dcc.Graph(id='usage_os', figure=create_os_chart(initial_df))
+                        dcc.Graph(id='usage_os', figure=self.create_os_chart(initial_df))
                     ], style={'width': '50%', 'display': 'inline-block'}),
                     html.Div([
-                        dcc.Graph(id='usage_browser', figure=create_browser_chart(initial_df))
+                        dcc.Graph(id='usage_browser', figure=self.create_browser_chart(initial_df))
                     ], style={'width': '50%', 'display': 'inline-block'})
                 ]),
                 
                 # Mobile and Generation Status Charts
                 html.Div([
                     html.Div([
-                        dcc.Graph(id='usage_mobile', figure=create_mobile_pie(initial_df))
+                        dcc.Graph(id='usage_mobile', figure=self.create_mobile_pie(initial_df))
                     ], style={'width': '50%', 'display': 'inline-block'}),
                     html.Div([
-                        dcc.Graph(id='usage_generations', figure=create_generation_status_chart(initial_df))
+                        dcc.Graph(id='usage_generations', figure=self.create_generation_status_chart(initial_df))
                     ], style={'width': '50%', 'display': 'inline-block'})
                 ])
             ])
         ]
     
-    def register_callbacks(self, app):
+    def register_callbacks(self):
         """Register callbacks for the Usage Statistics tab."""
-        @app.callback(
+        @self.app.callback(
             [
                 Output('usage_timeline', 'figure'),
                 Output('usage_os', 'figure'),
@@ -237,9 +330,9 @@ class UsageStatisticsTab:
             filtered_df = self.data_manager.prepare_filtered_data(start_date, end_date, filters_data)
             
             return [
-                create_sessions_timeline(filtered_df),
-                create_os_chart(filtered_df, os_filter),
-                create_browser_chart(filtered_df, browser_filter),
-                create_mobile_pie(filtered_df),
-                create_generation_status_chart(filtered_df)
+                self.create_sessions_timeline(filtered_df),
+                self.create_os_chart(filtered_df, os_filter),
+                self.create_browser_chart(filtered_df, browser_filter),
+                self.create_mobile_pie(filtered_df),
+                self.create_generation_status_chart(filtered_df)
             ]

@@ -64,7 +64,7 @@ class Dashboard:
         self.initial_top_images_df = self.data_manager.get_top_uploaded_images()
         
         # Initialize tabs
-        self.usage_stats_tab = UsageStatisticsTab(self.data_manager)
+        self.usage_stats_tab = UsageStatisticsTab(self.data_manager, self.app)
         self.geo_dist_tab = GeographicDistributionTab(self.data_manager, self.app)
         self.gen_details_tab = GenerationDetailsTab(self.data_manager)
         self.image_upload_tab = ImageUploadAnalysisTab(self.data_manager, self.cache_dir)
@@ -159,7 +159,6 @@ class Dashboard:
     def register_callbacks(self):
         """Register all callbacks."""
         # Register tab-specific callbacks
-        self.usage_stats_tab.register_callbacks(self.app)
         self.gen_details_tab.register_callbacks(self.app)
         self.image_upload_tab.register_callbacks(self.app)
 
