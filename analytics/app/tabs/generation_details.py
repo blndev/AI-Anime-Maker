@@ -3,6 +3,11 @@ import dash
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
+import logging
+
+# Set up logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 from ..styles import (
     HEADER_STYLE, PLOTLY_TEMPLATE, LAYOUT_THEME, CONTENT_STYLE,
     SEARCH_CONTAINER_STYLE, SEARCH_INPUT_STYLE, SEARCH_BUTTON_STYLE,
@@ -12,16 +17,20 @@ from ..styles import (
 class GenerationDetailsTab:
     def __init__(self, data_manager, app):
         """Initialize the Generation Details tab with a DataManager instance."""
+        logger.info("Initializing Generation Details tab")
         self.data_manager = data_manager
         self.app = app
         self.register_callbacks()
+        logger.info("Generation Details tab initialized successfully")
 
     def create_style_usage_chart(self, df, start_date=None, end_date=None):
         """Create pie chart showing generation style distribution with percentages."""
+        logger.debug(f"Creating style usage chart for date range: {start_date} to {end_date}")
         # Create figure
         fig = go.Figure()
         
         if len(df) == 0:
+            logger.debug("No style usage data available")
             fig.update_layout(
                 title='Generation Style Distribution (No data available)',
                 template=PLOTLY_TEMPLATE,
@@ -188,6 +197,7 @@ class GenerationDetailsTab:
     
     def register_callbacks(self):
         """Register callbacks for the Generation Details tab."""
+        logger.info("Registering Generation Details tab callbacks")
         @self.app.callback(
             [
                 Output('image-modal', 'style'),
@@ -205,6 +215,7 @@ class GenerationDetailsTab:
         )
         def toggle_image_modal(image_clicks, modal_clicks, image_srcs, current_src):
             """Handle image preview clicks to show/hide modal."""
+            logger.debug("Image modal callback triggered")
             triggered = ctx.triggered_id
             modal_style = {
                 'display': 'none',
@@ -220,16 +231,19 @@ class GenerationDetailsTab:
             
             # If modal background was clicked, hide it
             if triggered == 'image-modal':
+                logger.debug("Modal background clicked, hiding modal")
                 return modal_style, None, None
             
             # If an image was clicked
             if triggered and isinstance(triggered, dict) and triggered.get('type') == 'preview-image':
+                logger.debug("Image preview clicked, showing modal")
                 # Show modal
                 modal_style['display'] = 'block'
                 
                 # Find which image was clicked and get its source
                 for i, clicks in enumerate(image_clicks):
                     if clicks:
+                        logger.debug(f"Displaying image: {image_srcs[i]}")
                         return modal_style, image_srcs[i], image_srcs[i]
             
             # Default - no change
@@ -245,18 +259,24 @@ class GenerationDetailsTab:
         )
         def search_image(n_clicks, search_value):
             """Handle image search and display results."""
+            logger.debug(f"Image search triggered for value: {search_value}")
             if n_clicks == 0:
+                logger.debug("Initial callback, no search performed")
                 return None, None
             
             if not search_value:
+                logger.debug("No search value provided")
                 return "Please enter an Input ID or SHA1 hash.", None
             
             # Search for the image
+            logger.info(f"Searching for image with ID/SHA1: {search_value}")
             image_data, generations_df = self.data_manager.get_image_by_id_or_sha1(search_value)
             
             if image_data is None:
+                logger.info("No image found with provided ID/SHA1")
                 return "No image found with the provided ID or SHA1.", None
             
+            logger.info(f"Found image with {len(generations_df)} generations")
             return (
                 self.create_image_details(image_data),
                 self.create_generations_table(generations_df)
@@ -272,6 +292,7 @@ class GenerationDetailsTab:
         )
         def update_style_usage_chart(filters_data, start_date, end_date):
             """Update style usage chart based on active filters and date range."""
+            logger.debug(f"Updating style usage chart for date range: {start_date} to {end_date}")
             # First prepare filtered data to update the internal state
             self.data_manager.prepare_filtered_data(start_date, end_date, filters_data)
             # Then get style usage data

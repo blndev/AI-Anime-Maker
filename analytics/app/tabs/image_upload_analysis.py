@@ -3,22 +3,30 @@ import dash
 import os
 import pandas as pd
 import plotly.graph_objects as go
+import logging
+
+# Set up logging
+logger = logging.getLogger(__name__)
 from ..styles import HEADER_STYLE, PLOTLY_TEMPLATE, LAYOUT_THEME
 
 class ImageUploadAnalysisTab:
     def __init__(self, data_manager, cache_dir, app):
         """Initialize the Image Upload Analysis tab with a DataManager instance."""
+        logger.info("Initializing Image Upload Analysis tab")
         self.data_manager = data_manager
         self.cache_dir = cache_dir
         self.app = app
         self.register_callbacks()
+        logger.info("Image Upload Analysis tab initialized successfully")
 
     def create_image_uploads_timeline(self, df):
         """Create timeline of image uploads and generations aggregated by hour with local timezone."""
+        logger.debug("Creating image uploads timeline chart")
         # Create figure
         fig = go.Figure()
         
         if len(df) == 0:
+            logger.debug("No data available for timeline")
             fig.update_layout(
                 title='Activity per Hour (No data available)',
                 xaxis_title='Date & Time',
@@ -114,6 +122,7 @@ class ImageUploadAnalysisTab:
 
     def create_top_uploaded_images_chart(self, df):
         """Create bar chart of most frequently uploaded images."""
+        logger.debug("Creating top uploaded images chart")
         # Create figure with subplots: bar chart on top, image grid below
         fig = go.Figure()
         
@@ -163,6 +172,7 @@ class ImageUploadAnalysisTab:
 
     def create_top_generated_images_chart(self, df):
         """Create bar chart of images used most for generations."""
+        logger.debug("Creating top generated images chart")
         # Create figure
         fig = go.Figure()
         
@@ -212,6 +222,7 @@ class ImageUploadAnalysisTab:
         
     def create_layout(self, initial_df, initial_top_images_df):
         """Create the layout for the Image Upload Analysis tab."""
+        logger.info("Creating Image Upload Analysis tab layout")
         return [
             # Image Uploads Timeline
             html.Div([
@@ -258,6 +269,7 @@ class ImageUploadAnalysisTab:
     
     def register_callbacks(self):
         """Register callbacks for the Image Upload Analysis tab."""
+        logger.info("Registering Image Upload Analysis tab callbacks")
         @self.app.callback(
             [
                 Output('uploads_timeline', 'figure'),
@@ -272,14 +284,22 @@ class ImageUploadAnalysisTab:
         )
         def update_image_charts(filters_data, start_date, end_date):
             """Update image analysis charts."""
-            filtered_df = self.data_manager.prepare_filtered_data(start_date, end_date, filters_data)
-            filtered_top_images_df = self.data_manager.get_top_uploaded_images()
-            
-            return [
-                self.create_image_uploads_timeline(filtered_df),
-                self.create_top_uploaded_images_chart(filtered_top_images_df),
-                self.create_top_generated_images_chart(self.data_manager.get_top_generated_images())
-            ]
+            logger.debug(f"Updating image charts for date range: {start_date} to {end_date}")
+            try:
+                filtered_df = self.data_manager.prepare_filtered_data(start_date, end_date, filters_data)
+                filtered_top_images_df = self.data_manager.get_top_uploaded_images()
+                
+                logger.info(f"Retrieved filtered dataset with {len(filtered_df)} records")
+                logger.debug(f"Retrieved {len(filtered_top_images_df)} top uploaded images")
+                
+                return [
+                    self.create_image_uploads_timeline(filtered_df),
+                    self.create_top_uploaded_images_chart(filtered_top_images_df),
+                    self.create_top_generated_images_chart(self.data_manager.get_top_generated_images())
+                ]
+            except Exception as e:
+                logger.error(f"Error updating image charts: {str(e)}")
+                raise
         
         @self.app.callback(
             Output('uploads_image_grid', 'children'),
@@ -291,10 +311,13 @@ class ImageUploadAnalysisTab:
         )
         def update_image_grid(filters_data, start_date, end_date):
             """Update image grid based on filters and date range."""
-            self.data_manager.prepare_filtered_data(start_date, end_date, filters_data)
-            top_images_df = self.data_manager.get_top_uploaded_images()
-            
-            return html.Div([
+            logger.debug(f"Updating image grid for date range: {start_date} to {end_date}")
+            try:
+                self.data_manager.prepare_filtered_data(start_date, end_date, filters_data)
+                top_images_df = self.data_manager.get_top_uploaded_images()
+                logger.debug(f"Retrieved {len(top_images_df)} images for grid")
+                
+                return html.Div([
                 html.Div([
                     html.Div([
                         html.Img(
@@ -327,7 +350,10 @@ class ImageUploadAnalysisTab:
                     'gap': '20px',
                     'margin': '20px 0'
                 })
-            ])
+                ])
+            except Exception as e:
+                logger.error(f"Error updating image grid: {str(e)}")
+                raise
         
         @self.app.callback(
             Output('uploads_image_details', 'children'),
@@ -338,60 +364,73 @@ class ImageUploadAnalysisTab:
         )
         def update_image_details(generation_click, upload_click):
             """Update the details display when a bar in either chart is clicked."""
-            # Use the most recent click data
-            ctx = dash.callback_context
-            if not ctx.triggered:
-                return html.Div("Select an image to view details", style={
-                    'color': '#95A5A6',
-                    'fontStyle': 'italic',
-                    'textAlign': 'center',
-                    'marginTop': '20px'
-                })
+            logger.debug("Image details callback triggered")
+            try:
+                # Use the most recent click data
+                ctx = dash.callback_context
+                if not ctx.triggered:
+                    logger.debug("No click data available")
+                    return html.Div("Select an image to view details", style={
+                        'color': '#95A5A6',
+                        'fontStyle': 'italic',
+                        'textAlign': 'center',
+                        'marginTop': '20px'
+                    })
             
-            trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-            click_data = generation_click if trigger_id == 'uploads_generated_images' else upload_click
-            if not click_data or not click_data.get('points'):
-                return html.Div("Select an image to view details", style={
-                    'color': '#95A5A6',
-                    'fontStyle': 'italic',
-                    'textAlign': 'center',
-                    'marginTop': '20px'
-                })
+                trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+                logger.debug(f"Triggered by: {trigger_id}")
+                
+                click_data = generation_click if trigger_id == 'uploads_generated_images' else upload_click
+                if not click_data or not click_data.get('points'):
+                    logger.debug("No valid click data points")
+                    return html.Div("Select an image to view details", style={
+                        'color': '#95A5A6',
+                        'fontStyle': 'italic',
+                        'textAlign': 'center',
+                        'marginTop': '20px'
+                    })
             
-            # Get the selected image details from the click data
-            selected_id = click_data['points'][0]['x']
-            selected_path = click_data['points'][0]['customdata'][0]
-            selected_token = click_data['points'][0]['customdata'][1]
-            selected_face = click_data['points'][0]['customdata'][2]
-            selected_gender = click_data['points'][0]['customdata'][3]
+                # Get the selected image details from the click data
+                selected_id = click_data['points'][0]['x']
+                selected_path = click_data['points'][0]['customdata'][0]
+                selected_token = click_data['points'][0]['customdata'][1]
+                selected_face = click_data['points'][0]['customdata'][2]
+                selected_gender = click_data['points'][0]['customdata'][3]
+                
+                logger.debug(f"Selected image ID: {selected_id}")
             
-            # Get details based on which chart was clicked
-            if trigger_id == 'uploads_generated_images':
-                # Extract SHA1 from "SHA1: {sha1}..." format
-                raw_sha1 = selected_id.split(': ')[1].split('...')[0]
-                df_details = self.data_manager.get_top_generated_images()
-                filtered_details = df_details[df_details['SHA1'].str.contains(raw_sha1, regex=False)]
-            else:
-                # Extract ID from "ID: {id}" format
-                raw_id = selected_id.split(': ')[1]
-                df_details = self.data_manager.get_top_uploaded_images()
-                filtered_details = df_details[df_details['ID'].astype(str) == raw_id]
+                # Get details based on which chart was clicked
+                if trigger_id == 'uploads_generated_images':
+                    # Extract SHA1 from "SHA1: {sha1}..." format
+                    raw_sha1 = selected_id.split(': ')[1].split('...')[0]
+                    df_details = self.data_manager.get_top_generated_images()
+                    filtered_details = df_details[df_details['SHA1'].str.contains(raw_sha1, regex=False)]
+                    logger.debug(f"Retrieved generation details for SHA1: {raw_sha1}")
+                else:
+                    # Extract ID from "ID: {id}" format
+                    raw_id = selected_id.split(': ')[1]
+                    df_details = self.data_manager.get_top_uploaded_images()
+                    filtered_details = df_details[df_details['ID'].astype(str) == raw_id]
+                    logger.debug(f"Retrieved upload details for ID: {raw_id}")
             
-            if len(filtered_details) == 0:
-                return html.Div("Image details not found", style={
-                    'color': '#95A5A6',
-                    'fontStyle': 'italic',
-                    'textAlign': 'center',
-                    'marginTop': '20px'
-                })
+                if len(filtered_details) == 0:
+                    logger.warning("No details found for selected image")
+                    return html.Div("Image details not found", style={
+                        'color': '#95A5A6',
+                        'fontStyle': 'italic',
+                        'textAlign': 'center',
+                        'marginTop': '20px'
+                    })
             
-            image_data = filtered_details.iloc[0]
+                image_data = filtered_details.iloc[0]
+                
+                # Create details display with count label based on chart type
+                count_label = "Generations" if trigger_id == 'uploads_generated_images' else "Uploads"
+                count_value = image_data['GenerationCount'] if trigger_id == 'uploads_generated_images' else image_data['UploadCount']
+                
+                logger.info(f"Displaying details for image with {count_value} {count_label.lower()}")
             
-            # Create details display with count label based on chart type
-            count_label = "Generations" if trigger_id == 'uploads_generated_images' else "Uploads"
-            count_value = image_data['GenerationCount'] if trigger_id == 'uploads_generated_images' else image_data['UploadCount']
-            
-            details = [
+                details = [
                 html.Div([
                     html.Img(
                         src=f'/cache/{os.path.basename(os.path.dirname(selected_path))}/{os.path.basename(selected_path)}',
@@ -439,4 +478,7 @@ class ImageUploadAnalysisTab:
                 })
             ]
             
-            return details
+                return details
+            except Exception as e:
+                logger.error(f"Error updating image details: {str(e)}")
+                raise

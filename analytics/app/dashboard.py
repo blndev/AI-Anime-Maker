@@ -30,60 +30,79 @@ from .styles import (
 
 # Set up logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-# Create console handler with formatting
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(
-    logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-)
-logger.addHandler(console_handler)
 
 class Dashboard:
     def __init__(self):
         """Initialize the Dashboard application."""
-        # Initialize the Dash app
-        self.app = dash.Dash(__name__, title="AI Anime Maker Analytics")
-        
-        # Get cache directory path from config
-        config.read_configuration()
-        self.cache_dir = os.path.abspath(config.get_output_folder())
-        
-        # Initialize with last 30 days of data
-        self.initial_end_date = pd.Timestamp.now().strftime('%Y-%m-%d')
-        self.initial_start_date = (pd.Timestamp.now() - pd.Timedelta(days=30)).strftime('%Y-%m-%d')
-        
-        # Initialize DataManager
-        self.data_manager = DataManager()
-        
-        # Get initial data
-        self.initial_df = self.data_manager.prepare_filtered_data(
-            self.initial_start_date,
-            self.initial_end_date
-        )
-        self.initial_top_images_df = self.data_manager.get_top_uploaded_images()
-        
-        # Initialize tabs
-        self.usage_stats_tab = UsageStatisticsTab(self.data_manager, self.app)
-        self.geo_dist_tab = GeographicDistributionTab(self.data_manager, self.app)
-        self.gen_details_tab = GenerationDetailsTab(self.data_manager, self.app)
-        self.image_upload_tab = ImageUploadAnalysisTab(self.data_manager, self.cache_dir, self.app)
-        
-        # Create layout
-        self.app.layout = self.create_layout()
-        
-        # Register callbacks
-        self.register_callbacks()
+        logger.info("Initializing Analytics Dashboard")
+        try:
+            # Initialize the Dash app
+            logger.debug("Creating Dash application")
+            self.app = dash.Dash(__name__, title="AI Anime Maker Analytics")
+            
+            # Get cache directory path from config
+            logger.debug("Reading configuration")
+            config.read_configuration()
+            self.cache_dir = os.path.abspath(config.get_output_folder())
+            logger.debug(f"Using cache directory: {self.cache_dir}")
+            
+            # Initialize with last 30 days of data
+            logger.debug("Setting up initial date range")
+            self.initial_end_date = pd.Timestamp.now().strftime('%Y-%m-%d')
+            self.initial_start_date = (pd.Timestamp.now() - pd.Timedelta(days=30)).strftime('%Y-%m-%d')
+            logger.debug(f"Initial date range: {self.initial_start_date} to {self.initial_end_date}")
+            
+            # Initialize DataManager
+            logger.debug("Initializing DataManager")
+            self.data_manager = DataManager()
+            
+            # Get initial data
+            logger.debug("Preparing initial data")
+            self.initial_df = self.data_manager.prepare_filtered_data(
+                self.initial_start_date,
+                self.initial_end_date
+            )
+            logger.info(f"Retrieved initial dataset with {len(self.initial_df)} records")
+            
+            self.initial_top_images_df = self.data_manager.get_top_uploaded_images()
+            logger.debug(f"Retrieved {len(self.initial_top_images_df)} top uploaded images")
+            
+            # Initialize tabs
+            logger.debug("Initializing dashboard tabs")
+            self.usage_stats_tab = UsageStatisticsTab(self.data_manager, self.app)
+            self.geo_dist_tab = GeographicDistributionTab(self.data_manager, self.app)
+            self.gen_details_tab = GenerationDetailsTab(self.data_manager, self.app)
+            self.image_upload_tab = ImageUploadAnalysisTab(self.data_manager, self.cache_dir, self.app)
+            
+            # Create layout
+            logger.info("Creating dashboard layout")
+            self.app.layout = self.create_layout()
+            
+            # Register callbacks
+            logger.debug("Registering dashboard callbacks")
+            self.register_callbacks()
+            
+            logger.info("Dashboard initialization completed successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize dashboard: {str(e)}")
+            raise
         
         # Add route for serving images from cache directory
         @self.app.server.route('/cache/<path:path>')
         def serve_image(path):
             """Serve images from cache directory."""
-            return send_from_directory(self.cache_dir, path)
+            logger.debug(f"Serving image: {path}")
+            try:
+                return send_from_directory(self.cache_dir, path)
+            except Exception as e:
+                logger.error(f"Error serving image {path}: {str(e)}")
+                raise
     
     def create_layout(self):
         """Create the dashboard layout."""
-        return html.Div(style=LAYOUT_STYLE, children=[
+        logger.debug("Creating dashboard layout")
+        try:
+            layout = html.Div(style=LAYOUT_STYLE, children=[
             html.H1(f"{config.get_app_title()} Analytics Dashboard", style=HEADER_STYLE),
             
             # Date Range Selector
@@ -155,11 +174,18 @@ class Dashboard:
                 )
                 
             ], style=TABS_CONTAINER_STYLE)
-        ])
+            ])
+            logger.debug("Dashboard layout created successfully")
+            return layout
+        except Exception as e:
+            logger.error(f"Error creating dashboard layout: {str(e)}")
+            raise
     
     def register_callbacks(self):
         """Register all callbacks."""
-        # No more callbacks to register
+        logger.debug("Registering dashboard-level callbacks")
+        # No more callbacks to register at dashboard level
+        logger.debug("Dashboard callback registration complete")
 
 # Create dashboard instance for external use
 dashboard = Dashboard()
@@ -167,4 +193,5 @@ app = dashboard.app
 server = app.server
 
 if __name__ == '__main__':
+    logger.info("Starting Analytics Dashboard server")
     app.run_server(debug=True)

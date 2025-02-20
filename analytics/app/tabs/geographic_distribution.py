@@ -7,6 +7,10 @@ import dash
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
+import logging
+
+# Set up logging
+logger = logging.getLogger(__name__)
 from ..styles import (
     HEADER_STYLE, NO_DATA_STYLE,
     FILTER_TAG_STYLE, PLATFORM_FILTER_STYLE, LANGUAGE_FILTER_STYLE,
@@ -16,15 +20,19 @@ from ..styles import (
 class GeographicDistributionTab:
     def __init__(self, data_manager, app):
         """Initialize the Geographic Distribution tab with a DataManager instance."""
+        logger.info("Initializing Geographic Distribution tab")
         self.data_manager = data_manager
         self.app = app
         self.register_callbacks()
+        logger.info("Geographic Distribution tab initialized successfully")
 
     def create_choropleth_map(self, df):
         """Create choropleth map showing global session distribution."""
+        logger.debug("Creating choropleth map")
         fig = go.Figure()
         
         if len(df) == 0:
+            logger.debug("No data available for choropleth map")
             fig.update_layout(
                 title="Global Session Distribution (No data available)",
                 template=PLOTLY_TEMPLATE,
@@ -155,6 +163,7 @@ class GeographicDistributionTab:
 
     def create_language_chart(self, df, selected_language=None):
         """Create language distribution chart."""
+        logger.debug(f"Creating language chart with selected language: {selected_language}")
         fig = px.bar(
             pd.DataFrame({'Language': [], 'Count': []}),
             x='Language',
@@ -201,6 +210,7 @@ class GeographicDistributionTab:
 
     def create_continent_chart(self, df, selected_continent=None):
         """Create continent distribution chart."""
+        logger.debug(f"Creating continent chart with selected continent: {selected_continent}")
         fig = px.bar(
             pd.DataFrame({'Continent': [], 'Count': []}),
             x='Continent',
@@ -246,6 +256,7 @@ class GeographicDistributionTab:
 
     def create_country_chart(self, df, selected_continent=None, selected_country=None):
         """Create country distribution chart."""
+        logger.debug(f"Creating country chart with continent: {selected_continent}, country: {selected_country}")
         fig = px.bar(
             pd.DataFrame({'Country': [], 'Count': []}),
             x='Country',
@@ -295,6 +306,7 @@ class GeographicDistributionTab:
 
     def create_city_chart(self, df, selected_continent=None, selected_country=None):
         """Create city distribution chart."""
+        logger.debug(f"Creating city chart with continent: {selected_continent}, country: {selected_country}")
         fig = px.bar(
             pd.DataFrame({'City': [], 'Count': []}),
             x='City',
@@ -334,6 +346,7 @@ class GeographicDistributionTab:
         
     def create_layout(self, initial_df):
         """Create the layout for the Geographic Distribution tab."""
+        logger.info("Creating Geographic Distribution tab layout")
         active_filters = self.data_manager.get_active_filters()
         return [
                 # Geographic Distribution Section
@@ -393,6 +406,7 @@ class GeographicDistributionTab:
     
     def register_callbacks(self):
         """Register callbacks for the Geographic Distribution tab."""
+        logger.info("Registering Geographic Distribution tab callbacks")
         @self.app.callback(
             [
                 Output('geo_choropleth_map', 'figure'),
@@ -413,40 +427,55 @@ class GeographicDistributionTab:
         def update_charts(start_date, end_date, continent_click, country_click, 
                          language_click, reset_clicks):
             """Update all charts based on date range and filter selections."""
-            ctx = dash.callback_context
-            if not ctx.triggered:
-                return dash.no_update
-            
-            trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-            
-            # Handle filter updates
-            if trigger_id == 'reset-geo-filters':
-                self.data_manager.reset_filters()
-            elif trigger_id == 'geo_continent' and continent_click:
-                self.data_manager.add_filter('continent', continent_click['points'][0]['x'])
-            elif trigger_id == 'geo_country' and country_click:
-                self.data_manager.add_filter('country', country_click['points'][0]['x'])
-            elif trigger_id == 'geo_language' and language_click:
-                self.data_manager.add_filter('language', language_click['points'][0]['x'])
-            
-            # Get filtered data
-            filtered_df = self.data_manager.prepare_filtered_data(start_date, end_date)
-            
-            # Get active filters
-            active_filters = self.data_manager.get_active_filters()
-            
-            # Update all charts with active filters
-            return [
-                self.create_choropleth_map(filtered_df),
-                self.create_continent_chart(filtered_df, selected_continent=active_filters.get('continent')),
-                self.create_country_chart(filtered_df, 
-                                        selected_continent=active_filters.get('continent'),
-                                        selected_country=active_filters.get('country')),
-                self.create_city_chart(filtered_df,
-                                     selected_continent=active_filters.get('continent'),
-                                     selected_country=active_filters.get('country')),
-                self.create_language_chart(filtered_df, selected_language=active_filters.get('language'))
-            ]
+            logger.debug(f"Updating geographic charts for date range: {start_date} to {end_date}")
+            try:
+                ctx = dash.callback_context
+                if not ctx.triggered:
+                    return dash.no_update
+                
+                trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+                logger.debug(f"Triggered by: {trigger_id}")
+                
+                # Handle filter updates
+                if trigger_id == 'reset-geo-filters':
+                    logger.info("Resetting geographic filters")
+                    self.data_manager.reset_filters()
+                elif trigger_id == 'geo_continent' and continent_click:
+                    continent = continent_click['points'][0]['x']
+                    logger.info(f"Adding continent filter: {continent}")
+                    self.data_manager.add_filter('continent', continent)
+                elif trigger_id == 'geo_country' and country_click:
+                    country = country_click['points'][0]['x']
+                    logger.info(f"Adding country filter: {country}")
+                    self.data_manager.add_filter('country', country)
+                elif trigger_id == 'geo_language' and language_click:
+                    language = language_click['points'][0]['x']
+                    logger.info(f"Adding language filter: {language}")
+                    self.data_manager.add_filter('language', language)
+                
+                # Get filtered data
+                filtered_df = self.data_manager.prepare_filtered_data(start_date, end_date)
+                logger.info(f"Retrieved filtered dataset with {len(filtered_df)} records")
+                
+                # Get active filters
+                active_filters = self.data_manager.get_active_filters()
+                logger.debug(f"Active filters: {active_filters}")
+                
+                # Update all charts with active filters
+                return [
+                    self.create_choropleth_map(filtered_df),
+                    self.create_continent_chart(filtered_df, selected_continent=active_filters.get('continent')),
+                    self.create_country_chart(filtered_df, 
+                                            selected_continent=active_filters.get('continent'),
+                                            selected_country=active_filters.get('country')),
+                    self.create_city_chart(filtered_df,
+                                         selected_continent=active_filters.get('continent'),
+                                         selected_country=active_filters.get('country')),
+                    self.create_language_chart(filtered_df, selected_language=active_filters.get('language'))
+                ]
+            except Exception as e:
+                logger.error(f"Error updating geographic charts: {str(e)}")
+                raise
         
         @self.app.callback(
             Output('active-filters', 'children'),
@@ -459,54 +488,62 @@ class GeographicDistributionTab:
         )
         def update_active_filters_display(*_):
             """Update the active filters display."""
-            active_filters = self.data_manager.get_active_filters()
-            
-            if not active_filters:
-                return [html.Div("No filters active", style=NO_DATA_STYLE)]
-            
-            filters = []
-            
-            # Geographic filters
-            if active_filters.get('continent'):
-                filters.append(
-                    html.Div([
-                        html.Strong("Continent: "),
-                        html.Span(active_filters['continent'])
-                    ], style=FILTER_TAG_STYLE)
-                )
-            
-            if active_filters.get('country'):
-                filters.append(
-                    html.Div([
-                        html.Strong("Country: "),
-                        html.Span(active_filters['country'])
-                    ], style=FILTER_TAG_STYLE)
-                )
-            
-            # Platform filters
-            if active_filters.get('os'):
-                filters.append(
-                    html.Div([
-                        html.Strong("OS: "),
-                        html.Span(active_filters['os'])
-                    ], style=PLATFORM_FILTER_STYLE)
-                )
-            
-            if active_filters.get('browser'):
-                filters.append(
-                    html.Div([
-                        html.Strong("Browser: "),
-                        html.Span(active_filters['browser'])
-                    ], style=PLATFORM_FILTER_STYLE)
-                )
-            
-            # Language filter
-            if active_filters.get('language'):
-                filters.append(
-                    html.Div([
-                        html.Strong("Language: "),
-                        html.Span(active_filters['language'])
-                    ], style=LANGUAGE_FILTER_STYLE)
-                )
-            
-            return filters
+            """Update the active filters display."""
+            logger.debug("Updating active filters display")
+            try:
+                active_filters = self.data_manager.get_active_filters()
+                logger.debug(f"Current active filters: {active_filters}")
+                
+                if not active_filters:
+                    logger.debug("No active filters")
+                    return [html.Div("No filters active", style=NO_DATA_STYLE)]
+                
+                filters = []
+                
+                # Geographic filters
+                if active_filters.get('continent'):
+                    filters.append(
+                        html.Div([
+                            html.Strong("Continent: "),
+                            html.Span(active_filters['continent'])
+                        ], style=FILTER_TAG_STYLE)
+                    )
+                
+                if active_filters.get('country'):
+                    filters.append(
+                        html.Div([
+                            html.Strong("Country: "),
+                            html.Span(active_filters['country'])
+                        ], style=FILTER_TAG_STYLE)
+                    )
+                
+                # Platform filters
+                if active_filters.get('os'):
+                    filters.append(
+                        html.Div([
+                            html.Strong("OS: "),
+                            html.Span(active_filters['os'])
+                        ], style=PLATFORM_FILTER_STYLE)
+                    )
+                
+                if active_filters.get('browser'):
+                    filters.append(
+                        html.Div([
+                            html.Strong("Browser: "),
+                            html.Span(active_filters['browser'])
+                        ], style=PLATFORM_FILTER_STYLE)
+                    )
+                
+                # Language filter
+                if active_filters.get('language'):
+                    filters.append(
+                        html.Div([
+                            html.Strong("Language: "),
+                            html.Span(active_filters['language'])
+                        ], style=LANGUAGE_FILTER_STYLE)
+                    )
+                
+                return filters
+            except Exception as e:
+                logger.error(f"Error updating active filters display: {str(e)}")
+                raise

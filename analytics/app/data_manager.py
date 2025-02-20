@@ -16,23 +16,32 @@ import src.config as config
 
 # Set up logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 class DataManager:
     def __init__(self):
         """Initialize DataManager with configuration and database connection."""
-        config.read_configuration()
-        self.db_path = config.get_analytics_db_path()
-        self.timezone = datetime.now().astimezone().tzinfo
-        self._df = None  # Cache for the current filtered DataFrame
-        self._city_coords = self._load_city_coordinates()  # Load city coordinates
-        self._filters = {
-            'continent': None,
-            'country': None,
-            'os': None,
-            'browser': None,
-            'language': None
-        }
+        logger.info("Initializing DataManager")
+        try:
+            config.read_configuration()
+            self.db_path = config.get_analytics_db_path()
+            logger.debug(f"Using database path: {self.db_path}")
+            
+            self.timezone = datetime.now().astimezone().tzinfo
+            logger.debug(f"Using timezone: {self.timezone}")
+            
+            self._df = None  # Cache for the current filtered DataFrame
+            self._city_coords = self._load_city_coordinates()  # Load city coordinates
+            self._filters = {
+                'continent': None,
+                'country': None,
+                'os': None,
+                'browser': None,
+                'language': None
+            }
+            logger.info("DataManager initialization completed successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize DataManager: {str(e)}")
+            raise
 
     def _load_city_coordinates(self):
         """Load city coordinates from cities.csv."""
@@ -98,13 +107,22 @@ class DataManager:
         
     def _get_connection(self):
         """Get a database connection."""
-        return sqlite3.connect(self.db_path)
+        try:
+            logger.debug("Establishing database connection")
+            conn = sqlite3.connect(self.db_path)
+            logger.debug("Database connection established successfully")
+            return conn
+        except sqlite3.Error as e:
+            logger.error(f"Failed to connect to database: {str(e)}")
+            raise
 
     def prepare_filtered_data(self, start_date=None, end_date=None, filters=None):
         """
         Main function to prepare filtered DataFrame based on global parameters.
         If filters is None, uses internal filter state.
         """
+        logger.info(f"Preparing filtered data with date range: {start_date} to {end_date}")
+        logger.debug(f"Applied filters: {filters if filters is not None else self._filters}")
         """
         Main function to prepare filtered DataFrame based on global parameters.
         
@@ -118,31 +136,39 @@ class DataManager:
                 - browser: Selected browser
                 - language: Selected language
         """
-        # Get base dataset
-        df = self._get_session_data(start_date, end_date)
-        
-        # Use provided filters or internal filter state
-        active_filters = filters if filters is not None else self._filters
-        
-        # Apply active filters
-        if active_filters:
-            if active_filters.get('continent'):
-                df = df[df['Continent'] == active_filters['continent']]
-            if active_filters.get('country'):
-                df = df[df['Country'] == active_filters['country']]
-            if active_filters.get('os'):
-                df = df[df['OS'] == active_filters['os']]
-            if active_filters.get('browser'):
-                df = df[df['Browser'] == active_filters['browser']]
-            if active_filters.get('language'):
-                df = df[df['Language'] == active_filters['language']]
-        
-        # Cache the filtered DataFrame
-        self._df = df
-        return df
+        try:
+            # Get base dataset
+            df = self._get_session_data(start_date, end_date)
+            
+            # Use provided filters or internal filter state
+            active_filters = filters if filters is not None else self._filters
+            
+            # Apply active filters
+            if active_filters:
+                initial_rows = len(df)
+                if active_filters.get('continent'):
+                    df = df[df['Continent'] == active_filters['continent']]
+                if active_filters.get('country'):
+                    df = df[df['Country'] == active_filters['country']]
+                if active_filters.get('os'):
+                    df = df[df['OS'] == active_filters['os']]
+                if active_filters.get('browser'):
+                    df = df[df['Browser'] == active_filters['browser']]
+                if active_filters.get('language'):
+                    df = df[df['Language'] == active_filters['language']]
+                logger.debug(f"Filtered data from {initial_rows} to {len(df)} rows")
+            
+            # Cache the filtered DataFrame
+            self._df = df
+            logger.info(f"Successfully prepared filtered dataset with {len(df)} rows")
+            return df
+        except Exception as e:
+            logger.error(f"Error preparing filtered data: {str(e)}")
+            raise
 
     def _get_session_data(self, start_date=None, end_date=None):
         """Get base session data with all related information joined."""
+        logger.debug(f"Fetching session data for date range: {start_date} to {end_date}")
         query = """
         WITH SessionInputs AS (
             SELECT 
@@ -181,19 +207,24 @@ class DataManager:
         
         params = [start_date, end_date] if start_date and end_date else []
         try:
-            
             with self._get_connection() as conn:
+                logger.debug("Executing session data query")
                 df = pd.read_sql_query(query, conn, params=params)
+                logger.debug(f"Retrieved {len(df)} session records")
             
             # Convert timestamps to local timezone
             df['Timestamp'] = pd.to_datetime(df['Timestamp']).dt.tz_localize('GMT').dt.tz_convert(self.timezone)
+            logger.info(f"Successfully retrieved and processed session data with {len(df)} records")
+            return df
         except Exception as e:
-            logger.error("Erro while reading Main Dataset", e)        
-        return df
+            logger.error(f"Error retrieving session data: {str(e)}")
+            raise
 
     def get_top_uploaded_images(self):
         """Get top 10 most frequently uploaded images from current filtered dataset."""
+        logger.debug("Fetching top uploaded images")
         if self._df is None:
+            logger.error("No filtered dataset available")
             raise ValueError("No filtered dataset available. Call prepare_filtered_data first.")
         
         sessions = self._df['Session'].tolist()
@@ -237,7 +268,9 @@ class DataManager:
 
     def get_top_generated_images(self):
         """Get top 10 images used most for generations from current filtered dataset."""
+        logger.debug("Fetching top generated images")
         if self._df is None:
+            logger.error("No filtered dataset available")
             raise ValueError("No filtered dataset available. Call prepare_filtered_data first.")
         
         sessions = self._df['Session'].tolist()
@@ -282,7 +315,9 @@ class DataManager:
 
     def get_image_by_id_or_sha1(self, search_value):
         """Get image details and its generations by input ID or SHA1."""
+        logger.info(f"Searching for image with ID/SHA1: {search_value}")
         if not search_value:
+            logger.debug("No search value provided")
             return None, pd.DataFrame()
 
         # Query to get image details - search in both ID and SHA1
@@ -320,17 +355,23 @@ class DataManager:
                 # Try to parse as integer for ID search, use as string for SHA1
                 try:
                     id_value = int(search_value)
+                    logger.debug(f"Parsed search value as ID: {id_value}")
                 except ValueError:
                     id_value = -1  # Invalid ID that won't match anything
+                    logger.debug("Using search value as SHA1")
                 
                 # Get image details
+                logger.debug("Querying image details")
                 image_df = pd.read_sql_query(image_query, conn, params=[id_value, search_value])
                 if len(image_df) == 0:
+                    logger.info("No image found with provided ID/SHA1")
                     return None, pd.DataFrame()
                 
                 # Get generations using this image's SHA1
+                logger.debug(f"Querying generations for SHA1: {image_df.iloc[0]['SHA1']}")
                 generations_df = pd.read_sql_query(generations_query, conn, params=[image_df.iloc[0]['SHA1']])
                 
+                logger.info(f"Found image with {len(generations_df)} generations")
                 return image_df.iloc[0], generations_df
         except Exception as e:
             logger.error(f"Database error in get_image_by_id_or_sha1: {str(e)}")
