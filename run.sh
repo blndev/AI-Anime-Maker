@@ -19,7 +19,7 @@ else
         echo "Created on: $tag_date"
 
         # Ask for confirmation
-        read -p "Do you want to proceed with this version? (y/n) " answer
+        read -p "Do you want to proceed and update to this version? (y/n) " answer
         if [[ $answer == "y" || $answer == "Y" ]]; then
             # Switch to the latest tag
             git checkout "$latest_tag"
