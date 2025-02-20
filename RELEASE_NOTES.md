@@ -29,7 +29,8 @@
   - Gracefully handles non-git repositories and missing version tags
 
 ### Bugfixes
-- bugfix token for smile applied multiple times
+- token for smile applied multiple times
+- AppState is not creating new sessions after the first one
   
 ## Version 1.1.1 - 2024-02-19
 

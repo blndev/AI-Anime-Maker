@@ -13,11 +13,11 @@ import src.utils as utils
 import src.analytics as analytics
 import src.AI as AI
 
-@dataclass
 class AppState:
-    """State object for storing application data in browser."""
-    token: int = 0
-    session: str = str(uuid.uuid4())  # Generate a new UUID4 for each instance
+    def __init__(self, token: int=0, session: str=None):
+        """State object for storing application data in browser."""
+        self.token: int = token        
+        self.session: str = str(uuid.uuid4()) if session==None else session
 
     def __str__(self) -> str:
         """String representation for logging."""
@@ -76,7 +76,7 @@ def action_session_initialized(request: gr.Request, state_dict: dict) -> None:
             ip=request.client.host,
             user_agent=request.headers["user-agent"], 
             languages=request.headers["accept-language"])
-        logger.info("Session initialized for: %s", request.client.host)
+        logger.info("Session - %s - initialized for: %s",app_state.session, request.client.host)
     except Exception as e:
         logger.error("Error initializing analytics session: %s", str(e))
         logger.debug("Exception details:", exc_info=True)
