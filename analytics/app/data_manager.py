@@ -180,13 +180,15 @@ class DataManager:
         query += " ORDER BY s.Timestamp"
         
         params = [start_date, end_date] if start_date and end_date else []
-        
-        with self._get_connection() as conn:
-            df = pd.read_sql_query(query, conn, params=params)
-        
-        # Convert timestamps to local timezone
-        df['Timestamp'] = pd.to_datetime(df['Timestamp']).dt.tz_localize('GMT').dt.tz_convert(self.timezone)
-        
+        try:
+            
+            with self._get_connection() as conn:
+                df = pd.read_sql_query(query, conn, params=params)
+            
+            # Convert timestamps to local timezone
+            df['Timestamp'] = pd.to_datetime(df['Timestamp']).dt.tz_localize('GMT').dt.tz_convert(self.timezone)
+        except Exception as e:
+            logger.error("Erro while reading Main Dataset", e)        
         return df
 
     def get_top_uploaded_images(self):
