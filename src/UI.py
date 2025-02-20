@@ -104,13 +104,15 @@ def action_handle_input_file(request: gr.Request, image, state_dict):
         dir = os.path.join(dir, datetime.now().strftime("%Y%m%d"))
         input_file_path = utils.save_image_as_file(image, dir)
 
+    logger.info("new file uploaded from {app_state.session}: {image_sha1}")
+
     image_description = ""
     try:
         image_description = action_describe_image(image)
     except Exception as e:
         logger.error("Error creating image description: %s", str(e))
-        logger.debug("Exception details:", exc_info=True)
-        gr.Warning("Could not create a proper description, please describe your image shortly")
+        #logger.debug("Exception details:", exc_info=True)
+        #gr.Warning("Could not create a proper description, please describe your image shortly")
 
     # variables used for analytics if enabled
     face_detected = False
@@ -196,9 +198,13 @@ def action_handle_input_file(request: gr.Request, image, state_dict):
 def action_describe_image(image):
     """describe an image for better inpaint results."""
     if config.SKIP_AI: return "ai deactivated"
-    
-    value = AI.describe_image(image)
-    logger.debug("Image description: %s", value)
+    # Fallback
+    value = "please describe your image here"    
+    try:
+        value = AI.describe_image(image)
+        logger.debug("Image description: %s", value)
+    except Exception:
+        pass
     return value
 
 
