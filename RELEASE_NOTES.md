@@ -1,19 +1,32 @@
 # Release Notes
 
-## Version 1.2 - Preview
+## Version 1.2 - 2025-02-20
 
 ### New Features
-- Enhanced auto-update system in run.sh:
-  - Detects and shows latest version tag (V* format) and creation date
-  - Asks for user confirmation before updating
-  - Continues with current version if user declines
-  - Gracefully handles non-git repositories and missing version tags
-
+- New Analytics Dashboard (analytics_dashboard.py):
+  - Real-time usage statistics and trends
+  - Geographic distribution visualization with interactive world map
+  - Image upload analysis with timeline and patterns
+  - Generation details with style usage statistics
+  - Advanced filtering system across all analytics components
+  - Full-size image preview capability
+  - Search functionality by Input ID or SHA1 hash
+- Improved startup script (run.sh):
+  - Added interactive menu for component selection
+  - Option to start AI Anime Maker only
+  - Option to start Analytics Dashboard only
+  - Option to run both components simultaneously
+  
 ### Improvements
 - More robust version management:
   - Only considers version tags starting with 'V' (e.g., V1.0, V2.1)
   - Provides clear feedback about update availability and status
   - Continues application startup regardless of update choice
+- Enhanced auto-update system in run.sh:
+  - Detects and shows latest version tag (V* format) and creation date
+  - Asks for user confirmation before updating
+  - Continues with current version if user declines
+  - Gracefully handles non-git repositories and missing version tags
 
 ## Version 1.1.1 - 2024-02-19
 

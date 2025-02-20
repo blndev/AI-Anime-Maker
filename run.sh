@@ -59,8 +59,47 @@ echo "Upgrading Python requirements..."
 pip install --quiet --upgrade pip
 pip install --quiet --require-virtualenv --requirement requirements.txt
 
-# Execute "photo-to-drawing.py" in the virtual environment
-echo "Starting app..."
-python main.py
+# Function to start the main app
+start_main_app() {
+    echo "Starting App..."
+    python main.py
+}
 
-# Deactivate the virtual environment
+# Function to start the analytics dashboard
+start_analytics() {
+    echo "Starting Analytics Dashboard..."
+    python analytics_dashboard.py
+}
+
+# Function to start both components
+start_both() {
+    echo "Starting both AI Anime Maker and Analytics Dashboard..."
+    python main.py & 
+    python analytics_dashboard.py &
+    wait
+}
+
+# Show menu and get user choice
+echo "Please select what to start:"
+echo "1) AI App"
+echo "2) Analytics Dashboard"
+echo "3) Both"
+read -p "Enter your choice (1-3): " choice
+
+case $choice in
+    1)
+        start_main_app
+        ;;
+    2)
+        start_analytics
+        ;;
+    3)
+        start_both
+        ;;
+    *)
+        echo "Invalid choice. Starting AI Anime Maker by default..."
+        start_main_app
+        ;;
+esac
+
+# Deactivate the virtual environment when done
