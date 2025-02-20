@@ -26,9 +26,14 @@ class GeographicDistributionTab:
         self.register_callbacks()
         logger.info("Geographic Distribution tab initialized successfully")
 
-    def create_choropleth_map(self, df):
+    def create_choropleth_map(self, df, filters_data=None):
         """Create choropleth map showing global session distribution."""
         logger.debug("Creating choropleth map")
+        # Use provided filters or get from DataManager
+        if filters_data is None:
+            filters_data = self.data_manager.get_active_filters() or {}
+        selected_country = filters_data.get('country')
+        logger.debug(f"Selected country for map: {selected_country}")
         fig = go.Figure()
         
         if len(df) == 0:
@@ -58,8 +63,12 @@ class GeographicDistributionTab:
             #     [1, '#1B5E20']  # Dark green for high values
             # ],
             autocolorscale=True,
-            marker_line_color='darkgray',
-            marker_line_width=0.5,
+            marker_line_color=country_data['Country'].apply(
+                lambda x: '#1f77b4' if x == selected_country else 'darkgray'
+            ),
+            marker_line_width=country_data['Country'].apply(
+                lambda x: 2 if x == selected_country else 0.5
+            ),
             colorbar_title='Number of Sessions',
             customdata=country_data[['CountryCode']],
             hovertemplate="Country: <b>%{text}</b><br>Sessions: %{z:,}<br>ISO3166: %{customdata[0]}<extra></extra>"
@@ -347,7 +356,7 @@ class GeographicDistributionTab:
                     html.Div([
                         dcc.Graph(
                             id='geo_choropleth_map',
-                            figure=self.create_choropleth_map(initial_df)
+                            figure=self.create_choropleth_map(initial_df, active_filters)
                         )
                     ]),
                     
@@ -421,7 +430,7 @@ class GeographicDistributionTab:
                 
                 # Update all charts with filters from the store
                 return [
-                    self.create_choropleth_map(filtered_df),
+                    self.create_choropleth_map(filtered_df, filters_data),
                     self.create_continent_chart(filtered_df, selected_continent=filters_data.get('continent')),
                     self.create_country_chart(filtered_df, 
                                             selected_continent=filters_data.get('continent'),
