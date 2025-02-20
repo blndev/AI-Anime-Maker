@@ -37,18 +37,15 @@ class GeographicDistributionTab:
                 title="Global Session Distribution (No data available)",
                 template=PLOTLY_TEMPLATE,
                 **LAYOUT_THEME,
-                showlegend=False
+                showlegend=True
             )
             return fig
         
         # Aggregate data by country
-        country_data = df.groupby(['Country'])['Session'].nunique().reset_index()
+        country_data = df.groupby(['Country', 'Language'])['Session'].nunique().reset_index()
         country_data = country_data.rename(columns={'Session': 'Sessions'})
         
         # Get country codes using both country and language
-        country_data['Language'] = country_data['Country'].apply(
-            lambda x: df[df['Country'] == x]['Language'].iloc[0] if len(df[df['Country'] == x]) > 0 else None
-        )
         country_data['CountryCode'] = country_data.apply(
             lambda x: self.data_manager.get_country_code_from_country(x['Country'], x['Language']),
             axis=1
@@ -57,24 +54,43 @@ class GeographicDistributionTab:
         # Filter out any invalid country codes
         country_data = country_data.dropna(subset=['CountryCode'])
         
-        # First add choropleth map for countries
+        # # First add choropleth map for countries
+        # fig.add_trace(go.Choropleth(
+        #     country_data,
+        #     locations=country_data['CountryCode'],
+        #     z=country_data['Sessions'],
+        #     text=country_data['Country'],
+        #     # colorscale=[
+        #     #     [0, '#E8F5E9'],  # Light green for low values
+        #     #     [0.5, '#66BB6A'],  # Medium green
+        #     #     [1, '#1B5E20']  # Dark green for high values
+        #     # ],
+        #     autocolorscale=True,
+        #     marker_line_color='darkgray',
+        #     marker_line_width=0.5,
+        #     colorbar_title='Number of Sessions',
+        #     customdata=['CountryCode', 'Language'],
+        #     hovertemplate="Country: <b>%{text} (%{customdata[0]})</b><br>Sessions: %{z:,}<br>Language: %{customdata[1]}<extra></extra>"
+        # ))
+        
+                # First add choropleth map for countries
         fig.add_trace(go.Choropleth(
             locations=country_data['CountryCode'],
             z=country_data['Sessions'],
             text=country_data['Country'],
-            colorscale=[
-                [0, '#E8F5E9'],  # Light green for low values
-                [0.5, '#66BB6A'],  # Medium green
-                [1, '#1B5E20']  # Dark green for high values
-            ],
-            autocolorscale=False,
+            # colorscale=[
+            #     [0, '#E8F5E9'],  # Light green for low values
+            #     [0.5, '#66BB6A'],  # Medium green
+            #     [1, '#1B5E20']  # Dark green for high values
+            # ],
+            autocolorscale=True,
             marker_line_color='darkgray',
             marker_line_width=0.5,
             colorbar_title='Number of Sessions',
-            customdata=country_data['Language'],
-            hovertemplate="<b>%{text}</b><br>Sessions: %{z:,}<br>Language: %{customdata}<extra></extra>"
+            customdata=country_data[['CountryCode', 'Language']],
+            hovertemplate="Country: <b>%{text} (%{customdata[0]})</b><br>Sessions: %{z:,}<br>Language: %{customdata[1]}<extra></extra>"
         ))
-        
+
         # Then add city markers on top
         city_data = df.groupby(['City', 'Country'])['Session'].nunique().reset_index()
         city_data = city_data.rename(columns={'Session': 'Sessions'})
@@ -144,8 +160,8 @@ class GeographicDistributionTab:
                 showocean=True,
                 oceancolor='rgb(245, 250, 255)',
                 projection_type='natural earth',
-                projection_scale=1.2,
-                center=dict(lon=0, lat=30),  # Center the map slightly north
+                projection_scale=1,
+                center=dict(lon=0, lat=0),  # Center the map slightly north
                 showlakes=True,
                 lakecolor='rgb(245, 250, 255)',
                 showcountries=True,

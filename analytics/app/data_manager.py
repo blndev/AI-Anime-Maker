@@ -416,10 +416,11 @@ class DataManager:
                 ])
             return df
 
-    def get_country_code_from_country(self, country, language=None):
+    def get_country_code_from_country(self, country=None, language=None):
         """Convert country name or language to ISO 3166-1 alpha-3 code."""
         country_code_map = {
             # Country mappings
+            # do not implement 'n.a.' here, as this is applied later via language
             'United States': 'USA',
             'United Kingdom': 'GBR',
             'Germany': 'DEU',
@@ -448,47 +449,96 @@ class DataManager:
             'Ireland': 'IRL',
             'New Zealand': 'NZL',
             'Turkey': 'TUR',
+            'Columbia': 'COL',
         }
         
+        #https://de.wikipedia.org/wiki/ISO-3166-1-Kodierliste
         language_country_map = {
-            'en': 'USA',  # English -> United States
-            'en-US': 'USA',
-            'en-GB': 'GBR',
+            'af': 'ZAF',  # Afrikaans -> South Africa
+            'ar': 'SAU',  # Arabic -> Saudi Arabia
+            'ar-AE': 'ARE',  # Arabic -> United Arab Emirates
+            'ar-SA': 'SAU',  # Arabic -> Saudi Arabia
+            'bg': 'BGR',  # Bulgarian -> Bulgaria
+            'bn': 'BGD',  # Bengali -> Bangladesh
+            'cs': 'CZE',  # Czech -> Czech Republic
+            'cy': 'GBR',  # Welsh -> United Kingdom
+            'da': 'DNK',  # Danish -> Denmark
             'de': 'DEU',  # German -> Germany
-            'de-DE': 'DEU',
             'de-AT': 'AUT',  # Austrian German
             'de-CH': 'CHE',  # Swiss German
-            'fr': 'FRA',  # French -> France
-            'fr-FR': 'FRA',
-            'fr-CA': 'CAN',  # Canadian French
-            'fr-BE': 'BEL',  # Belgian French
-            'it': 'ITA',  # Italian -> Italy
+            'de-DE': 'DEU',  # German -> Germany
+            'el': 'GRC',  # Greek -> Greece
+            'en': 'USA',  # English -> United States
+            'en-AU': 'AUS',  # Australian English
+            'en-CA': 'CAN',  # Canadian English
+            'en-GB': 'GBR',  # British English
+            'en-IN': 'IND',  # Indian English
+            'en-US': 'USA',  # American English
             'es': 'ESP',  # Spanish -> Spain
-            'es-ES': 'ESP',
+            'es-AR': 'ARG',  # Argentine Spanish
+            'es-CL': 'CHL',  # Chilean Spanish
+            'es-CO': 'COL',  # Colombian Spanish
+            'es-ES': 'ESP',  # Spanish -> Spain
             'es-MX': 'MEX',  # Mexican Spanish
-            'ja': 'JPN',  # Japanese -> Japan
-            'zh': 'CHN',  # Chinese -> China
-            'zh-CN': 'CHN',
-            'hi': 'IND',  # Hindi -> India
-            'pt': 'BRA',  # Portuguese -> Brazil
-            'pt-BR': 'BRA',
-            'ru': 'RUS',  # Russian -> Russia
-            'ko': 'KOR',  # Korean -> South Korea
-            'nl': 'NLD',  # Dutch -> Netherlands
-            'sv': 'SWE',  # Swedish -> Sweden
-            'pl': 'POL',  # Polish -> Poland
-            'no': 'NOR',  # Norwegian -> Norway
-            'da': 'DNK',  # Danish -> Denmark
+            'et': 'EST',  # Estonian -> Estonia
+            'fa': 'IRN',  # Persian -> Iran
             'fi': 'FIN',  # Finnish -> Finland
+            'fr': 'FRA',  # French -> France
+            'fr-BE': 'BEL',  # Belgian French
+            'fr-CA': 'CAN',  # Canadian French
+            'fr-FR': 'FRA',  # French -> France
+            'he': 'ISR',  # Hebrew -> Israel
+            'hi': 'IND',  # Hindi -> India
+            'hr': 'HRV',  # Croatian -> Croatia
+            'hu': 'HUN',  # Hungarian -> Hungary
+            'id': 'IDN',  # Indonesian -> Indonesia
+            'is': 'ISL',  # Icelandic -> Iceland
+            'it': 'ITA',  # Italian -> Italy
+            'ja': 'JPN',  # Japanese -> Japan
+            'ja-JP': 'JPN',  # Japanese -> Japan
+            'ka': 'GEO',  # Georgian -> Georgia
+            'kk': 'KAZ',  # Kazakh -> Kazakhstan
+            'ko': 'KOR',  # Korean -> South Korea
+            'lt': 'LTU',  # Lithuanian -> Lithuania
+            'lv': 'LVA',  # Latvian -> Latvia
+            'mk': 'MKD',  # Macedonian -> North Macedonia
+            'ms': 'MYS',  # Malay -> Malaysia
+            'nb': 'NOR',  # Norwegian Bokmål -> Norway
+            'nl': 'NLD',  # Dutch -> Netherlands
+            'nn': 'NOR',  # Norwegian Nynorsk -> Norway
+            'no': 'NOR',  # Norwegian -> Norway
+            'n.a.': 'ATA',  # not available -> Antarctica
+            'pl': 'POL',  # Polish -> Poland
+            'pl-PL': 'POL',  # Polish -> Poland
+            'pt': 'BRA',  # Portuguese -> Brazil
+            'pt-BR': 'BRA',  # Brazilian Portuguese
+            'pt-PT': 'PRT',  # European Portuguese
+            'ro': 'ROU',  # Romanian -> Romania
+            'ru': 'RUS',  # Russian -> Russia
+            'sk': 'SVK',  # Slovak -> Slovakia
+            'sl': 'SVN',  # Slovenian -> Slovenia
+            'sq': 'ALB',  # Albanian -> Albania
+            'sr': 'SRB',  # Serbian -> Serbia
+            'sv': 'SWE',  # Swedish -> Sweden
+            'th': 'THA',  # Thai -> Thailand
             'tr': 'TUR',  # Turkish -> Turkey
+            'uk': 'UKR',  # Ukrainian -> Ukraine
+            'vi': 'VNM',  # Vietnamese -> Vietnam
+            'zh': 'CHN',  # Chinese -> China
+            'zh-CN': 'CHN',  # Simplified Chinese -> China
+            'zh-HK': 'HKG',  # Traditional Chinese -> Hong Kong
+            'zh-TW': 'TWN',  # Traditional Chinese -> Taiwan
         }
         
-        # Try to get from country map first
-        code = country_code_map.get(country)
-        if code:
-            return code
-        else:
-            logger.warning(f"Did not found a country-code for {country}")
+        code = None
+        if country:
+            # Try to get from country map first
+            code = country_code_map.get(country)
+            if code:
+                return code
+            else:
+                if country != "n.a.":
+                    logger.warning(f"Did not found a country-code for {country}")
             
         # If language is provided and no country match, try language map
         if language:
@@ -496,7 +546,12 @@ class DataManager:
             if code:
                 return code
             else:
-                logger.warning(f"Did not found a country for language {language}")
+                # fallback, use the first two chars of teh language
+                code = language_country_map.get(language[:2])
+                if code:
+                    return code
+                else:
+                    logger.warning(f"Did not found a country for language {language} or {language[:2]}")
             
         # Fallback to first 3 letters of country uppercase
         return country[:3].upper() if country else None
