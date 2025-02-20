@@ -28,6 +28,9 @@
   - Continues with current version if user declines
   - Gracefully handles non-git repositories and missing version tags
 
+### Bugfixes
+- bugfix token for smile applied multiple times
+  
 ## Version 1.1.1 - 2024-02-19
 
 ### New Features

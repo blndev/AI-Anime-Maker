@@ -162,9 +162,11 @@ def action_handle_input_file(request: gr.Request, image, state_dict):
                     max_age = face["maxAge"] if face["maxAge"]>max_age or max_age == 0 else max_age
                     if face["isFemale"]: # until we can recognize smiles
                         gender = 1 if gender == -1 else 2
-                        logger.debug("Bonus: smiling")
-                        new_token+=token_for_smiling
-                        gr.Info(f"{token_for_smiling} special Bonus token added!")
+                        if token_for_smiling>0:
+                            logger.debug("Bonus: smiling")
+                            new_token+=token_for_smiling
+                            gr.Info(f"{token_for_smiling} special Bonus token added!")
+                            token_for_smiling = 0 #apply only once per image
                     else:
                         # mal, 1 female, 2 both
                         gender = 0 if gender == -1 else 2
