@@ -7,7 +7,6 @@ import logging
 
 # Set up logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 from ..styles import (
     HEADER_STYLE, PLOTLY_TEMPLATE, LAYOUT_THEME, CONTENT_STYLE,
     SEARCH_CONTAINER_STYLE, SEARCH_INPUT_STYLE, SEARCH_BUTTON_STYLE,

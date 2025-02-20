@@ -418,60 +418,28 @@ class GeographicDistributionTab:
             [
                 Input('date-range', 'start_date'),
                 Input('date-range', 'end_date'),
-                Input('geo_continent', 'clickData'),
-                Input('geo_country', 'clickData'),
-                Input('geo_language', 'clickData'),
-                Input('reset-geo-filters', 'n_clicks')
+                Input('active-filters-store', 'data')
             ]
         )
-        def update_charts(start_date, end_date, continent_click, country_click, 
-                         language_click, reset_clicks):
-            """Update all charts based on date range and filter selections."""
+        def update_charts(start_date, end_date, filters_data):
+            """Update all charts based on date range and active filters."""
             logger.debug(f"Updating geographic charts for date range: {start_date} to {end_date}")
             try:
-                ctx = dash.callback_context
-                if not ctx.triggered:
-                    return dash.no_update
-                
-                trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-                logger.debug(f"Triggered by: {trigger_id}")
-                
-                # Handle filter updates
-                if trigger_id == 'reset-geo-filters':
-                    logger.info("Resetting geographic filters")
-                    self.data_manager.reset_filters()
-                elif trigger_id == 'geo_continent' and continent_click:
-                    continent = continent_click['points'][0]['x']
-                    logger.info(f"Adding continent filter: {continent}")
-                    self.data_manager.add_filter('continent', continent)
-                elif trigger_id == 'geo_country' and country_click:
-                    country = country_click['points'][0]['x']
-                    logger.info(f"Adding country filter: {country}")
-                    self.data_manager.add_filter('country', country)
-                elif trigger_id == 'geo_language' and language_click:
-                    language = language_click['points'][0]['x']
-                    logger.info(f"Adding language filter: {language}")
-                    self.data_manager.add_filter('language', language)
-                
-                # Get filtered data
-                filtered_df = self.data_manager.prepare_filtered_data(start_date, end_date)
+                # Get filtered data using the active filters from the store
+                filtered_df = self.data_manager.prepare_filtered_data(start_date, end_date, filters_data)
                 logger.info(f"Retrieved filtered dataset with {len(filtered_df)} records")
                 
-                # Get active filters
-                active_filters = self.data_manager.get_active_filters()
-                logger.debug(f"Active filters: {active_filters}")
-                
-                # Update all charts with active filters
+                # Update all charts with filters from the store
                 return [
                     self.create_choropleth_map(filtered_df),
-                    self.create_continent_chart(filtered_df, selected_continent=active_filters.get('continent')),
+                    self.create_continent_chart(filtered_df, selected_continent=filters_data.get('continent')),
                     self.create_country_chart(filtered_df, 
-                                            selected_continent=active_filters.get('continent'),
-                                            selected_country=active_filters.get('country')),
+                                            selected_continent=filters_data.get('continent'),
+                                            selected_country=filters_data.get('country')),
                     self.create_city_chart(filtered_df,
-                                         selected_continent=active_filters.get('continent'),
-                                         selected_country=active_filters.get('country')),
-                    self.create_language_chart(filtered_df, selected_language=active_filters.get('language'))
+                                         selected_continent=filters_data.get('continent'),
+                                         selected_country=filters_data.get('country')),
+                    self.create_language_chart(filtered_df, selected_language=filters_data.get('language'))
                 ]
             except Exception as e:
                 logger.error(f"Error updating geographic charts: {str(e)}")
@@ -479,22 +447,17 @@ class GeographicDistributionTab:
         
         @self.app.callback(
             Output('active-filters', 'children'),
-            [Input('date-range', 'start_date'),
-             Input('date-range', 'end_date'),
-             Input('geo_continent', 'clickData'),
-             Input('geo_country', 'clickData'),
-             Input('geo_language', 'clickData'),
-             Input('reset-geo-filters', 'n_clicks')]
+            [Input('active-filters-store', 'data')]
         )
-        def update_active_filters_display(*_):
-            """Update the active filters display."""
+        def update_active_filters_display(active_filters):
             """Update the active filters display."""
             logger.debug("Updating active filters display")
             try:
-                active_filters = self.data_manager.get_active_filters()
-                logger.debug(f"Current active filters: {active_filters}")
+                if active_filters is None:
+                    active_filters = {}
+                logger.debug(f"Active filters from store: {active_filters}")
                 
-                if not active_filters:
+                if not active_filters or len(active_filters) == 0:
                     logger.debug("No active filters")
                     return [html.Div("No filters active", style=NO_DATA_STYLE)]
                 

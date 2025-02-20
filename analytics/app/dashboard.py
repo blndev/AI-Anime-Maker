@@ -103,6 +103,9 @@ class Dashboard:
         logger.debug("Creating dashboard layout")
         try:
             layout = html.Div(style=LAYOUT_STYLE, children=[
+            # Store for active filters
+            dcc.Store(id='active-filters-store', data={}),
+            
             html.H1(f"{config.get_app_title()} Analytics Dashboard", style=HEADER_STYLE),
             
             # Date Range Selector
@@ -184,7 +187,66 @@ class Dashboard:
     def register_callbacks(self):
         """Register all callbacks."""
         logger.debug("Registering dashboard-level callbacks")
-        # No more callbacks to register at dashboard level
+        
+        @self.app.callback(
+            Output('active-filters-store', 'data'),
+            [
+                Input('geo_continent', 'clickData'),
+                Input('geo_country', 'clickData'),
+                Input('usage_os', 'clickData'),
+                Input('usage_browser', 'clickData'),
+                Input('geo_language', 'clickData'),
+                Input('reset-geo-filters', 'n_clicks')
+            ]
+        )
+        def update_active_filters(continent_click, country_click, os_click, browser_click, language_click, reset_clicks):
+            """Update the active filters store based on user interactions."""
+            logger.debug("Updating active filters store")
+            ctx = dash.callback_context
+            if not ctx.triggered:
+                logger.debug("No filter updates triggered")
+                return {}
+            
+            trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+            logger.debug(f"Filter update triggered by: {trigger_id}")
+            
+            # Handle filter reset
+            if trigger_id == 'reset-geo-filters':
+                logger.info("Resetting all filters")
+                self.data_manager.reset_filters()
+                return {}
+            
+            # Get current filters
+            filters = {}
+            
+            # Update filters based on clicks
+            if continent_click and 'points' in continent_click and len(continent_click['points']) > 0:
+                filters['continent'] = continent_click['points'][0]['x']
+                logger.debug(f"Added continent filter: {filters['continent']}")
+            
+            if country_click and 'points' in country_click and len(country_click['points']) > 0:
+                filters['country'] = country_click['points'][0]['x']
+                logger.debug(f"Added country filter: {filters['country']}")
+            
+            if os_click and 'points' in os_click and len(os_click['points']) > 0:
+                filters['os'] = os_click['points'][0]['x']
+                logger.debug(f"Added OS filter: {filters['os']}")
+            
+            if browser_click and 'points' in browser_click and len(browser_click['points']) > 0:
+                filters['browser'] = browser_click['points'][0]['x']
+                logger.debug(f"Added browser filter: {filters['browser']}")
+            
+            if language_click and 'points' in language_click and len(language_click['points']) > 0:
+                filters['language'] = language_click['points'][0]['x']
+                logger.debug(f"Added language filter: {filters['language']}")
+            
+            # Update DataManager filters
+            for filter_type, value in filters.items():
+                self.data_manager.add_filter(filter_type, value)
+            
+            logger.info(f"Active filters updated: {filters}")
+            return filters
+        
         logger.debug("Dashboard callback registration complete")
 
 # Create dashboard instance for external use

@@ -348,32 +348,17 @@ class UsageStatisticsTab:
             """Update all usage statistics charts."""
             logger.debug(f"Updating usage charts for date range: {start_date} to {end_date}")
             try:
-                # Initialize filters
+                # Get filtered data using the filters from the store
                 if filters_data is None:
                     filters_data = {}
                 
-                # Handle OS click
-                os_filter = None
-                if os_click and 'points' in os_click and len(os_click['points']) > 0:
-                    os_filter = os_click['points'][0]['x']  # Get clicked OS name
-                    filters_data['os'] = os_filter
-                    logger.debug(f"OS filter applied: {os_filter}")
-                
-                # Handle Browser click
-                browser_filter = None
-                if browser_click and 'points' in browser_click and len(browser_click['points']) > 0:
-                    browser_filter = browser_click['points'][0]['x']  # Get clicked browser name
-                    filters_data['browser'] = browser_filter
-                    logger.debug(f"Browser filter applied: {browser_filter}")
-            
-                # Get filtered data
                 filtered_df = self.data_manager.prepare_filtered_data(start_date, end_date, filters_data)
                 logger.info(f"Retrieved filtered dataset with {len(filtered_df)} records")
                 
                 return [
                     self.create_sessions_timeline(filtered_df),
-                    self.create_os_chart(filtered_df, os_filter),
-                    self.create_browser_chart(filtered_df, browser_filter),
+                    self.create_os_chart(filtered_df, filters_data.get('os')),
+                    self.create_browser_chart(filtered_df, filters_data.get('browser')),
                     self.create_mobile_pie(filtered_df),
                     self.create_generation_status_chart(filtered_df)
                 ]
