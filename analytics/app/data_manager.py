@@ -225,7 +225,10 @@ class DataManager:
                 logger.debug(f"Retrieved {len(df)} session records")
             
             # Convert timestamps to local timezone
-            df['Timestamp'] = pd.to_datetime(df['Timestamp']).dt.tz_localize('GMT').dt.tz_convert(self.timezone)
+            try:
+                df['Timestamp'] = pd.to_datetime(df['Timestamp']).dt.tz_localize('GMT').dt.tz_convert(self.timezone)
+            except TypeError:
+                logger.debug("time zone conversion failed. potentially already tz aware")
             logger.info(f"Successfully retrieved and processed session data with {len(df)} records")
             return df
         except Exception as e:
