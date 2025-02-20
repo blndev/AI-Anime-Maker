@@ -31,6 +31,7 @@
 ### Bugfixes
 - token for smile applied multiple times
 - AppState is not creating new sessions after the first one
+- reload captioner model after it was broken
   
 ## Version 1.1.1 - 2024-02-19
 
