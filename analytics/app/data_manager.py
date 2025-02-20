@@ -9,6 +9,7 @@ import os
 import sys
 from datetime import datetime
 import pytz
+from  iso3166 import countries as countrycodes
 
 # Add parent directory to path to import config
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
@@ -139,7 +140,18 @@ class DataManager:
         try:
             # Get base dataset
             df = self._get_session_data(start_date, end_date)
-            
+            # Add country codes using both country and language
+            df['CountryCode'] = df.apply(
+                lambda x: self.get_country_code_from_country(x['Country'], x['Language']),
+                axis=1
+            )
+            #if we have no countty, we can use the determined country code based on the language
+            df.loc[df['Country'] == "n.a.", "Country"] =  df['CountryCode'].apply(
+                lambda cc: countrycodes.get(cc).name if countrycodes.get(cc) else "n.a."    
+            )
+            # translate now the ISO-Code to a country
+            #df['Country'].apply(lambda country: iso3166.countries_by_alpha3.get(alpha3=country))
+        
             # Use provided filters or internal filter state
             active_filters = filters if filters is not None else self._filters
             
@@ -418,6 +430,13 @@ class DataManager:
 
     def get_country_code_from_country(self, country=None, language=None):
         """Convert country name or language to ISO 3166-1 alpha-3 code."""
+        for iso_country in countrycodes:
+            if iso_country.name == country:
+                logger.debug(f"found country via iso3166 library: {country} = {iso_country.alpha3}")
+                return iso_country.alpha3
+        logger.debug(f"iso3166 does not contain {country}")
+
+        #Fallback, can potentially be deleted
         country_code_map = {
             # Country mappings
             # do not implement 'n.a.' here, as this is applied later via language
@@ -452,6 +471,7 @@ class DataManager:
             'Columbia': 'COL',
         }
         
+        #language mapping is very important for us!!!
         #https://de.wikipedia.org/wiki/ISO-3166-1-Kodierliste
         language_country_map = {
             'af': 'ZAF',  # Afrikaans -> South Africa

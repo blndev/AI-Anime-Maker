@@ -41,39 +41,23 @@ class GeographicDistributionTab:
             )
             return fig
         
+        # TODO: group by CountryCode after it is moved to DataManager
         # Aggregate data by country
         country_data = df.groupby(['Country', 'Language'])['Session'].nunique().reset_index()
         country_data = country_data.rename(columns={'Session': 'Sessions'})
         
-        # Get country codes using both country and language
-        country_data['CountryCode'] = country_data.apply(
-            lambda x: self.data_manager.get_country_code_from_country(x['Country'], x['Language']),
-            axis=1
-        )
-        
+        # # Get country codes using both country and language
+        # country_data['CountryCode'] = country_data.apply(
+        #     lambda x: self.data_manager.get_country_code_from_country(x['Country'], x['Language']),
+        #     axis=1
+        # )
+        country_data = df.groupby(['Country', 'CountryCode'])['Session'].nunique().reset_index()
+        country_data = country_data.rename(columns={'Session': 'Sessions'})
+       
         # Filter out any invalid country codes
         country_data = country_data.dropna(subset=['CountryCode'])
-        
-        # # First add choropleth map for countries
-        # fig.add_trace(go.Choropleth(
-        #     country_data,
-        #     locations=country_data['CountryCode'],
-        #     z=country_data['Sessions'],
-        #     text=country_data['Country'],
-        #     # colorscale=[
-        #     #     [0, '#E8F5E9'],  # Light green for low values
-        #     #     [0.5, '#66BB6A'],  # Medium green
-        #     #     [1, '#1B5E20']  # Dark green for high values
-        #     # ],
-        #     autocolorscale=True,
-        #     marker_line_color='darkgray',
-        #     marker_line_width=0.5,
-        #     colorbar_title='Number of Sessions',
-        #     customdata=['CountryCode', 'Language'],
-        #     hovertemplate="Country: <b>%{text} (%{customdata[0]})</b><br>Sessions: %{z:,}<br>Language: %{customdata[1]}<extra></extra>"
-        # ))
-        
-                # First add choropleth map for countries
+
+        # First add choropleth map for countries
         fig.add_trace(go.Choropleth(
             locations=country_data['CountryCode'],
             z=country_data['Sessions'],
@@ -87,8 +71,8 @@ class GeographicDistributionTab:
             marker_line_color='darkgray',
             marker_line_width=0.5,
             colorbar_title='Number of Sessions',
-            customdata=country_data[['CountryCode', 'Language']],
-            hovertemplate="Country: <b>%{text} (%{customdata[0]})</b><br>Sessions: %{z:,}<br>Language: %{customdata[1]}<extra></extra>"
+            customdata=country_data[['CountryCode']],
+            hovertemplate="Country: <b>%{text}</b><br>Sessions: %{z:,}<br>ISO3166: %{customdata[0]}<extra></extra>"
         ))
 
         # Then add city markers on top

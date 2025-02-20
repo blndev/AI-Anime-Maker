@@ -16,3 +16,4 @@ onnxruntime-gpu # Face recognition GPU based (required for onnx models)
 colorlog        # Colored logging output
 dash            # Analytics dashboard - Routing and Callbacks
 plotly          # Analytics Dashboard - Diagrams Framework - uses dash
+iso3166         # Translation from country code to country and vice versa
