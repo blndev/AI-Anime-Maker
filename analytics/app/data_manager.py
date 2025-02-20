@@ -232,8 +232,9 @@ class DataManager:
             logger.info(f"Successfully retrieved and processed session data with {len(df)} records")
             return df
         except Exception as e:
-            logger.error(f"Error retrieving session data: {str(e)}")
-            raise
+            logger.debug(f"Error retrieving session data: {str(e)}")
+            logger.error(f"Error retrieving session data. Empty or wrong database at {config.get_analytics_db_path()}\n\nAnalytics will be stopped.")
+            sys.exit(1)
 
     def get_top_uploaded_images(self):
         """Get top 10 most frequently uploaded images from current filtered dataset."""
