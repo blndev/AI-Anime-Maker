@@ -1,52 +1,70 @@
 # AI Anime Maker Analytics Dashboard
 
-A Plotly Dash application that visualizes analytics data from the AI Anime Maker application.
+A Plotly Dash application that provides comprehensive analytics and insights for the AI Anime Maker application.
 
 ## Features
 
-- Operating System Distribution
-- Browser Usage Statistics
-- Mobile vs Desktop Usage
-- Geographic Distribution (Continent, Country, City)
-- Language Distribution
+### 📊 Usage Statistics
+- Session timeline with daily and hourly patterns
+- Platform statistics (OS, browser distribution)
+- Mobile vs desktop usage analysis
+- Generation success rate tracking
 
-## Installation
+### 🌍 Geographic Distribution
+- Interactive world map with user locations
+- Continent and country-level breakdowns
+- City-level population centers
+- Language distribution analysis
+- Filterable by region and time period
 
-1. Create a virtual environment (recommended):
+### 📸 Image Upload Analysis
+- Upload and generation timeline
+- Most frequently uploaded images
+- Generation patterns and trends
+- Image metadata statistics
+- Full-size image preview capability
+
+### 🎨 Generation Details
+- Style usage distribution with percentages
+- Detailed generation history
+- Image search by ID or SHA1
+- Generation metadata analysis
+
+## Running the Dashboard
+
+The analytics dashboard is now integrated with the main application. You can start it using:
+
+1. The run.sh script menu:
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+./run.sh
+# Select option 2 for Analytics Dashboard only
+# or option 3 to run both main app and dashboard
 ```
 
-2. Install requirements:
+2. Or directly:
 ```bash
-pip install -r requirements.txt
+python analytics_dashboard.py
 ```
 
-## Running the Application
+## Data Management
 
-1. Make sure you have access to the analytics.db file (configured in app.config)
-2. Run the application:
+- Real-time data updates from the analytics database
+- Centralized filter system across all components
+- Advanced search and filtering capabilities
+- Comprehensive logging system
+
+## Configuration
+
+The dashboard uses settings from the main app.config file:
+- analytics_enabled: Must be true to collect data
+- analytics_db_path: Path to the SQLite database
+- analytics_city_db: Optional GeoLite2 database for enhanced location data
+
+For GeoLite2 setup, visit: https://dev.maxmind.com/geoip/geoip2/geolite2/
+
+## Advanced Analysis
+
+For deeper data analysis, use the Jupyter notebook:
 ```bash
-python app.py
+jupyter lab Analyze_Usage.ipynb
 ```
-3. Open your browser and navigate to http://127.0.0.1:8050/
-
-## Data Updates
-
-The dashboard reads data directly from the analytics database each time it starts. No manual data updates are required.
-
-## Charts
-
-1. Platform Statistics
-   - Operating System Distribution
-   - Browser Distribution
-   - Mobile vs Desktop Usage
-
-2. Geographic Distribution
-   - Distribution by Continent
-   - Top 10 Countries
-   - Top 10 Cities
-
-3. Language Distribution
-   - Top 10 Languages Used
