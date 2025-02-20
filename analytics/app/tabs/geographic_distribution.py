@@ -41,16 +41,6 @@ class GeographicDistributionTab:
             )
             return fig
         
-        # TODO: group by CountryCode after it is moved to DataManager
-        # Aggregate data by country
-        country_data = df.groupby(['Country', 'Language'])['Session'].nunique().reset_index()
-        country_data = country_data.rename(columns={'Session': 'Sessions'})
-        
-        # # Get country codes using both country and language
-        # country_data['CountryCode'] = country_data.apply(
-        #     lambda x: self.data_manager.get_country_code_from_country(x['Country'], x['Language']),
-        #     axis=1
-        # )
         country_data = df.groupby(['Country', 'CountryCode'])['Session'].nunique().reset_index()
         country_data = country_data.rename(columns={'Session': 'Sessions'})
        
