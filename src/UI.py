@@ -33,7 +33,7 @@ else:
 style_details = {}
 
 
-def action_session_initialized(request: gr.Request, session_state: SessionState) -> None:
+def action_session_initialized(request: gr.Request, session_state: SessionState) -> SessionState:
     """Initialize analytics session when app loads.
     
     Args:
@@ -53,6 +53,8 @@ def action_session_initialized(request: gr.Request, session_state: SessionState)
     except Exception as e:
         logger.error("Error initializing analytics session: %s", str(e))
         logger.debug("Exception details:", exc_info=True)
+    
+    return session_state
 
 def action_update_all_local_models():
     """updates the list of available models in the ui"""
@@ -389,18 +391,18 @@ def create_gradio_interface():
         def helper_display_token(token):
             return f"Current Token: {token}"
         
-        @app.load(inputs=[local_storage], outputs=[token_counter])
+        @app.load(inputs=[local_storage], outputs=[local_storage, token_counter])
         def load_from_local_storage(request: gr.Request, gradio_state):
             # Restore token from local storage
             session_state = SessionState.from_gradio_state(gradio_state)
 
             # Initialize session when app loads
-            action_session_initialized(request=request, session_state=session_state)
+            session_state = action_session_initialized(request=request, session_state=session_state)
             
             if config.is_feature_generation_with_token_enabled(): 
                 logger.debug("Restoring token from local storage: %s", session_state.token)
                 logger.debug("Session ID: %s", session_state.session)
-            return session_state.token
+            return session_state, session_state.token
 
         token_counter.change(
             inputs=[token_counter],
