@@ -159,7 +159,7 @@ class Dashboard:
                 
                 # Tab 3: Image Upload Analysis
                 dcc.Tab(
-                    label='Image Upload Analysis',
+                    label='Image Uploads',
                     style=TAB_STYLE,
                     selected_style=TAB_SELECTED_STYLE,
                     children=self._image_upload_tab.create_layout(

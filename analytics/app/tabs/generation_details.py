@@ -1,5 +1,5 @@
+import os
 from dash import html, dcc, Input, Output, State, callback, ctx, ALL
-import dash
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
@@ -143,7 +143,7 @@ class GenerationDetailsTab:
             html.H3("Image Details"),
             html.Div([
                 html.Img(
-                    src=image_data['CachePath'],
+                    src= os.path.join("/cache", image_data['CachePath']),
                     style={'maxWidth': '200px', 'marginRight': '20px', 'cursor': 'pointer'},
                     id={'type': 'preview-image', 'index': 'input-image'},
                     title='Click to enlarge'
@@ -151,10 +151,13 @@ class GenerationDetailsTab:
                 html.Div([
                     html.P(f"Input ID: {image_data['ID']}"),
                     html.P(f"SHA1: {image_data['SHA1']}"),
+                    html.P(f"Token received: {image_data['Token']}"),
                     html.P(f"Face Detected: {image_data['Face']}"),
-                    html.P(f"Gender: {image_data['Gender']}"),
+                    html.P(f"Gender: {image_data['GenderText']}"),
                     html.P(f"Age Range: {image_data['MinAge']} - {image_data['MaxAge']}"),
                     html.P(f"Upload Time: {pd.to_datetime(image_data['Timestamp']).strftime('%Y-%m-%d %H:%M:%S')}")
+                    #TODO: from base dataset also country, browser, os 
+                    #TODO: sum uploads, sum token received,
                 ])
             ], style={'display': 'flex', 'alignItems': 'start'})
         ])
@@ -179,7 +182,7 @@ class GenerationDetailsTab:
                     html.Tr([
                         html.Td(
                             html.Img(
-                                src=row['GeneratedImagePath'],
+                                src=os.path.join("/cache", row['GeneratedImagePath']),
                                 style={'maxWidth': '100px', 'cursor': 'pointer'},
                                 id={'type': 'preview-image', 'index': f"gen-{row['GenerationId']}"},
                                 title='Click to enlarge'
@@ -269,7 +272,7 @@ class GenerationDetailsTab:
             
             # Search for the image
             logger.info(f"Searching for image with ID/SHA1: {search_value}")
-            image_data, generations_df = self.data_manager.get_image_by_id_or_sha1(search_value)
+            image_data, generations_df = self.data_manager.get_related_images(search_value)
             
             if image_data is None:
                 logger.info("No image found with provided ID/SHA1")
@@ -296,4 +299,5 @@ class GenerationDetailsTab:
             self.data_manager.prepare_filtered_data(start_date, end_date, filters_data)
             # Then get style usage data
             style_data = self.data_manager.get_style_usage(start_date, end_date)
+            return self.create_style_usage_chart(style_data)
             return self.create_style_usage_chart(style_data)

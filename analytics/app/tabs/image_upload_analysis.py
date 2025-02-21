@@ -333,10 +333,6 @@ class ImageUploadAnalysisTab:
             
                 # Get the selected image details from the click data
                 selected_id = click_data['points'][0]['x']
-                selected_path = click_data['points'][0]['customdata'][0]
-                selected_token = click_data['points'][0]['customdata'][1]
-                selected_face = click_data['points'][0]['customdata'][2]
-                selected_gender = click_data['points'][0]['customdata'][3]
                 
                 logger.debug(f"Selected image ID: {selected_id}")
             
@@ -360,8 +356,8 @@ class ImageUploadAnalysisTab:
                 details = [
                 html.Div([
                     html.Img(
-                        #FIXME: path calculation could be wrong
-                        src=f'/cache/{os.path.basename(os.path.dirname(selected_path))}/{os.path.basename(selected_path)}',
+                        id='generated_preview-image',
+                        src=os.path.join("/cache", image_data['CachePath']),
                         style={
                             'width': '200px',
                             'objectFit': 'cover',
