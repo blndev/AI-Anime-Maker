@@ -160,7 +160,7 @@ def save_session(session: str, ip: str, user_agent: str, languages: str = None) 
                 logger.debug("Exception details:", exc_info=True)
         
         continent = "n.a."
-        country = "n.a."
+        country = "n.a." #TODO: get country by language as in dashboard for fallback and remove this logic from dashboard
         city = "private IP" if ipaddress.ip_address(ip).is_private else "n.a."
         if not ipaddress.ip_address(ip).is_private and _ip_geo_reader != None:
             try:
