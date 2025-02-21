@@ -79,7 +79,7 @@ def action_handle_input_file(request: gr.Request, image: PIL.Image, gradio_state
         dir = os.path.join(dir, datetime.now().strftime("%Y%m%d"))
         input_file_path = utils.save_image_as_file(image, dir)
 
-    logger.info(f"UPLOAD from {session_state.session} with {image_sha1}")
+    logger.info(f"UPLOAD from {session_state.session} with ID: {image_sha1}")
 
     image_description = ""
     try:
@@ -93,26 +93,41 @@ def action_handle_input_file(request: gr.Request, image: PIL.Image, gradio_state
     face_detected = False
     min_age = 0
     max_age = 0
-    gender = -1
+    gender = 0
     new_token = 0 
 
-    if config.is_feature_generation_with_token_enabled():
+    #analyzation of images will be done always
+    if config.is_analytics_enabled():
         #check that the image was not already used in this session
-        skip_token = False
+        add_new_token_for_image = True
         if image_sha1 in session_image_hashes.keys():
             # check if the image is locked
-            dt = session_image_hashes[image_sha1]
+            last_upload = session_image_hashes[image_sha1]
+            dt = last_upload["dt"]
             if dt>datetime.now():
-                gr.Warning(f"This image signature was already used to gain token. New token for it will be provided after {dt.strftime("%d.%m.%Y - %H:%M")}")
-                skip_token = True
+                gr.Warning(
+                    f"""This image signature was already used to gain token.
+                    New token for it will be provided after {dt.strftime("%d.%m.%Y - %H:%M")}""")
+                add_new_token_for_image = False
+                gender=last_upload["gender"]
+                min_age=last_upload["min_age"]
+                max_age=last_upload["max_age"]
+                face_detected=last_upload["face_detected"]
             else:
-                #remove entry if it is outdated
+                #remove current entry as it is outdated
                 del session_image_hashes[image_sha1]
-                #if the services is running for weeks wtith hundred of users, then it make sense to remove also other entries
-                #FIXME: itterate over list and remove all old entries at once to free memory
+        
+        #cleanup the whole list of locked images to not waste memory
+        try:
+            keys_to_remove = [key for key, dt in session_image_hashes.items() if dt < datetime.now()]
+            for key in keys_to_remove:
+                del session_image_hashes[key]
+            if len(keys_to_remove)>0:
+                logger.info(f"Removed token lock for {len(keys_to_remove)} image(s)")
+        except:
+            pass
 
-        if not skip_token:
-            session_image_hashes[image_sha1]=datetime.now()+timedelta(minutes=config.get_token_time_lock_for_new_image())
+        if add_new_token_for_image:
             detected_faces = []
             try:
                 detected_faces = analyze_faces(image)
@@ -133,41 +148,54 @@ def action_handle_input_file(request: gr.Request, image: PIL.Image, gradio_state
                 # we have that bonus in a variable as we want to give it only once
                 token_for_cuteness = config.get_token_bonus_for_cuteness()
                 token_for_smiling = config.get_token_bonus_for_smile() 
+                gender = 0 #{0: "unkown", 1: "male", 2: "female", 3: "female + male"}
                 for face in detected_faces:
                     #just save the jungest and oldest if we have multiple faces
                     min_age = face["minAge"] if face["minAge"]<min_age or min_age == 0 else min_age
                     max_age = face["maxAge"] if face["maxAge"]>max_age or max_age == 0 else max_age
-                    if face["isFemale"]: # until we can recognize smiles
-                        gender = 1 if gender == -1 else 2
+                    if face["isFemale"]: 
+                        gender |= 2
+                        # until we can recognize smiles we give bonus for other properties
                         if token_for_smiling>0:
                             logger.debug("Bonus: smiling")
                             new_token+=token_for_smiling
                             gr.Info(f"{token_for_smiling} special Bonus token added!")
                             token_for_smiling = 0 #apply only once per image
-                    else:
-                        # mal, 1 female, 2 both
-                        gender = 0 if gender == -1 else 2
+                    elif face["isMale"]:
+                        gender |= 1
 
                     if token_for_cuteness>0 and (face["maxAge"]<20 or face["minAge"]>60):
                         logger.debug("Bonus: cuteness")
                         new_token+=token_for_cuteness
                         gr.Info(f"{token_for_cuteness} special Bonus token added!")
                         token_for_cuteness = 0 #allow bonus only once per upload
-            
-            logger.info(f"UPLOAD {image_sha1} received {new_token} token total.")
-            gr.Info(f"Total new Token: {new_token}")
-            session_state.token += new_token
+
+            # save the hash to prevent reuse
+            session_image_hashes[image_sha1]={
+                "dt": datetime.now()+timedelta(minutes=config.get_token_time_lock_for_new_image()),
+                "gender": gender,
+                "min_age": min_age,
+                "max_age": max_age,
+                "face_detected": face_detected
+            }
+
+        analytics.save_input_image_details(
+            session=session_state.session, 
+            sha1=image_sha1, 
+            token=new_token,
+            cache_path_and_filename=os.path.relpath(input_file_path, config.get_output_folder()), 
+            face_detected=face_detected,
+            min_age=min_age,
+            max_age=max_age,
+            gender=gender
+            )
+
+    if config.is_feature_generation_with_token_enabled():
+        logger.info(f"UPLOAD ID {image_sha1} received {new_token} token total.")
+        gr.Info(f"Total new Token: {new_token}")
+        session_state.token += new_token
     
-    analytics.save_input_image_details(
-        session=session_state.session, 
-        sha1=image_sha1, 
-        token=new_token,
-        cache_path_and_filename=os.path.relpath(input_file_path, config.get_output_folder()), 
-        face_detected=face_detected,
-        min_age=min_age,
-        max_age=max_age,
-        gender=gender
-        )
+
     start_enabled = True if not config.is_feature_generation_with_token_enabled() else bool(session_state.token>0)
     return wrap_handle_input_response(session_state, start_enabled, image_description)
 
