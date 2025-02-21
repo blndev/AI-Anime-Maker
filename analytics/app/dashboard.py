@@ -64,15 +64,18 @@ class Dashboard:
             )
             logger.info(f"Retrieved initial dataset with {len(self.initial_df)} records")
             
-            self.initial_top_images_df = self.data_manager.get_top_uploaded_images()
-            logger.debug(f"Retrieved {len(self.initial_top_images_df)} top uploaded images")
+            self._initial_top_uploaded_images_df = self.data_manager.get_top_uploaded_images()
+            logger.debug(f"Retrieved {len(self._initial_top_uploaded_images_df)} top uploaded images")
             
+            self._initial_top_used_images = self.data_manager.get_top_used_images()
+            logger.debug(f"Retrieved {len(self._initial_top_used_images)} top used images")
+
             # Initialize tabs
             logger.debug("Initializing dashboard tabs")
-            self.usage_stats_tab = UsageStatisticsTab(self.data_manager, self.app)
-            self.geo_dist_tab = GeographicDistributionTab(self.data_manager, self.app)
-            self.gen_details_tab = GenerationDetailsTab(self.data_manager, self.app)
-            self.image_upload_tab = ImageUploadAnalysisTab(self.data_manager, self.cache_dir, self.app)
+            self._usage_stats_tab = UsageStatisticsTab(self.data_manager, self.app)
+            self._geo_dist_tab = GeographicDistributionTab(self.data_manager, self.app)
+            self._gen_details_tab = GenerationDetailsTab(self.data_manager, self.app)
+            self._image_upload_tab = ImageUploadAnalysisTab(self.data_manager, self.cache_dir, self.app)
             
             # Create layout
             logger.info("Creating dashboard layout")
@@ -143,7 +146,7 @@ class Dashboard:
                     label='Usage',
                     style=TAB_STYLE,
                     selected_style=TAB_SELECTED_STYLE,
-                    children=self.usage_stats_tab.create_layout(self.initial_df)
+                    children=self._usage_stats_tab.create_layout(self.initial_df)
                 ),
                 
                 # Tab 2: Language and Geographic Distribution
@@ -151,7 +154,7 @@ class Dashboard:
                     label='Geographic',
                     style=TAB_STYLE,
                     selected_style=TAB_SELECTED_STYLE,
-                    children=self.geo_dist_tab.create_layout(self.initial_df)
+                    children=self._geo_dist_tab.create_layout(self.initial_df)
                 ),
                 
                 # Tab 3: Image Upload Analysis
@@ -159,9 +162,10 @@ class Dashboard:
                     label='Image Upload Analysis',
                     style=TAB_STYLE,
                     selected_style=TAB_SELECTED_STYLE,
-                    children=self.image_upload_tab.create_layout(
+                    children=self._image_upload_tab.create_layout(
                         self.initial_df,
-                        self.initial_top_images_df
+                        self._initial_top_uploaded_images_df,
+                        self._initial_top_used_images
                     )
                 ),
 
@@ -170,7 +174,7 @@ class Dashboard:
                     label='Generation Details',
                     style=TAB_STYLE,
                     selected_style=TAB_SELECTED_STYLE,
-                    children=self.gen_details_tab.create_layout(
+                    children=self._gen_details_tab.create_layout(
                         self.initial_start_date,
                         self.initial_end_date
                     )

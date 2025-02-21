@@ -44,8 +44,6 @@ class DataManager:
             logger.error(f"Failed to initialize DataManager: {str(e)}")
             raise
 
-    _gender_to_text = {0: "unkown", 1: "male", 2: "female", 3: "female + male"}
-
     def _load_city_coordinates(self):
         """Load city coordinates from cities.csv."""
         try:
@@ -255,16 +253,15 @@ class DataManager:
                 COUNT(*) as UploadCount,
                 MIN(i.ID) as ID,
                 MIN(i.CachePath) as CachePath,
-                MIN(i.Token) as Token,
-                MIN(i.Face) as Face,
-                MIN(i.Gender) as Gender,
+                MAX(i.Token) as Token,
+                MAX(i.Face) as Face,
+                MAX(i.Gender) as Gender,
                 MIN(i.MinAge) as MinAge,
-                MIN(i.MaxAge) as MaxAge,
+                MAX(i.MaxAge) as MaxAge,
                 MIN(i.Timestamp) as UploadTime
             FROM tblInput i
             WHERE i.Session IN ({sessions_str})
             GROUP BY i.SHA1
-            HAVING UploadCount > 1
             ORDER BY UploadCount DESC
             LIMIT 10
         )
@@ -283,12 +280,18 @@ class DataManager:
                     'UploadTime'
                 ])
 
-            df["Face"] = df["Face"].apply(lambda x: "yes" if x==1 else "no")
-            df["GenderText"] = df["Gender"].apply(lambda x: self._gender_to_text[x])
-            df["AgeSpan"] = df["MinAge"].astype(str) + " - " + df["MaxAge"].astype(str)
+            self._enhance_gender_age_face_data(df)
             return df
 
-    def get_top_generated_images(self):
+    _gender_to_text = {0: "unkown", 1: "male", 2: "female", 3: "female + male"}
+    def _enhance_gender_age_face_data(self, df):
+        """ad readable information into the df"""
+        df["Face"] = df["Face"].apply(lambda x: "yes" if x==1 else "no")
+        df["GenderText"] = df["Gender"].apply(lambda x: self._gender_to_text[x])
+        df["AgeSpan"] = df["MinAge"].astype(str) + " - " + df["MaxAge"].astype(str)
+        return df
+
+    def get_top_used_images(self):
         """Get top 10 images used most for generations from current filtered dataset."""
         logger.debug("Fetching top generated images")
         if self._df is None:
@@ -305,11 +308,11 @@ class DataManager:
                 COUNT(DISTINCT g.Id) as GenerationCount,
                 MIN(i.ID) as ID,
                 MIN(i.CachePath) as CachePath,
-                MIN(i.Token) as Token,
-                MIN(i.Face) as Face,
-                MIN(i.Gender) as Gender,
+                MAX(i.Token) as Token,
+                MAX(i.Face) as Face,
+                MAX(i.Gender) as Gender,
                 MIN(i.MinAge) as MinAge,
-                MIN(i.MaxAge) as MaxAge,
+                MAX(i.MaxAge) as MaxAge,
                 MIN(i.Timestamp) as UploadTime
             FROM tblInput i
             INNER JOIN tblGenerations g ON g.input_SHA1 = i.SHA1
@@ -333,6 +336,56 @@ class DataManager:
                     'Token', 'Face', 'Gender', 'MinAge', 'MaxAge',
                     'UploadTime'
                 ])
+            self._enhance_gender_age_face_data(df)
+            return df
+
+    def get_related_images(self, id: int=0, sha1:str =None):
+        """Get top 10 images used most for generations from current filtered dataset."""
+        # TODO anpassen, alles unten ist schon fast gut, nur das where muss anders
+        logger.debug("Fetching top generated images")
+        if self._df is None:
+            logger.error("No filtered dataset available")
+            raise ValueError("No filtered dataset available. Call prepare_filtered_data first.")
+        
+        sessions = self._df['Session'].tolist()
+        sessions_str = ','.join(f"'{s}'" for s in sessions)
+        
+        query = f"""
+        WITH ImageGenerations AS (
+            SELECT 
+                i.SHA1,
+                COUNT(DISTINCT g.Id) as GenerationCount,
+                MIN(i.ID) as ID,
+                MIN(i.CachePath) as CachePath,
+                MAX(i.Token) as Token,
+                MAX(i.Face) as Face,
+                MAX(i.Gender) as Gender,
+                MIN(i.MinAge) as MinAge,
+                MAX(i.MaxAge) as MaxAge,
+                MIN(i.Timestamp) as UploadTime
+            FROM tblInput i
+            INNER JOIN tblGenerations g ON g.input_SHA1 = i.SHA1
+            WHERE i.Session IN ({sessions_str})
+            GROUP BY i.SHA1
+            HAVING GenerationCount > 0
+            ORDER BY GenerationCount DESC
+            LIMIT 10
+        )
+        SELECT *
+        FROM ImageGenerations
+        """
+        
+        with self._get_connection() as conn:
+            df = pd.read_sql_query(query, conn)
+            
+            # If no results, return empty DataFrame with required columns
+            if len(df) == 0:
+                return pd.DataFrame(columns=[
+                    'SHA1', 'GenerationCount', 'ID', 'CachePath',
+                    'Token', 'Face', 'Gender', 'MinAge', 'MaxAge',
+                    'UploadTime'
+                ])
+            self._enhance_gender_age_face_data(df)
             return df
 
     def get_image_by_id_or_sha1(self, search_value):
@@ -342,59 +395,73 @@ class DataManager:
             logger.debug("No search value provided")
             return None, pd.DataFrame()
 
+        # # Query to get image details - search in both ID and SHA1
+        # image_query = """
+        # SELECT 
+        #     i.ID,
+        #     i.SHA1,
+        #     i.CachePath,
+        #     i.Token,
+        #     i.Face,
+        #     i.Gender,
+        #     i.MinAge,
+        #     i.MaxAge,
+        #     i.Timestamp
+        # FROM tblInput i
+        # WHERE i.ID = ? OR i.SHA1 = ?
+        # LIMIT 1
+        # """
+
+        # # Query to get all generations using this input
+        # generations_query = """
+        # SELECT 
+        #     g.Id as GenerationId,
+        #     g.Style,
+        #     g.Userprompt as Prompt,
+        #     g.Output as GeneratedImagePath,
+        #     g.Timestamp
+        # FROM tblGenerations g
+        # WHERE g.Input_SHA1 = ?
+        # ORDER BY g.Timestamp DESC
+        # """
+
         # Query to get image details - search in both ID and SHA1
         image_query = """
         SELECT 
-            i.ID,
-            i.SHA1,
-            i.CachePath,
-            i.Token,
-            i.Face,
-            i.Gender,
-            i.MinAge,
-            i.MaxAge,
-            i.Timestamp
-        FROM tblInput i
-        WHERE i.ID = ? OR i.SHA1 = ?
+            *
+        FROM tblInput
+        WHERE ID = ? OR SHA1 = ?
         LIMIT 1
         """
 
         # Query to get all generations using this input
         generations_query = """
         SELECT 
-            g.Id as GenerationId,
-            g.Style,
-            g.Userprompt as Prompt,
-            g.Output as GeneratedImagePath,
-            g.Timestamp
-        FROM tblGenerations g
-        WHERE g.Input_SHA1 = ?
-        ORDER BY g.Timestamp DESC
+            (select count(*) from tblInput where SHA1 = ?) as UploadCount,
+            (select count(*) from tblGenerations where Input_SHA1 = ?) as GenerationCount
         """
 
         try:
             with self._get_connection() as conn:
-                # Try to parse as integer for ID search, use as string for SHA1
-                try:
-                    id_value = int(search_value)
-                    logger.debug(f"Parsed search value as ID: {id_value}")
-                except ValueError:
-                    id_value = -1  # Invalid ID that won't match anything
-                    logger.debug("Using search value as SHA1")
                 
                 # Get image details
                 logger.debug("Querying image details")
-                image_df = pd.read_sql_query(image_query, conn, params=[id_value, search_value])
+                image_df = pd.read_sql_query(image_query, conn, params=[search_value, search_value])
+                self._enhance_gender_age_face_data(image_df)
                 if len(image_df) == 0:
                     logger.info("No image found with provided ID/SHA1")
                     return None, pd.DataFrame()
                 
                 # Get generations using this image's SHA1
-                logger.debug(f"Querying generations for SHA1: {image_df.iloc[0]['SHA1']}")
-                generations_df = pd.read_sql_query(generations_query, conn, params=[image_df.iloc[0]['SHA1']])
+                sha1=image_df.iloc[0]['SHA1'] 
+                logger.debug(f"Querying generations for SHA1: {sha1}")
+                generations_df = pd.read_sql_query(generations_query, conn, params=[sha1, sha1])
                 
                 logger.info(f"Found image with {len(generations_df)} generations")
-                return image_df.iloc[0], generations_df
+                counter = generations_df.iloc[0]
+                image_df["GenerationCount"] = counter["GenerationCount"]
+                image_df["UploadCount"] = counter["UploadCount"]
+                return image_df.iloc[0]
         except Exception as e:
             logger.error(f"Database error in get_image_by_id_or_sha1: {str(e)}")
             return None, pd.DataFrame()

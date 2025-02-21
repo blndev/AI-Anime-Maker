@@ -120,6 +120,23 @@ class ImageUploadAnalysisTab:
         fig.update_layout(**LAYOUT_THEME)
         return fig
 
+    def _add_image_details_hover(self, fig, df):
+        # Add hover text with image details
+        fig.update_traces(
+            #todo: check how to integrate an image "<img src=""%{customdata[6]}"" style=""width:50px;height:50px;"">" + 
+            hovertemplate="<br>".join([
+                "Input ID: %{x}",
+                "Upload Count: %{y}",
+                "SHA1: %{customdata[0]}",
+                "Path: %{customdata[1]}",
+                "Token: %{customdata[2]}",
+                "Face: %{customdata[3]}",
+                "Gender: %{customdata[4]}",
+                "Age: %{customdata[5]}"
+            ]),
+            customdata=df[['SHA1', 'CachePath', 'Token', 'Face', 'GenderText', 'AgeSpan']].values
+        )
+
     def create_top_uploaded_images_chart(self, df):
         """Create bar chart of most frequently uploaded images."""
         logger.debug("Creating top uploaded images chart")
@@ -128,7 +145,7 @@ class ImageUploadAnalysisTab:
         
         if len(df) == 0:
             fig.update_layout(
-                title='Top 10 Most Frequently Uploaded Images (No data available)',
+                title='Top 10 - Most Frequently Uploaded Images (No data available)',
                 xaxis_title='Image ID',
                 yaxis_title='Number of Uploads',
                 template=PLOTLY_TEMPLATE,
@@ -144,25 +161,12 @@ class ImageUploadAnalysisTab:
             name='Upload Count',
             marker_color='#4B89DC'
         ))
-        
-        # Add hover text with image details
-        fig.update_traces(
-            hovertemplate="<br>".join([
-                "Input ID: %{x}",
-                "Upload Count: %{y}",
-                "SHA1: %{customdata[0]}",
-                "Path: %{customdata[1]}",
-                "Token: %{customdata[2]}",
-                "Face: %{customdata[3]}",
-                "Gender: %{customdata[4]}",
-                "Age: %{customdata[5]}"
-            ]),
-            customdata=df[['SHA1', 'CachePath', 'Token', 'Face', 'GenderText', 'AgeSpan']].values
-        )
-        
+
+        self._add_image_details_hover(fig, df)
+
         # Update layout
         fig.update_layout(
-            title='Top 10 Most Frequently Uploaded Images',
+            title='Top 10 - Most Frequently Uploaded Images',
             xaxis_title='Image ID',
             yaxis_title='Number of Uploads',
             template=PLOTLY_TEMPLATE,
@@ -171,7 +175,7 @@ class ImageUploadAnalysisTab:
         
         return fig
 
-    def create_top_generated_images_chart(self, df):
+    def create_top_used_images_chart(self, df):
         """Create bar chart of images used most for generations."""
         logger.debug("Creating top generated images chart")
         # Create figure
@@ -179,7 +183,7 @@ class ImageUploadAnalysisTab:
         
         if len(df) == 0:
             fig.update_layout(
-                title='Top 10 Most Generated From Images (No data available)',
+                title='Top 10 - Most used for Generation (No data available)',
                 xaxis_title='Image SHA1',
                 yaxis_title='Number of Generations',
                 template=PLOTLY_TEMPLATE,
@@ -190,29 +194,18 @@ class ImageUploadAnalysisTab:
         
         # Add bar chart using SHA1 as x-axis labels
         fig.add_trace(go.Bar(
-            x=df['SHA1'].apply(lambda x: f"SHA1: {x[:8]}..."),
+            x=df['ID'].apply(lambda x: f"ID: {x}"),
             y=df['GenerationCount'],
             name='Generation Count',
-            marker_color='#E74C3C'  # Red to match generation line in timeline
+            marker_color='#E74C3C'  #TODO: move color to styles (Red to match generation line in timeline)
         ))
         
         # Add hover text with image details
-        fig.update_traces(
-            hovertemplate="<br>".join([
-                "SHA1: %{x}",
-                "Generations: %{y}",
-                "Input ID: %{customdata[1]}",
-                "Path: %{customdata[0]}",
-                "Token: %{customdata[2]}",
-                "Face: %{customdata[3]}",
-                "Gender: %{customdata[4]}"
-            ]),
-            customdata=df[['CachePath', 'ID', 'Token', 'Face', 'Gender']].values
-        )
-        
+        self._add_image_details_hover(fig, df)
+
         # Update layout
         fig.update_layout(
-            title='Top 10 Most Generated From Images',
+            title='Top 10 - Most used for Generation',
             xaxis_title='Image SHA1',
             yaxis_title='Number of Generations',
             template=PLOTLY_TEMPLATE,
@@ -221,7 +214,7 @@ class ImageUploadAnalysisTab:
         
         return fig
         
-    def create_layout(self, initial_df, initial_top_images_df):
+    def create_layout(self, initial_df, initial_top_uploaded_images_df, initial_top_used_images_df):
         """Create the layout for the Image Upload Analysis tab."""
         logger.info("Creating Image Upload Analysis tab layout")
         return [
@@ -235,9 +228,7 @@ class ImageUploadAnalysisTab:
             html.Div([
                 html.H2("Most Uploaded Images", style=HEADER_STYLE),
                 # Bar chart showing upload counts
-                dcc.Graph(id='uploads_top_images', figure=self.create_top_uploaded_images_chart(initial_top_images_df)),
-                # Image grid (updated via callback)
-                html.Div(id='uploads_image_grid')
+                dcc.Graph(id='uploads_top_images', figure=self.create_top_uploaded_images_chart(initial_top_uploaded_images_df)),
             ]),
             
             # Top Generated Images Section with Details
@@ -248,7 +239,7 @@ class ImageUploadAnalysisTab:
                     html.Div([
                         dcc.Graph(
                             id='uploads_generated_images',
-                            figure=self.create_top_generated_images_chart(self.data_manager.get_top_generated_images())
+                            figure=self.create_top_used_images_chart(initial_top_used_images_df)
                         )
                     ], style={'width': '50%', 'display': 'inline-block'}),
                     
@@ -257,7 +248,7 @@ class ImageUploadAnalysisTab:
                         html.H3("Image Details", style=HEADER_STYLE),
                         html.Div(id='uploads_image_details', children=[
                             html.Div("Select an image to view details", style={
-                                'color': '#95A5A6',
+                                'color': '#95A5A6', #TODO: move style to styles
                                 'fontStyle': 'italic',
                                 'textAlign': 'center',
                                 'marginTop': '20px'
@@ -288,15 +279,17 @@ class ImageUploadAnalysisTab:
             logger.debug(f"Updating image charts for date range: {start_date} to {end_date}")
             try:
                 filtered_df = self.data_manager.prepare_filtered_data(start_date, end_date, filters_data)
-                filtered_top_images_df = self.data_manager.get_top_uploaded_images()
+                filtered_top_uploaded_images_df = self.data_manager.get_top_uploaded_images()
+                filtered_top_used_images_df = self.data_manager.get_top_used_images()
                 
                 logger.info(f"Retrieved filtered dataset with {len(filtered_df)} records")
-                logger.debug(f"Retrieved {len(filtered_top_images_df)} top uploaded images")
+                logger.debug(f"Retrieved {len(filtered_top_uploaded_images_df)} top uploaded images")
+                logger.debug(f"Retrieved {len(filtered_top_used_images_df)} top used images")
                 
                 return [
                     self.create_image_uploads_timeline(filtered_df),
-                    self.create_top_uploaded_images_chart(filtered_top_images_df),
-                    self.create_top_generated_images_chart(self.data_manager.get_top_generated_images())
+                    self.create_top_uploaded_images_chart(filtered_top_uploaded_images_df),
+                    self.create_top_used_images_chart(filtered_top_used_images_df)
                 ]
             except Exception as e:
                 logger.error(f"Error updating image charts: {str(e)}")
@@ -372,7 +365,7 @@ class ImageUploadAnalysisTab:
                 if not ctx.triggered:
                     logger.debug("No click data available")
                     return html.Div("Select an image to view details", style={
-                        'color': '#95A5A6',
+                        'color': '#95A5A6', #TODO: add color or style to styles files
                         'fontStyle': 'italic',
                         'textAlign': 'center',
                         'marginTop': '20px'
@@ -385,7 +378,7 @@ class ImageUploadAnalysisTab:
                 if not click_data or not click_data.get('points'):
                     logger.debug("No valid click data points")
                     return html.Div("Select an image to view details", style={
-                        'color': '#95A5A6',
+                        'color': '#95A5A6',#TODO: add color or style to styles files
                         'fontStyle': 'italic',
                         'textAlign': 'center',
                         'marginTop': '20px'
@@ -400,40 +393,32 @@ class ImageUploadAnalysisTab:
                 
                 logger.debug(f"Selected image ID: {selected_id}")
             
-                # Get details based on which chart was clicked
-                if trigger_id == 'uploads_generated_images':
-                    # Extract SHA1 from "SHA1: {sha1}..." format
-                    raw_sha1 = selected_id.split(': ')[1].split('...')[0]
-                    df_details = self.data_manager.get_top_generated_images()
-                    filtered_details = df_details[df_details['SHA1'].str.contains(raw_sha1, regex=False)]
-                    logger.debug(f"Retrieved generation details for SHA1: {raw_sha1}")
-                else:
-                    # Extract ID from "ID: {id}" format
-                    raw_id = selected_id.split(': ')[1]
-                    df_details = self.data_manager.get_top_uploaded_images()
-                    filtered_details = df_details[df_details['ID'].astype(str) == raw_id]
-                    logger.debug(f"Retrieved upload details for ID: {raw_id}")
+                # Extract ID from "ID: {id}" format
+                raw_id = selected_id.split(': ')[1]
+                image_data = self.data_manager.get_image_by_id_or_sha1(raw_id)
+                #filtered_details = df_details[df_details['ID'].astype(str) == raw_id]
+                logger.debug(f"Retrieved upload details for ID: {raw_id}")
             
-                if len(filtered_details) == 0:
+                if len(image_data) == None:
                     logger.warning("No details found for selected image")
                     return html.Div("Image details not found", style={
-                        'color': '#95A5A6',
+                        'color': '#95A5A6', #TODO: move color or style to styles files
                         'fontStyle': 'italic',
                         'textAlign': 'center',
                         'marginTop': '20px'
                     })
             
-                image_data = filtered_details.iloc[0]
                 
                 # Create details display with count label based on chart type
                 count_label = "Generations" if trigger_id == 'uploads_generated_images' else "Uploads"
-                count_value = image_data['GenerationCount'] if trigger_id == 'uploads_generated_images' else image_data['UploadCount']
+                count_value = image_data["GenerationCount"] #0#TODO: in query einbauen image_data['GenerationCount'] if trigger_id == 'uploads_generated_images' else image_data['UploadCount']
                 
                 logger.info(f"Displaying details for image with {count_value} {count_label.lower()}")
             
                 details = [
                 html.Div([
                     html.Img(
+                        #FIXME: path calculation could be wrong
                         src=f'/cache/{os.path.basename(os.path.dirname(selected_path))}/{os.path.basename(selected_path)}',
                         style={
                             'width': '200px',
@@ -468,8 +453,12 @@ class ImageUploadAnalysisTab:
                         html.Span(f"{image_data['MinAge'] if pd.notna(image_data['MinAge']) else 'N/A'} - {image_data['MaxAge'] if pd.notna(image_data['MaxAge']) else 'N/A'}")
                     ], style={'margin': '5px 0'}),
                     html.Div([
-                        html.Strong(f"{count_label}: "),
-                        html.Span(str(count_value))
+                        html.Strong(f"Uploads for this File: "),
+                        html.Span(str(image_data["UploadCount"]))
+                    ], style={'margin': '5px 0'}),
+                    html.Div([
+                        html.Strong(f"Generations for this File: "),
+                        html.Span(str(image_data["GenerationCount"]))
                     ], style={'margin': '5px 0'})
                 ], style={
                     'backgroundColor': '#2C3E50',
