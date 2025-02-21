@@ -1,44 +1,16 @@
 import os
+import PIL
 import gradio as gr
 from hashlib import sha1
 import time # for sleep in SKIP_AI
 from datetime import datetime, timedelta
 import logging
-import uuid
-from dataclasses import dataclass
-from typing import Optional
 
 import src.config as config
 import src.utils as utils
 import src.analytics as analytics
 import src.AI as AI
-
-class AppState:
-    def __init__(self, token: int=0, session: str=None):
-        """State object for storing application data in browser."""
-        self.token: int = token        
-        self.session: str = str(uuid.uuid4()) if session==None else session
-
-    def __str__(self) -> str:
-        """String representation for logging."""
-        return f"AppState(token={self.token}, session={self.session})"
-
-    def to_dict(self) -> dict:
-        """Convert AppState to dictionary for serialization."""
-        return {
-            'token': self.token,
-            'session': self.session
-        }
-
-    @classmethod
-    def from_dict(cls, data: Optional[dict]) -> 'AppState':
-        """Create AppState from dictionary after deserialization."""
-        if not data:
-            return cls()
-        return cls(
-            token=data.get('token', 0),
-            session=data.get('session', str(uuid.uuid4()))
-        )
+from src.AppState import AppState
 
 # Set up module logger
 logger = logging.getLogger(__name__)
@@ -59,7 +31,7 @@ else:
 style_details = {}
 
 
-def action_session_initialized(request: gr.Request, state_dict: dict) -> None:
+def action_session_initialized(request: gr.Request, app_state: AppState) -> None:
     """Initialize analytics session when app loads.
     
     Args:
@@ -69,14 +41,13 @@ def action_session_initialized(request: gr.Request, state_dict: dict) -> None:
     if not config.is_analytics_enabled() or not request:
         return
 
-    app_state = AppState.from_dict(state_dict)
     try:
         analytics.save_session(
             session=app_state.session, 
             ip=request.client.host,
             user_agent=request.headers["user-agent"], 
             languages=request.headers["accept-language"])
-        logger.info("Session - %s - initialized for: %s",app_state.session, request.client.host)
+        logger.info("Session - %s - initialized with %i token for: %s",app_state.session, app_state.token, request.client.host)
     except Exception as e:
         logger.error("Error initializing analytics session: %s", str(e))
         logger.debug("Exception details:", exc_info=True)
@@ -86,10 +57,10 @@ def action_update_all_local_models():
     return gr.update(choices=utils.get_all_local_models(config.get_model_folder()))
 
 session_image_hashes = {}
-def action_handle_input_file(request: gr.Request, image, state_dict):
+def action_handle_input_file(request: gr.Request, image: PIL.Image, gradio_state: str):
     """Analyze the Image, Handle Session Info, Save the input image in a cache if enabled, count token."""
     global session_image_hashes
-    app_state = AppState.from_dict(state_dict)
+    app_state = AppState.from_gradio_state(gradio_state)
     # deactivate the start button on error
     if image is None: 
         return wrap_handle_input_response(app_state, False, "")
@@ -104,7 +75,7 @@ def action_handle_input_file(request: gr.Request, image, state_dict):
         dir = os.path.join(dir, datetime.now().strftime("%Y%m%d"))
         input_file_path = utils.save_image_as_file(image, dir)
 
-    logger.info("new file uploaded from {app_state.session}: {image_sha1}")
+    logger.info(f"UPLOAD from {app_state.session} with {image_sha1}")
 
     image_description = ""
     try:
@@ -217,10 +188,10 @@ def action_reload_model(model):
     except Exception as e:
         gr.Error(message=e.message)
 
-def action_generate_image(request: gr.Request, image, style, strength, steps, image_description, state_dict):
+def action_generate_image(request: gr.Request, image, style, strength, steps, image_description, gradio_state):
     """Convert the entire input image to the selected style."""
     global style_details
-    app_state = AppState.from_dict(state_dict)
+    app_state = AppState.from_gradio_state(gradio_state)
     #setting token always to 10 if the feature is disabled saved a lot of "if feature enabled .." statements
     if app_state.token == None: app_state.token = 0 
     if not config.is_feature_generation_with_token_enabled(): app_state.token = 10
@@ -321,7 +292,7 @@ def wrap_handle_input_response(app_state: AppState, start_enabled: bool, image_d
     return [
         gr.update(interactive=start_enabled),
         image_description,
-        app_state.to_dict(),
+        app_state,
         gr.update(visible=True),
         app_state.token
     ]
@@ -338,7 +309,7 @@ def wrap_generate_image_response(app_state: AppState, result_image: any) -> list
     """
     return [
         result_image,
-        app_state.to_dict(),
+        app_state,
         gr.update(interactive=bool(app_state.token>0)),
         app_state.token
     ]
@@ -375,7 +346,7 @@ def create_gradio_interface():
         with gr.Row(visible=config.is_feature_generation_with_token_enabled()):
             with gr.Column():
                 #token = gr.Session
-                local_storage = gr.BrowserState(AppState()) # initial state with token=0 and new session
+                local_storage = gr.BrowserState() # do not initialize it with any value!!! this is used as default
                 #token count is restored from app.load
                 token_counter = gr.Number(visible=False, value=0)
                 token_label = gr.Text(
@@ -412,12 +383,13 @@ def create_gradio_interface():
             return f"Current Token: {token}"
         
         @app.load(inputs=[local_storage], outputs=[token_counter])
-        def load_from_local_storage(request: gr.Request, state_dict):
-            # Initialize session when app loads
-            action_session_initialized(request=request, state_dict=state_dict)
-            
+        def load_from_local_storage(request: gr.Request, gradio_state):
             # Restore token from local storage
-            app_state = AppState.from_dict(state_dict)
+            app_state = AppState.from_gradio_state(gradio_state)
+
+            # Initialize session when app loads
+            action_session_initialized(request=request, app_state=app_state)
+            
             if config.is_feature_generation_with_token_enabled(): 
                 logger.debug("Restoring token from local storage: %s", app_state.token)
                 logger.debug("Session ID: %s", app_state.session)

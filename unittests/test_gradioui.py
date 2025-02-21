@@ -31,7 +31,7 @@ class TestGradioUI(unittest.TestCase):
         self.assertEqual(len(response), 5, "Response should contain 5 elements")
         self.assertEqual(response[0], gr.update(interactive=True), "Start button should be enabled")
         self.assertEqual(response[1], "Test description", "Description should match input")
-        self.assertEqual(response[2], self.app_state.to_dict(), "AppState dict should be included")
+        self.assertEqual(response[2], self.app_state, "AppState dict should be included")
         self.assertEqual(response[3], gr.update(visible=True), "Description area should be visible")
         self.assertEqual(response[4], self.app_state.token, "Token count should match AppState")
 
@@ -55,7 +55,7 @@ class TestGradioUI(unittest.TestCase):
         
         self.assertEqual(len(response), 4, "Response should contain 4 elements")
         self.assertEqual(response[0], self.test_image, "Result image should match input")
-        self.assertEqual(response[1], self.app_state.to_dict(), "AppState dict should be included")
+        self.assertEqual(response[1], self.app_state, "AppState dict should be included")
         self.assertEqual(response[2], gr.update(interactive=True), "Start button should be enabled with tokens > 0")
         self.assertEqual(response[3], self.app_state.token, "Token count should match AppState")
 
@@ -103,7 +103,7 @@ class TestActionHandleInputFile(unittest.TestCase):
     @patch('src.UI.analytics')
     def test_handle_input_no_image(self, mock_analytics, mock_config):
         """Test handling when no image is provided."""
-        response = action_handle_input_file(self.mock_request, None, self.app_state.to_dict())
+        response = action_handle_input_file(self.mock_request, None, self.app_state)
         self.assertEqual(response[0], gr.update(interactive=False))
         self.assertEqual(response[1], "")
 
@@ -111,7 +111,7 @@ class TestActionHandleInputFile(unittest.TestCase):
     @patch('src.UI.analytics')
     def test_handle_input_no_request(self, mock_analytics, mock_config):
         """Test handling when no request object is provided (API usage)."""
-        response = action_handle_input_file(None, self.test_image, self.app_state.to_dict())
+        response = action_handle_input_file(None, self.test_image, self.app_state)
         self.assertEqual(response[0], gr.update(interactive=False))
 
     @patch('src.UI.config')
@@ -123,7 +123,7 @@ class TestActionHandleInputFile(unittest.TestCase):
         mock_config.is_feature_generation_with_token_enabled.return_value = False
         mock_describe.return_value = "Test description"
 
-        response = action_handle_input_file(self.mock_request, self.test_image, self.app_state.to_dict())
+        response = action_handle_input_file(self.mock_request, self.test_image, self.app_state)
         
         mock_analytics.save_input_image_details.assert_called_once()
         self.assertEqual(response[1], "Test description")
@@ -144,10 +144,10 @@ class TestActionHandleInputFile(unittest.TestCase):
         mock_describe.return_value = "Test description"
         mock_faces.return_value = [{"isFemale": True, "maxAge": 25, "minAge": 20}]
 
-        response = action_handle_input_file(self.mock_request, self.test_image, self.app_state.to_dict())
+        response = action_handle_input_file(self.mock_request, self.test_image, self.app_state)
         
         app_state_dict = response[2]
-        reconstructed_state = AppState.from_dict(app_state_dict)
+        reconstructed_state = app_state_dict
         self.assertGreater(reconstructed_state.token, self.app_state.token)
 
     @patch('src.UI.config')
@@ -164,14 +164,14 @@ class TestActionHandleInputFile(unittest.TestCase):
         mock_faces.return_value = []
 
         # First upload
-        response1 = action_handle_input_file(self.mock_request, self.test_image, self.app_state.to_dict())
+        response1 = action_handle_input_file(self.mock_request, self.test_image, self.app_state)
         app_state_dict1 = response1[2]
-        state_after_first = AppState.from_dict(app_state_dict1)
+        state_after_first = AppState.from_gradio_state(app_state_dict1)
         
         # Second upload of same image
-        response2 = action_handle_input_file(self.mock_request, self.test_image, state_after_first.to_dict())
+        response2 = action_handle_input_file(self.mock_request, self.test_image, state_after_first)
         app_state_dict2 = response2[2]
-        state_after_second = AppState.from_dict(app_state_dict2)
+        state_after_second = AppState.from_gradio_state(app_state_dict2)
         
         # Token count should not increase on second upload
         self.assertEqual(state_after_first.token, state_after_second.token)
@@ -184,7 +184,7 @@ class TestActionHandleInputFile(unittest.TestCase):
         mock_describe.side_effect = Exception("Description failed")
         mock_config.is_feature_generation_with_token_enabled.return_value = False
 
-        response = action_handle_input_file(self.mock_request, self.test_image, self.app_state.to_dict())
+        response = action_handle_input_file(self.mock_request, self.test_image, self.app_state)
         
         self.assertEqual(response[1], "")  # Description should be empty on error
 
@@ -203,9 +203,9 @@ class TestActionHandleInputFile(unittest.TestCase):
         mock_faces.return_value = []
 
         # First upload
-        response1 = action_handle_input_file(self.mock_request, self.test_image, self.app_state.to_dict())
+        response1 = action_handle_input_file(self.mock_request, self.test_image, self.app_state)
         app_state_dict1 = response1[2]
-        state_after_first = AppState.from_dict(app_state_dict1)
+        state_after_first = app_state_dict1
         
         # Simulate time passing - modify the timestamp in session_image_hashes
         from src.UI import session_image_hashes
@@ -214,9 +214,9 @@ class TestActionHandleInputFile(unittest.TestCase):
             session_image_hashes[image_sha1] = datetime.now() - timedelta(minutes=61)  # Past the lock period
         
         # Second upload of same image
-        response2 = action_handle_input_file(self.mock_request, self.test_image, state_after_first.to_dict())
+        response2 = action_handle_input_file(self.mock_request, self.test_image, state_after_first)
         app_state_dict2 = response2[2]
-        state_after_second = AppState.from_dict(app_state_dict2)
+        state_after_second = AppState.from_gradio_state(app_state_dict2)
         
         # Token count should increase on second upload since lock expired
         self.assertGreater(state_after_second.token, state_after_first.token)
@@ -262,11 +262,11 @@ class TestActionGenerateImage(unittest.TestCase):
             self.strength,
             self.steps,
             self.image_description,
-            self.app_state.to_dict()
+            self.app_state
         )
 
         self.assertEqual(response[0], self.test_image)  # Result image
-        reconstructed_state = AppState.from_dict(response[1])
+        reconstructed_state = response[1]
         self.assertEqual(reconstructed_state.token, 9)  # Token is always set to 10 and decrement by one for each tunr if taken handling is disabled
 
     @patch('src.UI.config')
@@ -286,11 +286,11 @@ class TestActionGenerateImage(unittest.TestCase):
             self.strength,
             self.steps,
             self.image_description,
-            self.app_state.to_dict()
+            self.app_state
         )
 
         self.assertEqual(response[0], self.test_image)  # Result image
-        reconstructed_state = AppState.from_dict(response[1])
+        reconstructed_state = response[1]
         self.assertEqual(reconstructed_state.token, self.app_state.token - 1)  # Token decremented
 
     @patch('src.UI.config')
@@ -307,11 +307,11 @@ class TestActionGenerateImage(unittest.TestCase):
             self.strength,
             self.steps,
             self.image_description,
-            self.app_state.to_dict()
+            self.app_state
         )
 
         self.assertEqual(response[0], self.test_image)  # Original image returned
-        reconstructed_state = AppState.from_dict(response[1])
+        reconstructed_state = response[1]
         self.assertEqual(reconstructed_state.token, 0)  # Token remains 0
 
     @patch('src.UI.config')
@@ -331,7 +331,7 @@ class TestActionGenerateImage(unittest.TestCase):
             self.strength,
             self.steps,
             None,  # No description
-            self.app_state.to_dict()
+            self.app_state
         )
 
         mock_ai.describe_image.assert_called_once()
@@ -353,11 +353,11 @@ class TestActionGenerateImage(unittest.TestCase):
             self.strength,
             self.steps,
             self.image_description,
-            self.app_state.to_dict()
+            self.app_state
         )
 
         self.assertIsNone(response[0])  # No image returned
-        reconstructed_state = AppState.from_dict(response[1])
+        reconstructed_state = response[1]
         self.assertEqual(reconstructed_state.token, self.app_state.token)  # Token not decremented on error
 
     @patch('src.UI.config')
@@ -376,7 +376,7 @@ class TestActionGenerateImage(unittest.TestCase):
             self.strength,
             self.steps,
             self.image_description,
-            self.app_state.to_dict()
+            self.app_state
         )
 
         mock_utils.image_convert_to_sepia.assert_called_once()
@@ -395,11 +395,11 @@ class TestActionGenerateImage(unittest.TestCase):
             self.strength,
             self.steps,
             self.image_description,
-            self.app_state.to_dict()
+            self.app_state
         )
 
         self.assertIsNone(response[0])  # No result image
-        reconstructed_state = AppState.from_dict(response[1])
+        reconstructed_state = response[1]
         self.assertEqual(reconstructed_state.token, self.app_state.token)  # Token not decremented
 
     @patch('src.UI.config')
@@ -415,11 +415,11 @@ class TestActionGenerateImage(unittest.TestCase):
             self.strength,
             self.steps,
             self.image_description,
-            self.app_state.to_dict()
+            self.app_state
         )
 
         self.assertIsNone(response[0])  # No result image
-        reconstructed_state = AppState.from_dict(response[1])
+        reconstructed_state = response[1]
         self.assertEqual(reconstructed_state.token, self.app_state.token)  # Token not decremented
 
     @patch('src.UI.config')
@@ -439,7 +439,7 @@ class TestActionGenerateImage(unittest.TestCase):
             self.strength,
             self.steps,
             self.image_description,
-            self.app_state.to_dict()
+            self.app_state
         )
 
         mock_analytics.save_generation_details.assert_called_once()
