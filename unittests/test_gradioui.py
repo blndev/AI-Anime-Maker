@@ -119,6 +119,7 @@ class TestActionHandleInputFile(unittest.TestCase):
     @patch('src.UI.action_describe_image')
     def test_handle_input_with_analytics(self, mock_describe, mock_analytics, mock_config):
         """Test handling with analytics enabled."""
+        mock_config.get_token_time_lock_for_new_image.return_value = 5
         mock_config.is_analytics_enabled.return_value = True
         mock_config.is_feature_generation_with_token_enabled.return_value = False
         mock_describe.return_value = "Test description"
@@ -183,6 +184,7 @@ class TestActionHandleInputFile(unittest.TestCase):
         """Test handling when image description fails."""
         mock_describe.side_effect = Exception("Description failed")
         mock_config.is_feature_generation_with_token_enabled.return_value = False
+        mock_config.get_token_time_lock_for_new_image.return_value = 5
 
         response = action_handle_input_file(self.mock_request, self.test_image, self.session_state)
         
@@ -211,7 +213,13 @@ class TestActionHandleInputFile(unittest.TestCase):
         from src.UI import session_image_hashes
         image_sha1 = sha1(self.test_image.tobytes()).hexdigest()
         if image_sha1 in session_image_hashes:
-            session_image_hashes[image_sha1] = datetime.now() - timedelta(minutes=61)  # Past the lock period
+            session_image_hashes[image_sha1] = {
+                "dt": datetime.now() - timedelta(minutes=61),
+                "gender": 0,
+                "min_age": 0,
+                "max_age": 0,
+                "face_detected": 0
+                }  # Past the lock period
         
         # Second upload of same image
         response2 = action_handle_input_file(self.mock_request, self.test_image, state_after_first)
