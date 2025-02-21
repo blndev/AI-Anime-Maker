@@ -17,7 +17,7 @@ from .tabs.usage_statistics import UsageStatisticsTab
 from .tabs.geographic_distribution import GeographicDistributionTab
 from .tabs.generation_details import GenerationDetailsTab
 from .tabs.image_upload_analysis import ImageUploadAnalysisTab
-
+from .tabs.adhoc_queries import AdHocQueriesTab
 # Import styles
 from .styles import (
     PLOTLY_TEMPLATE, LAYOUT_THEME, LAYOUT_STYLE,
@@ -76,6 +76,7 @@ class Dashboard:
             self._geo_dist_tab = GeographicDistributionTab(self.data_manager, self.app)
             self._gen_details_tab = GenerationDetailsTab(self.data_manager, self.app)
             self._image_upload_tab = ImageUploadAnalysisTab(self.data_manager, self.cache_dir, self.app)
+            self._adhoc_tab = AdHocQueriesTab(self.data_manager, self.app)
             
             # Create layout
             logger.info("Creating dashboard layout")
@@ -175,6 +176,17 @@ class Dashboard:
                     style=TAB_STYLE,
                     selected_style=TAB_SELECTED_STYLE,
                     children=self._gen_details_tab.create_layout(
+                        self.initial_start_date,
+                        self.initial_end_date
+                    )
+                ),
+
+                # Tab 4: Generation Details
+                dcc.Tab(
+                    label='AdHoc',
+                    style=TAB_STYLE,
+                    selected_style=TAB_SELECTED_STYLE,
+                    children=self._adhoc_tab.create_layout(
                         self.initial_start_date,
                         self.initial_end_date
                     )
