@@ -31,7 +31,7 @@ def _create_tables():
     create_table_session = """
     CREATE TABLE IF NOT EXISTS tblSessions (
         Session TEXT NOT NULL PRIMARY KEY,
-        Timestamp TEXT NOT NULL,
+        Timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         Continent TEXT,
         Country TEXT,
         City TEXT,
@@ -45,15 +45,14 @@ def _create_tables():
     create_table_generations = """
     CREATE TABLE IF NOT EXISTS tblGenerations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        Timestamp TEXT NOT NULL,
+        Timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         Session TEXT NOT NULL,
         Input_SHA1 TEXT NOT NULL,
         Style TEXT,
         Userprompt TEXT,
         Output TEXT,
         IsBlocked INTEGER,
-        BlockReason TEXT,
-        FOREIGN KEY(Session) REFERENCES tblSessions(Session)
+        BlockReason TEXT
     );
     """
 
@@ -68,7 +67,7 @@ def _create_tables():
         Gender INTEGER,
         MinAge INTEGER,
         MaxAge INTEGER,
-        Token TEXT
+        Token INTEGER  NOT NULL
     );
     """
 
@@ -161,7 +160,7 @@ def save_session(session: str, ip: str, user_agent: str, languages: str = None) 
                 logger.debug("Exception details:", exc_info=True)
         
         continent = "n.a."
-        country = "n.a."
+        country = "n.a." #TODO: get country by language as in dashboard for fallback and remove this logic from dashboard
         city = "private IP" if ipaddress.ip_address(ip).is_private else "n.a."
         if not ipaddress.ip_address(ip).is_private and _ip_geo_reader != None:
             try:
@@ -248,7 +247,7 @@ def save_generation_details(session: str, sha1: str, style: str, prompt: str,
 def save_input_image_details(session: str, sha1: str, cache_path_and_filename: str = None, 
                            face_detected: bool = False, gender: int = 0, 
                            min_age: int = None, max_age: int = None, 
-                           token: str = None) -> bool:
+                           token: int = 0) -> bool:
     """Saves details about an uploaded input image.
 
     Args:

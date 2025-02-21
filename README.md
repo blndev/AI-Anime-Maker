@@ -62,6 +62,10 @@ The script will:
 - Show the latest version and its creation date if available
 - Ask if you want to update to the latest version
 - Continue with your chosen version (latest or current)
+- Present a menu to choose what to start:
+  1. AI Anime Maker (the main application)
+  2. Analytics Dashboard (if analytics is enabled)
+  3. Both components simultaneously
 
 Note: The first run might take a while as it downloads multiple gigabytes of AI models and required libraries. Patience, young grasshopper! 🐢
 
@@ -90,7 +94,7 @@ is_shared=false
 analytics_enabled=false
 
 # Path to the analytics database (will be created if not existing)
-analytics_db_path=./analytics.db
+analytics_db_path=./analytics/analytics.db
 
 # if available it will be used to determine country and city in analytics
 # official source: https://dev.maxmind.com/geoip/geoip2/geolite2/
@@ -177,16 +181,50 @@ style_2_prompt=a anime style painting
 #style_2_strength=0.3
 #style_2_negative_prompt=oil painting
 ```
-## 🌟 Feature: Analytics
-If you have activated analytics, a few interesting data will be saved. This includes the usage of styles, time of activities and languages of the requesting clients. With this information you can optimize the configuration of your system and save costs if it runs on a cloud.
-For privacy reasons, there will be no data stored which allows identification of users.
+## 🌟 Feature: Analytics Dashboard
+AI-Anime-Maker includes a powerful analytics dashboard that provides real-time insights into system usage and user behavior. When analytics is enabled, you can access the dashboard by running:
 
-If you want to have information of the origin (Continent and Country) of Users, you need to use a Geo2Lite DB which is not included in this app. For more information see https://dev.maxmind.com/geoip/geoip2/geolite2/
-This information can only be determined if you expose your application directly to the users without using the "IsShared" feature. IsShared (our default) will always run over a FRT Proxy which protectes user information from the app for privacy reasons.
-To get more information about this topic and security concerns check the gradio documentation. 
+```sh
+python analytics_dashboard.py
+```
 
-You can analyze the stored data via the Analyze_Usage jupyter notebook in this project.
-For that use an IDE like VSCode or run ```notebook lab Analyze_Usage.ipynb``` from the application folder.
+### Dashboard Features:
+
+#### 📊 Usage Statistics
+All statistics are based on the user-agent 
+- Session timeline showing daily and hourly activity patterns
+- Platform statistics (operating systems, browsers)
+- Mobile vs desktop usage distribution
+- Generation success rate analysis
+
+#### 🌍 Geographic Distribution
+- Interactive world map showing user locations based on their language settings
+- Language distribution analysis
+
+#### 📸 Image Upload Analysis
+- Timeline of image uploads and generations
+- Generation patterns and style preferences
+
+
+#### 🎨 Generation Details
+- Style usage distribution with percentages
+
+### Data Privacy
+- No personal identification information is stored
+- Geographic data requires GeoLite2 DB (not included)
+- Limited data collection when using shared mode
+- For GeoLite2 DB setup, visit: https://dev.maxmind.com/geoip/geoip2/geolite2/
+
+### Advanced Analysis
+For deeper data analysis, you can use the Jupyter notebook:
+```sh
+jupyter lab analytics/Analyze_Usage.ipynb
+```
+
+The dashboard provides valuable insights to:
+- Optimize system configuration
+- Identify popular styles and features
+- Track usage patterns
 
 ## 🌟 Feature: Token based generation
 If you have activated token based generation,  then the users can't build unlimited amount of images based on one source file. For generation they need token (on for each) and such toklen will be received for uploaded images.
@@ -195,6 +233,12 @@ That prevents the system for misuse. In our public beta we have seen that users 
 ## 🛠️ Development and Deployment
 For development and deployment purposes, you can create a "local.config" file (copy of app.config) which allows you to use dedicated configuration, e.g. local model folder without affecting the release/standard configuration. 
 This is useful for updating the app including app.config without affecting you local settings.
+
+To make VSCode aware of teh packes and path, you need to execute the following line within your python environment
+
+```bash
+pip install -e .
+```
 
 Interesting settings for dev environments are:
 * [General][debug] (true/false) - enable model selection and more output

@@ -1,3 +1,4 @@
+import gc
 from PIL import Image, ImageDraw
 from hashlib import sha1
 import logging
@@ -30,36 +31,51 @@ IMAGE_TO_TEXT_PIPELINE = None
 
 def _load_captioner_model():
     """Load and return a image to text model."""
+    global IMAGE_TO_TEXT_PIPELINE
     if (IMAGE_TO_TEXT_PIPELINE != None):
         return IMAGE_TO_TEXT_PIPELINE
 
-    # this will load teh model. if it is not availabole it will be downloaded from huggingface
+    # this will load the model. if it is not availabole it will be downloaded from huggingface
     captioner = pipeline("image-to-text", model="Salesforce/blip-image-captioning-base")
     return captioner
 
+def _cleanup_captioner():
+    global IMAGE_TO_TEXT_PIPELINE
+    try:
+        logger.info("Unload image captioner")
+        if IMAGE_TO_TEXT_PIPELINE!= None:
+            del IMAGE_TO_TEXT_PIPELINE
+            IMAGE_TO_TEXT_PIPELINE = None
+            gc.collect()
+        
+        torch.cuda.empty_cache()
+        #TODO: there must be more to unload
+    except Exception as e:
+        logger.error("Erro while unload captioner")
 
 def describe_image(image):
     """describe an image for better inpaint results."""
     try:
         captioner = _load_captioner_model()
-        # TODO V3: add prompt to captioner to ask for details like how many people, background etc.
-        # messages = [
-        # {
-        #     "role": "user",
-        #     "content": [
-        #         {"type": "image", "image": "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/bee.jpg"},
-        #         {"type": "text", "text": "What do we see in this image?"},
-        #     ]
-        # }]
-        # prompt = captioner.apply_chat_template(messages)
-        # value = captioner(image, text=prompt, return_full_text=False)
-        value = captioner(image)
-        return value[0]['generated_text']
+    except Exception:
+        logger.warn("loading image captioner failed")
+        _cleanup_captioner()
+
+    try:
+        if captioner:
+            value = captioner(image)
+            return value[0]['generated_text']
+        else:
+            return ""
     except Exception as e:
-        logger.error("Error while creating image description: %s", str(e))
+        logger.error("Error while creating image description.")
         logger.debug("Exception details:", exc_info=True)
         return ""
 
+if not config.DEBUG:
+    from tqdm import tqdm
+    # Patch tqdm to not display progress bars
+    tqdm.__init__ = lambda *args, **kwargs: None
 
 # cache of the image loaded already
 IMAGE_TO_IMAGE_PIPELINE = None
@@ -67,6 +83,7 @@ IMAGE_TO_IMAGE_PIPELINE = None
 
 def _load_img2img_model(model=config.get_model(), use_cached_model=True):
     """Load and return the Stable Diffusion model to generate images"""
+    #use cached becomes obsolete with a proper unloading!
     global IMAGE_TO_IMAGE_PIPELINE
     if (IMAGE_TO_IMAGE_PIPELINE != None and use_cached_model):
         logger.debug("Using cached model")
@@ -104,15 +121,26 @@ def _load_img2img_model(model=config.get_model(), use_cached_model=True):
         logger.debug("Exception details:", exc_info=True)
         raise Exception(message="Error while loading the model.\nSee logfile for details.")
 
+def _cleanup_img2img_pipeline():
+    global IMAGE_TO_IMAGE_PIPELINE
+    try:
+        logger.info("Unload image captioner")
+        if IMAGE_TO_IMAGE_PIPELINE!= None:
+            del IMAGE_TO_IMAGE_PIPELINE
+            IMAGE_TO_IMAGE_PIPELINE = None
+            gc.collect()
+        
+        torch.cuda.empty_cache()
+        #TODO: there must be more to unload
+    except Exception as e:
+        logger.error("Error while unloading IMAGE_TO_IMAGE_PIPELINE")
 
 def change_text2img_model(model):
     global IMAGE_TO_IMAGE_PIPELINE
     logger.info("Reloading model %s", model)
     try:
         # TODO (low prio): check better ways to unload a model!
-        IMAGE_TO_IMAGE_PIPELINE = None
-        if device == "cuda":
-            torch.cuda.empty_cache()
+        _cleanup_img2img_pipeline()
         # load new model
         IMAGE_TO_IMAGE_PIPELINE = _load_img2img_model(model=model, use_cached_model=False)
         if IMAGE_TO_IMAGE_PIPELINE is None:
@@ -162,3 +190,4 @@ def generate_image(image: Image, prompt: str, negative_prompt: str = "", strengt
         logger.error("RuntimeError: %s", str(e))
         logger.debug("Exception details:", exc_info=True)
         raise Exception(message="Error while creating the image. More details in log.")
+        #todo: add error count, on 3 errors unload and reload the model
