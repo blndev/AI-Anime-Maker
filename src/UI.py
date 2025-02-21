@@ -20,11 +20,13 @@ if config.SKIP_ONNX or not config.is_feature_generation_with_token_enabled():
         """ without onnx we cant detect and analyze faces"""
         return []
 else:
-    logger.info("Loading ONNX functions")
+    logger.info("Activating ONNX functions")
     from src.onnx_analyzer import FaceAnalyzer
-    fai = FaceAnalyzer() # singleton
+    _face_analyzer = None
     def analyze_faces(pil_image):
-        return fai.get_gender_and_age_from_image(pil_image)
+        global _face_analyzer
+        if _face_analyzer == None: _face_analyzer = FaceAnalyzer()
+        return _face_analyzer.get_gender_and_age_from_image(pil_image)
 
 # used to get properties of the selected style liek prompt or strangth
 # will be filled while interface is loading
