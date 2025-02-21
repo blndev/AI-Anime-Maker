@@ -6,8 +6,9 @@ import sys
 from datetime import datetime
 import pytz
 
-# Add parent directory to path to import app modules
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+import logging
+logger = logging.getLogger(__name__)
+
 from analytics.app.data_manager import DataManager
 
 class TestDataManager(unittest.TestCase):

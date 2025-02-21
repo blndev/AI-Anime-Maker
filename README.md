@@ -191,28 +191,23 @@ python analytics_dashboard.py
 ### Dashboard Features:
 
 #### 📊 Usage Statistics
+All statistics are based on the user-agent 
 - Session timeline showing daily and hourly activity patterns
 - Platform statistics (operating systems, browsers)
 - Mobile vs desktop usage distribution
 - Generation success rate analysis
 
 #### 🌍 Geographic Distribution
-- Interactive world map showing user locations
-- Continent and country-level breakdowns
-- City-level insights with population centers
+- Interactive world map showing user locations based on their language settings
 - Language distribution analysis
 
 #### 📸 Image Upload Analysis
 - Timeline of image uploads and generations
-- Most frequently uploaded image types
 - Generation patterns and style preferences
-- Detailed image metadata analysis
+
 
 #### 🎨 Generation Details
 - Style usage distribution with percentages
-- Detailed generation history
-- Image search by ID or SHA1 hash
-- Full-size image preview capability
 
 ### Data Privacy
 - No personal identification information is stored
@@ -223,14 +218,12 @@ python analytics_dashboard.py
 ### Advanced Analysis
 For deeper data analysis, you can use the Jupyter notebook:
 ```sh
-jupyter lab Analyze_Usage.ipynb
+jupyter lab analytics/Analyze_Usage.ipynb
 ```
 
 The dashboard provides valuable insights to:
 - Optimize system configuration
 - Identify popular styles and features
-- Monitor system performance
-- Plan resource allocation
 - Track usage patterns
 
 ## 🌟 Feature: Token based generation
@@ -240,6 +233,12 @@ That prevents the system for misuse. In our public beta we have seen that users 
 ## 🛠️ Development and Deployment
 For development and deployment purposes, you can create a "local.config" file (copy of app.config) which allows you to use dedicated configuration, e.g. local model folder without affecting the release/standard configuration. 
 This is useful for updating the app including app.config without affecting you local settings.
+
+To make VSCode aware of teh packes and path, you need to execute the following line within your python environment
+
+```bash
+pip install -e .
+```
 
 Interesting settings for dev environments are:
 * [General][debug] (true/false) - enable model selection and more output
