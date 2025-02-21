@@ -152,6 +152,7 @@ def action_handle_input_file(request: gr.Request, image: PIL.Image, gradio_state
                         gr.Info(f"{token_for_cuteness} special Bonus token added!")
                         token_for_cuteness = 0 #allow bonus only once per upload
             
+            logger.info(f"UPLOAD {image_sha1} received {new_token} token total.")
             gr.Info(f"Total new Token: {new_token}")
             session_state.token += new_token
     
@@ -183,7 +184,7 @@ def action_describe_image(image):
 
 def action_reload_model(model):
     if config.SKIP_AI: return
-    logger.info("Reloading model %s", model)
+    logger.warning("Reloading model %s", model)
     try:
         AI.change_text2img_model(model=model)
         gr.Info(message=f"Model {model} loaded.", title="Model changed")
@@ -226,7 +227,7 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
 
         prompt = f"{sd["prompt"]}: {image_description}"
         
-        logger.info("%s - %s: %s - %s", datetime.now().strftime("%H:%M"), request.client.host, style, image_description)
+        logger.info(f"GENERATE - {session_state.session} - {style}: {image_description}")
 
         # must be before resizing, otherwise hash will not be same as from source image
         # or adapt the source image saving with thumbnail property
