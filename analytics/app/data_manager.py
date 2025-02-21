@@ -44,6 +44,8 @@ class DataManager:
             logger.error(f"Failed to initialize DataManager: {str(e)}")
             raise
 
+    _gender_to_text = {0: "unkown", 1: "male", 2: "female", 3: "female + male"}
+
     def _load_city_coordinates(self):
         """Load city coordinates from cities.csv."""
         try:
@@ -280,6 +282,10 @@ class DataManager:
                     'Token', 'Face', 'Gender', 'MinAge', 'MaxAge',
                     'UploadTime'
                 ])
+
+            df["Face"] = df["Face"].apply(lambda x: "yes" if x==1 else "no")
+            df["GenderText"] = df["Gender"].apply(lambda x: self._gender_to_text[x])
+            df["AgeSpan"] = df["MinAge"].astype(str) + " - " + df["MaxAge"].astype(str)
             return df
 
     def get_top_generated_images(self):
