@@ -245,7 +245,7 @@ class DataManager:
         
         sessions = self._df['Session'].tolist()
         sessions_str = ','.join(f"'{s}'" for s in sessions)
-        
+
         query = f"""
         WITH ImageUploads AS (
             SELECT 
@@ -262,6 +262,7 @@ class DataManager:
             FROM tblInput i
             WHERE i.Session IN ({sessions_str})
             GROUP BY i.SHA1
+            HAVING UploadCount > 0
             ORDER BY UploadCount DESC
             LIMIT 10
         )
@@ -275,7 +276,7 @@ class DataManager:
             # If no results, return empty DataFrame with required columns
             if len(df) == 0:
                 return pd.DataFrame(columns=[
-                    'SHA1', 'GenerationCount', 'ID', 'CachePath',
+                    'SHA1', 'UploadCount', 'ID', 'CachePath',
                     'Token', 'Face', 'Gender', 'MinAge', 'MaxAge',
                     'UploadTime'
                 ])
@@ -283,7 +284,7 @@ class DataManager:
             self._enhance_gender_age_face_data(df)
             return df
 
-    _gender_to_text = {0: "unkown", 1: "male", 2: "female", 3: "female + male"}
+    _gender_to_text = {-1: "unkown", 0: "unkown", 1: "male", 2: "female", 3: "female + male"}
     def _enhance_gender_age_face_data(self, df):
         """ad readable information into the df"""
         df["Face"] = df["Face"].apply(lambda x: "yes" if x==1 else "no")
@@ -293,14 +294,14 @@ class DataManager:
 
     def get_top_used_images(self):
         """Get top 10 images used most for generations from current filtered dataset."""
-        logger.debug("Fetching top generated images")
+        logger.debug("Fetching top used images")
         if self._df is None:
             logger.error("No filtered dataset available")
             raise ValueError("No filtered dataset available. Call prepare_filtered_data first.")
         
         sessions = self._df['Session'].tolist()
         sessions_str = ','.join(f"'{s}'" for s in sessions)
-        
+
         query = f"""
         WITH ImageGenerations AS (
             SELECT 
@@ -395,38 +396,8 @@ class DataManager:
             logger.debug("No search value provided")
             return None, pd.DataFrame()
 
-        # # Query to get image details - search in both ID and SHA1
-        # image_query = """
-        # SELECT 
-        #     i.ID,
-        #     i.SHA1,
-        #     i.CachePath,
-        #     i.Token,
-        #     i.Face,
-        #     i.Gender,
-        #     i.MinAge,
-        #     i.MaxAge,
-        #     i.Timestamp
-        # FROM tblInput i
-        # WHERE i.ID = ? OR i.SHA1 = ?
-        # LIMIT 1
-        # """
-
-        # # Query to get all generations using this input
-        # generations_query = """
-        # SELECT 
-        #     g.Id as GenerationId,
-        #     g.Style,
-        #     g.Userprompt as Prompt,
-        #     g.Output as GeneratedImagePath,
-        #     g.Timestamp
-        # FROM tblGenerations g
-        # WHERE g.Input_SHA1 = ?
-        # ORDER BY g.Timestamp DESC
-        # """
-
         # Query to get image details - search in both ID and SHA1
-        image_query = """
+        image_query = f"""
         SELECT 
             *
         FROM tblInput
@@ -435,10 +406,13 @@ class DataManager:
         """
 
         # Query to get all generations using this input
-        generations_query = """
+        sessions = self._df['Session'].tolist()
+        sessions_str = ','.join(f"'{s}'" for s in sessions)
+        ##sessionstr is used to apply the local set filters
+        generations_query = f"""
         SELECT 
-            (select count(*) from tblInput where SHA1 = ?) as UploadCount,
-            (select count(*) from tblGenerations where Input_SHA1 = ?) as GenerationCount
+            (select count(*) from tblInput where SHA1 = ? and session in ({sessions_str})) as UploadCount,
+            (select count(*) from tblGenerations where Input_SHA1 = ? and session in ({sessions_str}))as GenerationCount
         """
 
         try:

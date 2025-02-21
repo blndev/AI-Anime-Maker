@@ -295,59 +295,6 @@ class ImageUploadAnalysisTab:
                 logger.error(f"Error updating image charts: {str(e)}")
                 raise
         
-        @self.app.callback(
-            Output('uploads_image_grid', 'children'),
-            [
-                Input('active-filters-store', 'data'),
-                Input('date-range', 'start_date'),
-                Input('date-range', 'end_date')
-            ]
-        )
-        def update_image_grid(filters_data, start_date, end_date):
-            """Update image grid based on filters and date range."""
-            logger.debug(f"Updating image grid for date range: {start_date} to {end_date}")
-            try:
-                self.data_manager.prepare_filtered_data(start_date, end_date, filters_data)
-                top_images_df = self.data_manager.get_top_uploaded_images()
-                logger.debug(f"Retrieved {len(top_images_df)} images for grid")
-                
-                return html.Div([
-                html.Div([
-                    html.Div([
-                        html.Img(
-                            src=f'/cache/{os.path.basename(os.path.dirname(path))}/{os.path.basename(path)}' if os.path.exists(path) else '',
-                            style={
-                                'width': '150px',
-                                'object-fit': 'cover',
-                                'margin': '5px',
-                                'border': '2px solid #333'
-                            }
-                        ),
-                        html.Div(
-                            f'Uploaded {count} times',
-                            style={
-                                'color': '#FFFFFF',
-                                'textAlign': 'center',
-                                'marginTop': '5px'
-                            }
-                        )
-                    ], style={
-                        'display': 'flex',
-                        'flexDirection': 'column',
-                        'alignItems': 'center',
-                        'margin': '10px'
-                    }) for path, count in zip(top_images_df['CachePath'], top_images_df['UploadCount'])
-                ], style={
-                    'display': 'flex',
-                    'flexWrap': 'wrap',
-                    'justifyContent': 'center',
-                    'gap': '20px',
-                    'margin': '20px 0'
-                })
-                ])
-            except Exception as e:
-                logger.error(f"Error updating image grid: {str(e)}")
-                raise
         
         @self.app.callback(
             Output('uploads_image_details', 'children'),
@@ -399,7 +346,7 @@ class ImageUploadAnalysisTab:
                 #filtered_details = df_details[df_details['ID'].astype(str) == raw_id]
                 logger.debug(f"Retrieved upload details for ID: {raw_id}")
             
-                if len(image_data) == None:
+                if len(image_data) == 0:
                     logger.warning("No details found for selected image")
                     return html.Div("Image details not found", style={
                         'color': '#95A5A6', #TODO: move color or style to styles files
@@ -407,13 +354,8 @@ class ImageUploadAnalysisTab:
                         'textAlign': 'center',
                         'marginTop': '20px'
                     })
-            
                 
-                # Create details display with count label based on chart type
-                count_label = "Generations" if trigger_id == 'uploads_generated_images' else "Uploads"
-                count_value = image_data["GenerationCount"] #0#TODO: in query einbauen image_data['GenerationCount'] if trigger_id == 'uploads_generated_images' else image_data['UploadCount']
-                
-                logger.info(f"Displaying details for image with {count_value} {count_label.lower()}")
+                logger.info(f"Displaying details for image with ID {raw_id}")
             
                 details = [
                 html.Div([
@@ -446,11 +388,11 @@ class ImageUploadAnalysisTab:
                     ], style={'margin': '5px 0'}),
                     html.Div([
                         html.Strong("Gender: "),
-                        html.Span(image_data['Gender'] if pd.notna(image_data['Gender']) else 'N/A')
+                        html.Span(image_data['GenderText'] if pd.notna(image_data['Gender']) else 'N/A')
                     ], style={'margin': '5px 0'}),
                     html.Div([
                         html.Strong("Age Range: "),
-                        html.Span(f"{image_data['MinAge'] if pd.notna(image_data['MinAge']) else 'N/A'} - {image_data['MaxAge'] if pd.notna(image_data['MaxAge']) else 'N/A'}")
+                        html.Span(image_data['AgeSpan'] if pd.notna(image_data['AgeSpan']) else 'N/A')
                     ], style={'margin': '5px 0'}),
                     html.Div([
                         html.Strong(f"Uploads for this File: "),
