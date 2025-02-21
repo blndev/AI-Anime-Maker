@@ -2,7 +2,7 @@ import json
 from typing import Optional
 import uuid
 
-class AppState:
+class SessionState:
     """Object to handle session state information for the user"""
     
     @property
@@ -29,28 +29,28 @@ class AppState:
     def __str__(self) -> str:
         """String representation for logging."""
         # gradio is using the (str) function to save the state instead of the repr
-        return repr(self) # f"AppState(token={self.token}, session={self.session})"
+        return repr(self) # f"SessionState(token={self.token}, session={self.session})"
 
     def __repr__(self) -> str:
-        """Return a string representation of the AppState."""
+        """Return a string representation of the SessionState."""
         return json.dumps(self.to_dict())
-        #return f"AppState(token={self.token}, session='{self.session}')"
+        #return f"SessionState(token={self.token}, session='{self.session}')"
 
     @classmethod
     def to_gradio_state(self) -> str:
-        """Create AppState from dictionary after deserialization."""
+        """Create SessionState from dictionary after deserialization."""
         return repr(self)
 
     def to_dict(self) -> dict:
-        """Convert AppState to dictionary for serialization."""
+        """Convert SessionState to dictionary for serialization."""
         return {
             'token': self.token,
             'session': str(self.session)
         }
 
     @classmethod
-    def from_dict(cls, data: Optional[dict]) -> 'AppState':
-        """Create AppState from dictionary after deserialization."""
+    def from_dict(cls, data: Optional[dict]) -> 'SessionState':
+        """Create SessionState from dictionary after deserialization."""
         if not data:
             return cls()
         return cls(
@@ -59,8 +59,8 @@ class AppState:
         )
 
     @classmethod
-    def from_gradio_state(cls, data: str) -> 'AppState':
-        """Create AppState from dictionary string after deserialization."""
+    def from_gradio_state(cls, data: str) -> 'SessionState':
+        """Create SessionState from dictionary string after deserialization."""
         if not data:
             return cls()
         if not isinstance(data, str):

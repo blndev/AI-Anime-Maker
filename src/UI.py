@@ -10,7 +10,7 @@ import src.config as config
 import src.utils as utils
 import src.analytics as analytics
 import src.AI as AI
-from src.AppState import AppState
+from src.SessionState import SessionState
 
 # Set up module logger
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ else:
 style_details = {}
 
 
-def action_session_initialized(request: gr.Request, app_state: AppState) -> None:
+def action_session_initialized(request: gr.Request, session_state: SessionState) -> None:
     """Initialize analytics session when app loads.
     
     Args:
@@ -43,11 +43,11 @@ def action_session_initialized(request: gr.Request, app_state: AppState) -> None
 
     try:
         analytics.save_session(
-            session=app_state.session, 
+            session=session_state.session, 
             ip=request.client.host,
             user_agent=request.headers["user-agent"], 
             languages=request.headers["accept-language"])
-        logger.info("Session - %s - initialized with %i token for: %s",app_state.session, app_state.token, request.client.host)
+        logger.info("Session - %s - initialized with %i token for: %s",session_state.session, session_state.token, request.client.host)
     except Exception as e:
         logger.error("Error initializing analytics session: %s", str(e))
         logger.debug("Exception details:", exc_info=True)
@@ -60,13 +60,13 @@ session_image_hashes = {}
 def action_handle_input_file(request: gr.Request, image: PIL.Image, gradio_state: str):
     """Analyze the Image, Handle Session Info, Save the input image in a cache if enabled, count token."""
     global session_image_hashes
-    app_state = AppState.from_gradio_state(gradio_state)
+    session_state = SessionState.from_gradio_state(gradio_state)
     # deactivate the start button on error
     if image is None: 
-        return wrap_handle_input_response(app_state, False, "")
+        return wrap_handle_input_response(session_state, False, "")
     # API Users don't have a request (by documentation)
     if not request: 
-        return wrap_handle_input_response(app_state, False, "")
+        return wrap_handle_input_response(session_state, False, "")
 
     input_file_path = ""
     image_sha1 = sha1(image.tobytes()).hexdigest()
@@ -75,7 +75,7 @@ def action_handle_input_file(request: gr.Request, image: PIL.Image, gradio_state
         dir = os.path.join(dir, datetime.now().strftime("%Y%m%d"))
         input_file_path = utils.save_image_as_file(image, dir)
 
-    logger.info(f"UPLOAD from {app_state.session} with {image_sha1}")
+    logger.info(f"UPLOAD from {session_state.session} with {image_sha1}")
 
     image_description = ""
     try:
@@ -151,10 +151,10 @@ def action_handle_input_file(request: gr.Request, image: PIL.Image, gradio_state
                         token_for_cuteness = 0 #allow bonus only once per upload
             
             gr.Info(f"Total new Token: {new_token}")
-            app_state.token += new_token
+            session_state.token += new_token
     
     analytics.save_input_image_details(
-        session=app_state.session, 
+        session=session_state.session, 
         sha1=image_sha1, 
         token=new_token,
         cache_path_and_filename=os.path.relpath(input_file_path, config.get_output_folder()), 
@@ -163,8 +163,8 @@ def action_handle_input_file(request: gr.Request, image: PIL.Image, gradio_state
         max_age=max_age,
         gender=gender
         )
-    start_enabled = True if not config.is_feature_generation_with_token_enabled() else bool(app_state.token>0)
-    return wrap_handle_input_response(app_state, start_enabled, image_description)
+    start_enabled = True if not config.is_feature_generation_with_token_enabled() else bool(session_state.token>0)
+    return wrap_handle_input_response(session_state, start_enabled, image_description)
 
 def action_describe_image(image):
     """describe an image for better inpaint results."""
@@ -191,22 +191,22 @@ def action_reload_model(model):
 def action_generate_image(request: gr.Request, image, style, strength, steps, image_description, gradio_state):
     """Convert the entire input image to the selected style."""
     global style_details
-    app_state = AppState.from_gradio_state(gradio_state)
+    session_state = SessionState.from_gradio_state(gradio_state)
     #setting token always to 10 if the feature is disabled saved a lot of "if feature enabled .." statements
-    if app_state.token == None: app_state.token = 0 
-    if not config.is_feature_generation_with_token_enabled(): app_state.token = 10
+    if session_state.token == None: session_state.token = 0 
+    if not config.is_feature_generation_with_token_enabled(): session_state.token = 10
 
     try:
-        if config.is_feature_generation_with_token_enabled() and app_state.token<=0:
+        if config.is_feature_generation_with_token_enabled() and session_state.token<=0:
             gr.Warning("You have not enough token to start a generation. Upload a new image for new token!")
-            return wrap_generate_image_response(app_state, image)
+            return wrap_generate_image_response(session_state, image)
         if image is None: 
             gr.Error("Start of Generation without image!")
-            return wrap_generate_image_response(app_state, None)
+            return wrap_generate_image_response(session_state, None)
         # API Users don't have a request object (by documentation)
         if request is None: 
             logger.warning("No request object. API usage?")
-            return wrap_generate_image_response(app_state, None)
+            return wrap_generate_image_response(session_state, None)
 
         logger.debug("Starting image generation")
         if image_description == None or image_description == "": image_description = AI.describe_image(image)
@@ -259,30 +259,34 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
                 ignore_errors=True)
 
         if config.is_analytics_enabled():
+            if config.is_save_output_enabled() and fn:
+                rel_path = os.path.relpath(fn, config.get_output_folder())
+            else:
+                rel_path = None
             analytics.save_generation_details(
-                app_state.session,
+                session_state.session,
                 sha1=image_sha1,
                 style=style,
                 prompt=image_description,
-                output_filename=os.path.relpath(fn, config.get_output_folder())
+                output_filename=rel_path
                 )
-        app_state.token -= 1
-        if app_state.token <= 0: gr.Warning("You running out of Token.\n\nUpload a new image to continue.")
-        return wrap_generate_image_response(app_state, result_image)
+        session_state.token -= 1
+        if session_state.token <= 0: gr.Warning("You running out of Token.\n\nUpload a new image to continue.")
+        return wrap_generate_image_response(session_state, result_image)
     except RuntimeError as e:
         logger.error("RuntimeError: %s", str(e))
         logger.debug("Exception details:", exc_info=True)
         gr.Error(e)
-        return wrap_generate_image_response(app_state, None)
+        return wrap_generate_image_response(session_state, None)
 
 #--------------------------------------------------------------
 # Gradio - Render UI
 #--------------------------------------------------------------
-def wrap_handle_input_response(app_state: AppState, start_enabled: bool, image_description: str) -> list:
+def wrap_handle_input_response(session_state: SessionState, start_enabled: bool, image_description: str) -> list:
     """Create a consistent response format for handle_input_file action.
     
     Args:
-        app_state: The current AppState object
+        session_state: The current SessionState object
         start_enabled: Whether the start button should be enabled
         image_description: The generated image description
         
@@ -292,16 +296,16 @@ def wrap_handle_input_response(app_state: AppState, start_enabled: bool, image_d
     return [
         gr.update(interactive=start_enabled),
         image_description,
-        app_state,
+        session_state,
         gr.update(visible=True),
-        app_state.token
+        session_state.token
     ]
 
-def wrap_generate_image_response(app_state: AppState, result_image: any) -> list:
+def wrap_generate_image_response(session_state: SessionState, result_image: any) -> list:
     """Create a consistent response format for generate_image action.
     
     Args:
-        app_state: The current AppState object
+        session_state: The current SessionState object
         result_image: The generated image result
         
     Returns:
@@ -309,9 +313,9 @@ def wrap_generate_image_response(app_state: AppState, result_image: any) -> list
     """
     return [
         result_image,
-        app_state,
-        gr.update(interactive=bool(app_state.token>0)),
-        app_state.token
+        session_state,
+        gr.update(interactive=bool(session_state.token>0)),
+        session_state.token
     ]
 
 def create_gradio_interface():
@@ -385,15 +389,15 @@ def create_gradio_interface():
         @app.load(inputs=[local_storage], outputs=[token_counter])
         def load_from_local_storage(request: gr.Request, gradio_state):
             # Restore token from local storage
-            app_state = AppState.from_gradio_state(gradio_state)
+            session_state = SessionState.from_gradio_state(gradio_state)
 
             # Initialize session when app loads
-            action_session_initialized(request=request, app_state=app_state)
+            action_session_initialized(request=request, session_state=session_state)
             
             if config.is_feature_generation_with_token_enabled(): 
-                logger.debug("Restoring token from local storage: %s", app_state.token)
-                logger.debug("Session ID: %s", app_state.session)
-            return app_state.token
+                logger.debug("Restoring token from local storage: %s", session_state.token)
+                logger.debug("Session ID: %s", session_state.session)
+            return session_state.token
 
         token_counter.change(
             inputs=[token_counter],
