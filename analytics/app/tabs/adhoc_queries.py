@@ -174,8 +174,8 @@ class AdHocQueriesTab:
                 logger.debug("Modal background clicked, hiding modal")
                 return modal_style, None, None
             
-            # If an image was clicked
-            if triggered and isinstance(triggered, dict) and triggered.get('type') == 'preview-image':
+            # If an image was clicked (and not the search button)
+            if triggered and isinstance(triggered, dict) and triggered.get('type') == 'preview-image' and any(clicks for clicks in image_clicks):
                 logger.debug("Image preview clicked, showing modal")
                 # Show modal
                 modal_style['display'] = 'block'
