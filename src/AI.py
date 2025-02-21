@@ -72,6 +72,10 @@ def describe_image(image):
         logger.debug("Exception details:", exc_info=True)
         return ""
 
+if not config.DEBUG:
+    from tqdm import tqdm
+    # Patch tqdm to not display progress bars
+    tqdm.__init__ = lambda *args, **kwargs: None
 
 # cache of the image loaded already
 IMAGE_TO_IMAGE_PIPELINE = None
