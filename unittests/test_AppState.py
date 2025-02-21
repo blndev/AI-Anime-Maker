@@ -1,6 +1,8 @@
 import unittest
+import random, uuid, sys, os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from src.UI import (AppState)
-import random, uuid
 
 class TestGradioUIAppState(unittest.TestCase):
     def setUp(self):
