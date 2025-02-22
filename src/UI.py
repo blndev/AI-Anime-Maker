@@ -490,12 +490,12 @@ As all communication is anonymous through Hugging Face. We can't send any feedba
             gr.Info("Thank you for the report. We will try to fine tune our model to avoid such generations in the future.")
             #TODO: use output sha1 or db id (send it to client) to fill teh blocked column in database
             logger.error(f"REPORT: User {session_state.session} flagged the last generation. Feedback '{feedback}'")
-            return gr.update(interactive=False)
+            return gr.update(interactive=False), ""
             
         flag_image_button.click(
             fn=action_image_reported,
             inputs=[local_storage, flag_image_text],
-            outputs=[flag_image_button]
+            outputs=[flag_image_button, flag_image_text]
         )
         def action__activate_button():
             return gr.update(interactive=True)
