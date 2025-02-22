@@ -395,7 +395,7 @@ def create_gradio_interface():
                 image_input = gr.Image(label="Input", type="pil", height=512)
                 #describe_button = gr.Button("Describe your Image", interactive=False)
                 with gr.Column(visible=False) as area_description:
-                    text_description = gr.Textbox(label="change the image description for better results", show_label=True, max_length=70, submit_btn="↻")
+                    text_description = gr.Textbox(label="change the image description for better results", show_label=True, max_length=90, submit_btn="↻")
 
             with gr.Column():
                 output_image = gr.Image(label="Result", type="pil", height=512)
