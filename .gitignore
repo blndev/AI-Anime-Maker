@@ -8,6 +8,7 @@ __pycache__/
 /models/**
 /output/**
 /cache/**
+/logs/**
 MagicMock/
 unittests/tmp/**
 dev.config
