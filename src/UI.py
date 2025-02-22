@@ -211,7 +211,6 @@ def action_describe_image(image):
         pass
     return value
 
-
 def action_reload_model(model):
     if config.SKIP_AI: return
     logger.warning("Reloading model %s", model)
@@ -305,6 +304,8 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
                 )
         session_state.token -= 1
         if session_state.token <= 0: gr.Warning("You running out of Token.\n\nUpload a new image to continue.")
+        #make it smaller (WebP to JPG)
+        result_image = result_image.convert("RGB") 
         return wrap_generate_image_response(session_state, result_image)
     except RuntimeError as e:
         logger.error("RuntimeError: %s", str(e))
@@ -397,10 +398,6 @@ def create_gradio_interface():
                 with gr.Column(visible=False) as area_description:
                     text_description = gr.Textbox(label="change the image description for better results", show_label=True, max_length=90, submit_btn="↻")
 
-            with gr.Column():
-                output_image = gr.Image(label="Result", type="pil", height=512)
-                start_button = gr.Button("Start Creation", interactive=False, variant="primary")
-                
                 styles = []
                 for i in range(1,config.get_style_count()+1):
                     name = config.get_style_name(i)
@@ -413,9 +410,29 @@ def create_gradio_interface():
                     }
                 if config.DEBUG: styles.append("Open Style")
                 style_dropdown = gr.Radio(styles, label="Style", value=styles[0])
+            with gr.Column():
+                output_image = gr.Image(
+                    label="Result", 
+                    type="pil", 
+                    height=512, 
+                    show_download_button=True
+                    )
+                start_button = gr.Button("Start Creation", interactive=False, variant="primary")
+                with gr.Column():
+                    gr.Markdown(value="""
+### Important Information
+
+You can report any inappropriate image generation.
+
+**Note:** If you click "report," we will save the output and settings for analysis.
+As all communication is anonymous through Hugging Face. We can't send any feedback to you.
+                                """)
+                    flag_image_text = gr.Text(label="Feedback", placeholder="What is wrong?")
+                    flag_image_button = gr.Button("Report by clicking here", interactive=False)
+
                 strength_slider = gr.Slider(label="Strength", minimum=0.1, maximum=1, value=config.get_default_strength(), step=0.1,  visible=config.UI_show_stength_slider())
                 steps_slider = gr.Slider(label="Steps", minimum=10, maximum=100, value=config.get_default_steps(), step=5, visible=config.UI_show_steps_slider())
-
+        
         def helper_display_token(token):
             return f"Current Token: {token}"
         
@@ -462,10 +479,27 @@ def create_gradio_interface():
             inputs=[image_input, style_dropdown, strength_slider, steps_slider, text_description, local_storage],
             outputs=[output_image, local_storage, start_button, token_counter],
             concurrency_limit=config.GenAI_get_execution_batch_size(),
-            batch=False,
-            max_batch_size=config.GenAI_get_execution_batch_size(),
-            concurrency_id="gpu_queue"
+            concurrency_id="gpu_queue",
+            show_progress="minimal"
+            #batch=False,
+            #max_batch_size=config.GenAI_get_execution_batch_size(),
         )
+
+        def action_image_reported(gradio_state, feedback):
+            session_state = SessionState.from_gradio_state(gradio_state)
+            gr.Info("Thank you for the report. We will try to fine tune our model to avoid such generations in the future.")
+            #TODO: use output sha1 or db id (send it to client) to fill teh blocked column in database
+            logger.error(f"REPORT: User {session_state.session} flagged the last generation. Feedback '{feedback}'")
+            return gr.update(interactive=False)
+            
+        flag_image_button.click(
+            fn=action_image_reported,
+            inputs=[local_storage, flag_image_text],
+            outputs=[flag_image_button]
+        )
+        def action__activate_button():
+            return gr.update(interactive=True)
+        output_image.change(fn=action__activate_button, outputs=[flag_image_button])
 
         disclaimer = config.get_app_disclaimer()
         if disclaimer:
