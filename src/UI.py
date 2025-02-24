@@ -263,7 +263,7 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
         image_sha1 = sha1(image.tobytes()).hexdigest()
 
         # use always the sliders for strength and steps if they are enabled
-        if not config.UI_show_stength_slider(): strength = sd["strength"]
+        if not config.UI_show_strength_slider(): strength = sd["strength"]
         if not config.UI_show_steps_slider(): steps = sd["steps"]
 
         if config.SKIP_AI:
@@ -430,7 +430,7 @@ As all communication is anonymous through Hugging Face. We can't send any feedba
                     flag_image_text = gr.Text(label="Feedback", placeholder="What is wrong?")
                     flag_image_button = gr.Button("Report by clicking here", interactive=False)
 
-                strength_slider = gr.Slider(label="Strength", minimum=0.1, maximum=1, value=config.get_default_strength(), step=0.1,  visible=config.UI_show_stength_slider())
+                strength_slider = gr.Slider(label="Strength", minimum=0.1, maximum=1, value=config.get_default_strength(), step=0.1,  visible=config.UI_show_strength_slider())
                 steps_slider = gr.Slider(label="Steps", minimum=10, maximum=100, value=config.get_default_steps(), step=5, visible=config.UI_show_steps_slider())
         
         def helper_display_token(token):

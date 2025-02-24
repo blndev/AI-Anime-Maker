@@ -1,4 +1,4 @@
-import pandas as pd  # db querys with visualization
+import pandas as pd  # db queries with visualization
 import matplotlib.pyplot as plt  # diagrams
 import matplotlib.image as mpimg  # images
 import seaborn as sns           # Heatmaps etc.
@@ -79,7 +79,7 @@ def showImageGrid(df: pd.DataFrame, path_column: str, name_column: str = None, d
             ax.axis('off')
 
     for ax in axes.flatten()[len(df):]:
-        ax.axis('off')  # Entferne leere Zellen
+        ax.axis('off')  # Remove empty cells
 
     # Align space between images
     plt.tight_layout()

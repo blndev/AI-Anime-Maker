@@ -4,7 +4,7 @@ import logging
 import src.config as config           # to get configuration values
 import geoip2.database  # for ip to city
 import os               # to check if files exists
-from threading import Lock  # write to DB must be thread save
+from threading import Lock  # write to DB must be thread safe
 from user_agents import parse as parse_user_agent   # Split OS. Browser etc.
 
 # Set up module logger
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 _ip_geo_reader = None
 
 def _load_geo_db():
-    """loads the ip to city database if existing"""
+    """loads the ip to city database if it exists"""
     global _ip_geo_reader
     try:
         db = config.get_analytics_city_db()
@@ -86,7 +86,7 @@ def _create_tables():
         logger.debug("Exception details:", exc_info=True)
         return False
 
-def _write_thread_save_to_db(query: str, data: dict) -> bool:
+def _write_thread_safe_to_db(query: str, data: dict) -> bool:
     """Writes data to the database in a thread-safe manner.
 
     Args:
@@ -136,7 +136,7 @@ def stop():
         _ip_geo_reader.close()
 
 def save_session(session: str, ip: str, user_agent: str, languages: str = None) -> bool:
-    """Creates an entry for the current user session if not existing.
+    """Creates an entry for the current user session if it doesn't exist.
 
     Args:
         session (str): The session identifier
@@ -195,7 +195,7 @@ def save_session(session: str, ip: str, user_agent: str, languages: str = None) 
         )
         """
         
-        return _write_thread_save_to_db(query, data)
+        return _write_thread_safe_to_db(query, data)
     except Exception as e:
         logger.error("Failed to save session: %s", str(e))
         logger.debug("Exception details:", exc_info=True)
@@ -238,7 +238,7 @@ def save_generation_details(session: str, sha1: str, style: str, prompt: str,
             :Session, datetime('now'), :SHA1, :Style, :Prompt, :Output, :IsBlocked, :BlockReason
         )
         """
-        return _write_thread_save_to_db(query, data)
+        return _write_thread_safe_to_db(query, data)
     except Exception as e:
         logger.error("Failed to save generation details: %s", str(e))
         logger.debug("Exception details:", exc_info=True)
@@ -283,7 +283,7 @@ def save_input_image_details(session: str, sha1: str, cache_path_and_filename: s
         VALUES (CURRENT_TIMESTAMP, :Session, :SHA1, :CachePath, :Face, :Gender, :MinAge, :MaxAge, :Token)
         '''
 
-        return _write_thread_save_to_db(query=query, data=data)
+        return _write_thread_safe_to_db(query=query, data=data)
     except Exception as e:
         logger.error("Failed to save input image details: %s", str(e))
         logger.debug("Exception details:", exc_info=True)

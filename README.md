@@ -25,7 +25,7 @@ Our mission (and the mission of our future tools) is to provide simple, dedicate
 
 Just imagine! A world where converting photos to anime is as easy as pie. 🥧
 
-To make the generation results even better, we implemented a local image-to-text conversion, which describes the input of your source image automaticaly. 
+To make the generation results even better, we implemented a local image-to-text conversion, which describes the input of your source image automatically. 
 
 ## 🎨 Model Support
 AI-Anime-Maker supports a variety of models, from Hugging Face models to safetensor files. You can download these models from multiple websites like https://civit.ai for free. This flexibility allows you to experiment with different models to find the perfect one for your needs.
@@ -39,7 +39,7 @@ Tested on Linux, but it should work like a charm on Windows and Mac too (fingers
 ### Prerequisites
 * Python 3.12 (tested with it)
 * Python venv module (should be there with python)
-* Python pip (should be tehre as well)
+* Python pip (should be there as well)
 * a GPU with 4-8GB VRAM depending on Model and Image Size
 (CPU works also but is very slow)
 
@@ -74,101 +74,124 @@ Customize your anime-creating experience using the app.config file. Here's a sne
 
 ```ini
 [General]
-# Name of the App and Browser Tab
+# Name of the App and Browser Tab (Default: "Funny Image Creator")
 app_title=AI Anime Maker
 
-# if set, a poup message for the user. You can use any HTML to format it
-#app_disclaimer=This App is made for educational purpose.<br><br><p align=left>It is shared to you by sponsored hardware.</p>
+# If set, creates a popup message when the application starts. Supports HTML formatting.
+# Leave empty for no disclaimer. (Default: empty)
+#app_disclaimer=<h2>Important Information</h2>
 
-# the message showed below the app title
+# Message displayed below the app title (Default: empty)
 user_message=Have fun creating funny pictures out of your photos!
 
-# defines the port where the app is starting, if not defined, a random port will be choosen
+# Port number for the application server. If not defined, a random port will be chosen.
+# (Default: random)
 #port=7860
 
-#define if the application should create a internet reachable link via gradio shared tunnel function
+# Enable to create an internet-accessible link via Gradio's shared tunnel function.
+# Warning: This makes your instance publicly accessible. (Default: false)
 is_shared=false
 
-# With this feature you can determine which style is mostly used and much more
-# be aware of data privacy and regulations
+# Enable analytics to track style usage, user patterns, and system performance.
+# Please be aware of data privacy regulations in your region. (Default: false)
 analytics_enabled=false
 
-# Path to the analytics database (will be created if not existing)
+# Path to the SQLite database for analytics. Created automatically if it doesn't exist.
+# (Default: "./analytics.db")
 analytics_db_path=./analytics/analytics.db
 
-# if available it will be used to determine country and city in analytics
-# official source: https://dev.maxmind.com/geoip/geoip2/geolite2/
-analytics_city_db=./GeoLite2-City.mmdb
+# Path to the GeoLite2 City database for geographic analytics features.
+# Download from: https://dev.maxmind.com/geoip/geoip2/geolite2/
+# (Default: "./GeoLite2-City.mmdb")
+analytics_city_db=./analytics/GeoLite2-City.mmdb
 
 
 [Token]
-# This section contains the feature of token based image generation
+# Token-based generation system to prevent misuse and manage system resources
 
-# if active (default=true), users can generate images only if they have token
-# token can be optained by uploading images
+# Enable token requirement for image generation. Users need tokens to generate images,
+# which they can earn by uploading new images. (Default: true)
 enabled=false
 
-# if set, a explanation which will be shown to the user
+# Explanation shown to users about the token system. (Default: empty)
 explanation=You will receive Token by using new images. Each generation will cost you 1 Token. We implemented this to avoid misuse.
 
-# amout of token users get a a new image
+# Number of tokens awarded for uploading a new image (Default: 3)
 new_image=3
 
-# time before the user will get token again for this image in the same session, default 240
+# Time in minutes before the same image can earn tokens again in the same session
+# (Default: 240 minutes / 4 hours)
 image_blocked_in_minutes=240
 
-# bonus of tokens they get if the image contains at least one face
+# Bonus tokens for special image characteristics:
+# For images containing at least one face (Default: 2)
 bonus_for_face=3
-# bonus of tokens if the faces smiles (not implemented so far)
+# For images with smiling faces - Feature coming soon (Default: 1)
 bonus_for_smile=1
-# bonus of token they get if the image is recognized as "cute"
+# For images recognized as "cute" (Default: 3)
 bonus_for_cuteness=3
 
 [GenAI]
-# a local savetensors file or a Huggingface Model (will be downloaded)
+# AI Model Configuration
+
+# Path to the model file - can be local safetensors file or Hugging Face model
+# (Default: "./models/toonify.safetensors")
 default_model=./models/toonify.safetensors
 
-# a local folder where the system can look for the specified model 
+# Directory containing additional model files (Default: "./models/")
 #model_folder=./models/
 
-# the url to download the model if the file specified in "model" is not existing
+# URL to download the model if the specified model file doesn't exist
+# (Default: CivitAI toonify model)
 #safetensor_url=https://civit.ai/...
 
-# amount of parallel renderings (depends on GPU size), default 1
+# Number of parallel rendering processes. Increase based on available GPU memory.
+# (Default: 1)
 execution_batch_size=1
 
-# the amount of steps used to generate the image
-# the value should be lower for systems without GPU
+# Number of steps for image generation. Lower values recommended for CPU-only systems.
+# Valid range: 10-100 (Default: 50)
 default_steps=60
 
-# value between 0 and 1
-# 0=no changes to the input image
-# 1=maximum changes (like no input file)
-# this Setting is appied to all Styles who don't define a strength
-# good values are 0.4 to 0.6
+# Generation strength controls how much the AI modifies the input image
+# 0.0 = no changes, 1.0 = complete transformation
+# Recommended range: 0.4-0.6 (Default: 0.5)
 default_strength=0.5
 
-# the maximum width or height of the output image
-# change the value depending on teh model and available RAM on the GPU
+# Maximum dimension (width or height) for output images
+# Adjust based on available GPU memory (Default: 1024)
 max_size=1024
 
 [UI]
-# visual style of the application.
-# you can define your own style or selected e.g. from here: https://huggingface.co/spaces/gradio/theme-gallery
+# User Interface Configuration
+
+# Visual theme for the application
+# Browse themes: https://huggingface.co/spaces/gradio/theme-gallery
+# (Default: empty - uses Gradio default theme)
 theme=allenai/gradio-theme
 
-# true=enables the slider to modify strengths in the UI
+# Enable strength adjustment slider in UI (Default: false)
 show_strength=false
 
-# true=enables the slider to modify steps in the UI
+# Enable steps adjustment slider in UI (Default: false)
 show_steps=false
 
 [Styles]
-# The number of styles listed below.
+# Style Configuration
+
+# Number of styles defined below (Default: 0)
 style_count=2
 
-# The negative prompt applied to all styles.
+# Negative prompts applied to all styles for safety and quality
+# (Default: empty)
 general_negative_prompt=realistic photo, wrong fingers, ugly, sad, brutal, violence
+
+# Style definitions
+# Each style can have:
+# - name: Display name
+# - prompt: The positive prompt for generation
+# - strength: Optional override for default_strength
+# - negative_prompt: Additional style-specific negative prompts
 
 style_1_name=Test 1
 style_1_prompt=disney-style painting
@@ -227,14 +250,14 @@ The dashboard provides valuable insights to:
 - Track usage patterns
 
 ## 🌟 Feature: Token based generation
-If you have activated token based generation,  then the users can't build unlimited amount of images based on one source file. For generation they need token (on for each) and such toklen will be received for uploaded images.
-That prevents the system for misuse. In our public beta we have seen that users try to generate inappropiate content by tweaking the prompt. It wasn't succesful as our used model don't support that and the style description and negative prompt prevent it in addition. But finally users wasted computing times and with that slowed down the system for others. That was the main reason why we implemented token. It's turned off by default, but feel free to switch it on.
+If you have activated token based generation, then the users can't build unlimited amount of images based on one source file. For generation they need token (one for each) and such token will be received for uploaded images.
+That prevents the system for misuse. In our public beta we have seen that users try to generate inappropriate content by tweaking the prompt. It wasn't successful as our used model doesn't support that and the style description and negative prompt prevent it in addition. But finally users wasted computing times and with that slowed down the system for others. That was the main reason why we implemented token. It's turned off by default, but feel free to switch it on.
 
 ## 🛠️ Development and Deployment
 For development and deployment purposes, you can create a "local.config" file (copy of app.config) which allows you to use dedicated configuration, e.g. local model folder without affecting the release/standard configuration. 
-This is useful for updating the app including app.config without affecting you local settings.
+This is useful for updating the app including app.config without affecting your local settings.
 
-To make VSCode aware of teh packes and path, you need to execute the following line within your python environment
+To make VSCode aware of the packages and path, you need to execute the following line within your python environment
 
 ```bash
 pip install -e .
@@ -260,8 +283,5 @@ This project is licensed under the GPL3 License - see the [LICENSE.md] file for 
 We welcome contributions! Please read our Contributing Guidelines for details on the process for submitting pull requests.
 
 ## 🌟 Outlook (Features which could be useful)
-* Preview on generation Process
-* Better Image description generation
 * Better Memory Handling for higher resolutions
 * SDXL and FLUX Support
-* More Styles or Groups of Styles

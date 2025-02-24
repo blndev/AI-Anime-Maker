@@ -67,7 +67,7 @@
 - Rendering could be limited by enabling render token
 
 ### Improvements
-- Error Handling and robustnes
+- Error Handling and robustness
 
 ### Bug Fixes
 - Strength of Styles is not used, System always use default strength

@@ -52,7 +52,7 @@ def setup_logging():
     log_file = os.path.join(log_directory, "app.log")
     file_handler = TimedRotatingFileHandler(log_file, when="midnight", interval=1, backupCount=7, encoding="utf-8")
     file_handler.setFormatter(formatter)
-    file_handler.suffix = "%Y-%m-%d"  # Dateiname mit Datum
+    file_handler.suffix = "%Y-%m-%d"  # filename with date
     root_logger.addHandler(file_handler)
 
     return root_logger

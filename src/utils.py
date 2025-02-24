@@ -79,7 +79,7 @@ def save_image_as_file(image: Image.Image, dir: str):
 def save_image_with_timestamp(image, folder_path, ignore_errors=False, reference=""):
     """
     saves a image in a given folder and returns the used path
-    refernce: could be the SHA1 from source image to make a combined filename
+    reference: could be the SHA1 from source image to make a combined filename
     """
     try:
         # Create the folder if it does not exist
