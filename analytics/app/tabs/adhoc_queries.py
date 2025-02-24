@@ -89,6 +89,7 @@ class AdHocQueriesTab:
                 html.Div([
                     html.P(f"Input ID: {image_data['ID']}"),
                     html.P(f"SHA1: {image_data['SHA1']}"),
+                    html.P(f"Session: {image_data['Session']}"),
                     html.P(f"Token received: {image_data['Token']}"),
                     html.P(f"Face Detected: {image_data['Face']}"),
                     html.P(f"Gender: {image_data['GenderText']}"),
@@ -113,6 +114,10 @@ class AdHocQueriesTab:
                         html.Th("Preview", style=TABLE_HEADER_STYLE),
                         html.Th("Style", style=TABLE_HEADER_STYLE),
                         html.Th("Prompt", style=TABLE_HEADER_STYLE),
+                        html.Th("Session", style=TABLE_HEADER_STYLE),
+                        html.Th("Country", style=TABLE_HEADER_STYLE),
+                        html.Th("Language", style=TABLE_HEADER_STYLE),
+                        html.Th("Browser", style=TABLE_HEADER_STYLE),
                         html.Th("Generation Time", style=TABLE_HEADER_STYLE)
                     ])
                 ),
@@ -129,7 +134,11 @@ class AdHocQueriesTab:
                         ),
                         html.Td(row['Style'], style=TABLE_CELL_STYLE),
                         html.Td(row['Prompt'], style=TABLE_CELL_STYLE),
-                        html.Td(pd.to_datetime(row['Timestamp']).strftime('%Y-%m-%d %H:%M:%S'), style=TABLE_CELL_STYLE)
+                        html.Td(row['Session'], style=TABLE_CELL_STYLE),
+                        html.Td(row['Country'], style=TABLE_CELL_STYLE),
+                        html.Td(row['Language'], style=TABLE_CELL_STYLE),
+                        html.Td(row['Browser'], style=TABLE_CELL_STYLE),
+                       html.Td(pd.to_datetime(row['Timestamp']).strftime('%Y-%m-%d %H:%M:%S'), style=TABLE_CELL_STYLE)
                     ]) for _, row in generations_df.iterrows()
                 ])
             ], style=TABLE_STYLE)
@@ -209,7 +218,7 @@ class AdHocQueriesTab:
                 return "Please enter an Input ID or SHA1 hash.", None
             
             # Search for the image
-            logger.info(f"Searching for image with ID/SHA1: {search_value}")
+            logger.info(f"Searching for image with ID/SHA1/Session: {search_value}")
             image_data, generations_df = self.data_manager.get_related_images(search_value)
             
             if image_data is None:
