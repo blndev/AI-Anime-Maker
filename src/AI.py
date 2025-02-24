@@ -35,9 +35,9 @@ def _load_captioner_model():
     if (IMAGE_TO_TEXT_PIPELINE != None):
         return IMAGE_TO_TEXT_PIPELINE
 
-    # this will load the model. if it is not availabole it will be downloaded from huggingface
-    captioner = pipeline("image-to-text", model="Salesforce/blip-image-captioning-base")
-    return captioner
+    # this will load the model. if it is not available it will be downloaded from huggingface
+    IMAGE_TO_TEXT_PIPELINE = pipeline("image-to-text", model="Salesforce/blip-image-captioning-base")
+    return IMAGE_TO_TEXT_PIPELINE
 
 def _cleanup_captioner():
     global IMAGE_TO_TEXT_PIPELINE
@@ -51,7 +51,7 @@ def _cleanup_captioner():
         torch.cuda.empty_cache()
         #TODO: there must be more to unload
     except Exception as e:
-        logger.error("Erro while unload captioner")
+        logger.error("Error while unloading captioner")
 
 def describe_image(image):
     """describe an image for better inpaint results."""
