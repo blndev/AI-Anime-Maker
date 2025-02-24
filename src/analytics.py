@@ -177,7 +177,7 @@ def save_session(session: str, ip: str, user_agent: str, languages: str = None) 
         data = {
             'Session': session,
             'OS': ua.os.family,
-            'Browser': ua.browser.family,
+            'Browser': ua.browser.family + (" (bot)" if ua.is_bot else ""),
             'IsMobile': 1 if ua.is_mobile or ua.is_tablet else 0,
             'Language': languages,
             'UserAgent': user_agent,
@@ -185,7 +185,7 @@ def save_session(session: str, ip: str, user_agent: str, languages: str = None) 
             'Country': country,
             'City': city
         }
-
+        
         query = """
         INSERT OR IGNORE INTO tblSessions 
         (Timestamp, Session, OS, Browser, IsMobile, Language, UserAgent, Continent, Country, City)
