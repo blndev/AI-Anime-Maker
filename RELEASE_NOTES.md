@@ -1,8 +1,12 @@
 # Release Notes
 
-## Version 1.2 - 2025-02-20
+## Version 1.2 - 2025-02-27
 
 ### New Features
+- Added feedback/report functionality for inappropriate generations:
+  - Users can report problematic content directly from the UI
+  - Helps maintain content quality and community standards
+  - Supports continuous improvement of safety measures
 - New Analytics Dashboard (analytics_dashboard.py):
   - Real-time usage statistics and trends
   - Geographic distribution visualization with interactive world map
