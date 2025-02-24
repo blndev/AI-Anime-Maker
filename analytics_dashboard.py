@@ -14,6 +14,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger("analytics.main")
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
 def main():
     """Start the analytics dashboard server."""
