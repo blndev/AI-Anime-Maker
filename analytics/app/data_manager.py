@@ -251,6 +251,7 @@ class DataManager:
             SELECT 
                 i.SHA1,
                 COUNT(*) as UploadCount,
+                MIN(i.Session) as Session,
                 MIN(i.ID) as ID,
                 MIN(i.CachePath) as CachePath,
                 MAX(i.Token) as Token,
@@ -306,6 +307,7 @@ class DataManager:
         WITH ImageGenerations AS (
             SELECT 
                 i.SHA1,
+                MIN(i.Session) as Session,
                 COUNT(DISTINCT g.Id) as GenerationCount,
                 MIN(i.ID) as ID,
                 MIN(i.CachePath) as CachePath,
@@ -368,6 +370,7 @@ class DataManager:
         generations_query = """
         SELECT 
             g.Id as GenerationId,
+            g.Session as Session,
             g.Style,
             g.Userprompt as Prompt,
             g.Output as GeneratedImagePath,
