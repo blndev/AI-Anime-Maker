@@ -372,6 +372,28 @@ class DataManager:
         LIMIT 1
         """
 
+        # Query to get other images from the same session
+        session_images_query = """
+        SELECT 
+            i.ID,
+            i.SHA1,
+            i.CachePath,
+            i.Token,
+            i.Face,
+            i.Gender,
+            i.MinAge,
+            i.MaxAge,
+            i.Timestamp
+        FROM tblInput i
+        WHERE i.Session = (
+            SELECT Session FROM tblInput WHERE ID = ? OR SHA1 = ? LIMIT 1
+        )
+        AND i.SHA1 != (
+            SELECT SHA1 FROM tblInput WHERE ID = ? OR SHA1 = ? LIMIT 1
+        )
+        ORDER BY i.Timestamp
+        """
+
         # Query to get all generations using this input
         generations_query = """
         SELECT distinct
@@ -408,17 +430,26 @@ class DataManager:
                 image_df = pd.read_sql_query(image_query, conn, params=[id_value, search_value])
                 if len(image_df) == 0:
                     logger.info("No image found with provided ID/SHA1")
-                    return None, pd.DataFrame()
+                    return None, pd.DataFrame(), pd.DataFrame()
+        
                 self._enhance_gender_age_face_data(image_df)
                 # Get generations using this image's SHA1
                 logger.debug(f"Querying generations for SHA1: {image_df.iloc[0]['SHA1']}")
                 generations_df = pd.read_sql_query(generations_query, conn, params=[image_df.iloc[0]['SHA1']])
-                self._enhance_country_and_countrycode_by_language(generations_df)
-                logger.info(f"Found image with {len(generations_df)} generations")
-                return image_df.iloc[0], generations_df
+                if len(generations_df)>0:
+                    self._enhance_country_and_countrycode_by_language(generations_df)
+                logger.info(f"Found {len(generations_df)} generations")
+                # Get other images from the same session
+                logger.debug("Querying other images from the same session")
+                session_images_df = pd.read_sql_query(session_images_query, conn, 
+                    params=[id_value, search_value, id_value, search_value])
+                if len(session_images_df)>0:
+                    self._enhance_gender_age_face_data(session_images_df)
+                
+                return image_df.iloc[0], generations_df, session_images_df
         except Exception as e:
-            logger.error(f"Database error in get_image_by_id_or_sha1: {str(e)}")
-            return None, pd.DataFrame()
+            logger.error(f"Database error in get_related_images: {str(e)}")
+            return None, pd.DataFrame(), pd.DataFrame()
 
     def get_image_by_id_or_sha1(self, search_value):
         """Get image details and its generations by input ID or SHA1."""
@@ -648,7 +679,7 @@ class DataManager:
             if code:
                 return code
             else:
-                # fallback, use the first two chars of teh language
+                # fallback, use the first two chars of the language
                 code = language_country_map.get(language[:2])
                 if code:
                     return code
