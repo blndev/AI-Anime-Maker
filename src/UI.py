@@ -33,28 +33,25 @@ else:
 style_details = {}
 
 
-def action_session_initialized(request: gr.Request, session_state: SessionState) -> SessionState:
+def action_session_initialized(request: gr.Request, session_state: SessionState):
     """Initialize analytics session when app loads.
     
     Args:
         request (gr.Request): The Gradio request object containing client information
         state_dict (dict): The current application state dictionary
     """
-    if not config.is_analytics_enabled() or not request:
-        return
-
-    try:
-        analytics.save_session(
-            session=session_state.session, 
-            ip=request.client.host,
-            user_agent=request.headers["user-agent"], 
-            languages=request.headers["accept-language"])
-        logger.info("Session - %s - initialized with %i token for: %s",session_state.session, session_state.token, request.client.host)
-    except Exception as e:
-        logger.error("Error initializing analytics session: %s", str(e))
-        logger.debug("Exception details:", exc_info=True)
-    
-    return session_state
+    logger.info("Session - %s - initialized with %i token for: %s",session_state.session, session_state.token, request.client.host)
+    if config.is_analytics_enabled() and request:
+        try:
+            analytics.save_session(
+                session=session_state.session, 
+                ip=request.client.host,
+                user_agent=request.headers["user-agent"], 
+                languages=request.headers["accept-language"])
+            logger.debug("Session - %s - saved for analytics",session_state.session)
+        except Exception as e:
+            logger.error("Error initializing analytics session: %s", str(e))
+            logger.debug("Exception details:", exc_info=True)
 
 def action_update_all_local_models():
     """updates the list of available models in the ui"""
@@ -87,7 +84,7 @@ def action_handle_input_file(request: gr.Request, image: PIL.Image, gradio_state
     except Exception as e:
         logger.error("Error creating image description: %s", str(e))
         #logger.debug("Exception details:", exc_info=True)
-        #gr.Warning("Could not create a proper description, please describe your image shortly")
+        gr.Warning("Could not create a proper image description. Please describe your image shortly for better results.")
 
     # variables used for analytics if enabled
     face_detected = False
@@ -97,88 +94,70 @@ def action_handle_input_file(request: gr.Request, image: PIL.Image, gradio_state
     new_token = 0 
 
     #analyzation of images will be done always
-    if config.is_analytics_enabled():
-        #check that the image was not already used in this session
-        add_new_token_for_image = True
-        if image_sha1 in session_image_hashes.keys():
-            # check if the image is locked
-            last_upload = session_image_hashes[image_sha1]
-            dt = last_upload["dt"]
-            if dt>datetime.now():
-                gr.Warning(
-                    f"""This image signature was already used to gain token.
-                    New token for it will be provided after {dt.strftime("%d.%m.%Y - %H:%M")}""")
-                add_new_token_for_image = False
-                gender=last_upload["gender"]
-                min_age=last_upload["min_age"]
-                max_age=last_upload["max_age"]
-                face_detected=last_upload["face_detected"]
-            else:
-                #remove current entry as it is outdated
-                del session_image_hashes[image_sha1]
-        
-        #cleanup the whole list of locked images to not waste memory
+    #check that the image was not already used in this session
+    analyze_input_image_details = True
+    if config.is_feature_generation_with_token_enabled():
+        min_age, max_age, gender, face_detected, analyze_input_image_details = check_same_upload_in_block_time(image_sha1)
+
+    if analyze_input_image_details:
+        detected_faces = []
         try:
-            keys_to_remove = [key for key, dt in session_image_hashes.items() if dt < datetime.now()]
-            for key in keys_to_remove:
-                del session_image_hashes[key]
-            if len(keys_to_remove)>0:
-                logger.info(f"Removed token lock for {len(keys_to_remove)} image(s)")
-        except:
-            pass
+            detected_faces = analyze_faces(image)
+        except Exception as e:
+            logger.error("Error while analyzing face: %s", str(e))
+            logger.debug("Exception details:", exc_info=True)
+        
+        new_token = config.get_token_for_new_image()
+        if len(detected_faces)>0:
+            face_detected = True
+            #we have minimum one face
+            logger.debug("Bonus: face")
+            face_bonus = config.get_token_bonus_for_face()
+            if face_bonus>0: 
+                new_token += face_bonus
+                gr.Info(f"{face_bonus} Bonus token added for an Image with a Face!")
 
-        if add_new_token_for_image:
-            detected_faces = []
-            try:
-                detected_faces = analyze_faces(image)
-            except Exception as e:
-                logger.error("Error while analyzing face: %s", str(e))
-                logger.debug("Exception details:", exc_info=True)
-            
-            new_token = config.get_token_for_new_image()
-            if len(detected_faces)>0:
-                face_detected = True
-                #we have minimum one face
-                logger.debug("Bonus: face")
-                face_bonus = config.get_token_bonus_for_face()
-                if face_bonus>0: 
-                    new_token += face_bonus
-                    gr.Info(f"{face_bonus} Bonus token added for an Image with a Face!")
+            # we have that bonus in a variable as we want to give it only once
+            token_for_cuteness = config.get_token_bonus_for_cuteness()
+            token_for_smiling = config.get_token_bonus_for_smile() 
+            gender = 0 #{0: "unkown", 1: "male", 2: "female", 3: "female + male"}
+            for face in detected_faces:
+                #just save the jungest and oldest if we have multiple faces
+                min_age = face["minAge"] if face["minAge"]<min_age or min_age == 0 else min_age
+                max_age = face["maxAge"] if face["maxAge"]>max_age or max_age == 0 else max_age
+                if face["isFemale"]: 
+                    gender |= 2
+                    # until we can recognize smiles we give bonus for other properties
+                    if token_for_smiling>0:
+                        logger.debug("Bonus: smiling")
+                        new_token+=token_for_smiling
+                        gr.Info(f"{token_for_smiling} special Bonus token added!")
+                        token_for_smiling = 0 #apply only once per image
+                elif face["isMale"]:
+                    gender |= 1
 
-                # we have that bonus in a variable as we want to give it only once
-                token_for_cuteness = config.get_token_bonus_for_cuteness()
-                token_for_smiling = config.get_token_bonus_for_smile() 
-                gender = 0 #{0: "unkown", 1: "male", 2: "female", 3: "female + male"}
-                for face in detected_faces:
-                    #just save the jungest and oldest if we have multiple faces
-                    min_age = face["minAge"] if face["minAge"]<min_age or min_age == 0 else min_age
-                    max_age = face["maxAge"] if face["maxAge"]>max_age or max_age == 0 else max_age
-                    if face["isFemale"]: 
-                        gender |= 2
-                        # until we can recognize smiles we give bonus for other properties
-                        if token_for_smiling>0:
-                            logger.debug("Bonus: smiling")
-                            new_token+=token_for_smiling
-                            gr.Info(f"{token_for_smiling} special Bonus token added!")
-                            token_for_smiling = 0 #apply only once per image
-                    elif face["isMale"]:
-                        gender |= 1
+                if token_for_cuteness>0 and (face["maxAge"]<20 or face["minAge"]>60):
+                    logger.debug("Bonus: cuteness")
+                    new_token+=token_for_cuteness
+                    gr.Info(f"{token_for_cuteness} special Bonus token added!")
+                    token_for_cuteness = 0 #allow bonus only once per upload
 
-                    if token_for_cuteness>0 and (face["maxAge"]<20 or face["minAge"]>60):
-                        logger.debug("Bonus: cuteness")
-                        new_token+=token_for_cuteness
-                        gr.Info(f"{token_for_cuteness} special Bonus token added!")
-                        token_for_cuteness = 0 #allow bonus only once per upload
+        # save the hash to prevent reuse
+        session_image_hashes[image_sha1]={
+            "dt": datetime.now()+timedelta(minutes=config.get_token_time_lock_for_new_image()),
+            "gender": gender,
+            "min_age": min_age,
+            "max_age": max_age,
+            "face_detected": face_detected
+        }
 
-            # save the hash to prevent reuse
-            session_image_hashes[image_sha1]={
-                "dt": datetime.now()+timedelta(minutes=config.get_token_time_lock_for_new_image()),
-                "gender": gender,
-                "min_age": min_age,
-                "max_age": max_age,
-                "face_detected": face_detected
-            }
+    if config.is_feature_generation_with_token_enabled() and new_token>0:
+        gr.Info(f"Total new Token: {new_token}")
 
+    logger.info(f"UPLOAD ID {image_sha1} received {new_token} token total.")
+    session_state.token += new_token
+
+    if config.is_analytics_enabled():
         analytics.save_input_image_details(
             session=session_state.session, 
             sha1=image_sha1, 
@@ -188,16 +167,46 @@ def action_handle_input_file(request: gr.Request, image: PIL.Image, gradio_state
             min_age=min_age,
             max_age=max_age,
             gender=gender
-            )
-
-    if config.is_feature_generation_with_token_enabled():
-        logger.info(f"UPLOAD ID {image_sha1} received {new_token} token total.")
-        gr.Info(f"Total new Token: {new_token}")
-        session_state.token += new_token
-    
+            )    
 
     start_enabled = True if not config.is_feature_generation_with_token_enabled() else bool(session_state.token>0)
     return wrap_handle_input_response(session_state, start_enabled, image_description)
+
+def check_same_upload_in_block_time(image_sha1):
+    """check if the same file is uploaded from same user again to gain token"""
+    analyzation_required = True
+    face_detected = False
+    min_age = 0
+    max_age = 0
+    gender = 0
+    if image_sha1 in session_image_hashes.keys():
+        # check if the image is locked
+        last_upload = session_image_hashes[image_sha1]
+        dt = last_upload["dt"]
+        if dt>datetime.now():
+            analyzation_required = False
+            if config.is_feature_generation_with_token_enabled():
+                gr.Warning(
+                    f"""This image signature was already used to gain token.
+                    New token for it will be provided after {dt.strftime("%d.%m.%Y - %H:%M")}""")
+            gender=last_upload["gender"]
+            min_age=last_upload["min_age"]
+            max_age=last_upload["max_age"]
+            face_detected=last_upload["face_detected"]
+        else:
+            #remove current entry as it is outdated
+            del session_image_hashes[image_sha1]
+
+    #cleanup the whole list of locked images to not waste memory
+    try:
+        keys_to_remove = [key for key, dt in session_image_hashes.items() if dt < datetime.now()]
+        for key in keys_to_remove:
+            del session_image_hashes[key]
+        if len(keys_to_remove)>0:
+            logger.info(f"Removed token lock for {len(keys_to_remove)} image(s)")
+    except:
+        pass
+    return min_age, max_age, gender, face_detected, analyzation_required
 
 def action_describe_image(image):
     """describe an image for better inpaint results."""
@@ -442,7 +451,7 @@ As all communication is anonymous through. We can't send any feedback to you.
             session_state = SessionState.from_gradio_state(gradio_state)
 
             # Initialize session when app loads
-            session_state = action_session_initialized(request=request, session_state=session_state)
+            action_session_initialized(request=request, session_state=session_state)
             
             if config.is_feature_generation_with_token_enabled(): 
                 logger.debug("Restoring token from local storage: %s", session_state.token)
