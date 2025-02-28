@@ -1,6 +1,6 @@
 # Release Notes
 
-## Version 1.2 - 2025-02-27
+## Version 1.2 - 2025-02-28
 
 ### New Features
 - Added feedback/report functionality for inappropriate generations:
@@ -10,16 +10,14 @@
 - New Analytics Dashboard (analytics_dashboard.py):
   - Real-time usage statistics and trends
   - Geographic distribution visualization with interactive world map
-  - Image upload analysis with timeline and patterns
   - Generation details with style usage statistics
   - Advanced filtering system across all analytics components
-  - Full-size image preview capability
-  - Search functionality by Input ID or SHA1 hash
 - Improved startup script (run.sh):
   - Added interactive menu for component selection
   - Option to start AI Anime Maker only
   - Option to start Analytics Dashboard only
   - Option to run both components simultaneously
+- Persistent rotating log files for errors and warnings
   
 ### Improvements
 - More robust version management:
