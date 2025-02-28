@@ -115,6 +115,7 @@ def _load_img2img_model(model=config.get_model(), use_cached_model=True):
     except Exception as e:
         logger.error("Pipeline could not be created. Error in load_model: %s", str(e))
         logger.debug("Exception details:", exc_info=True)
+        _cleanup_img2img_pipeline()
         raise Exception(message="Error while loading the model.\nSee logfile for details.")
 
 def _cleanup_img2img_pipeline():
@@ -185,5 +186,6 @@ def generate_image(image: Image, prompt: str, negative_prompt: str = "", strengt
     except RuntimeError as e:
         logger.error("RuntimeError: %s", str(e))
         logger.debug("Exception details:", exc_info=True)
+        _cleanup_img2img_pipeline()
         raise Exception(message="Error while creating the image. More details in log.")
         #todo: add error count, on 3 errors unload and reload the model
