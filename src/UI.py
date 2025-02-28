@@ -424,8 +424,8 @@ def create_gradio_interface():
 
 You can report any inappropriate image generation.
 
-**Note:** If you click "report," we will save the output and settings for analysis.
-As all communication is anonymous through Hugging Face. We can't send any feedback to you.
+**Note:** If you click "report," we will save the settings for analysis.
+As all communication is anonymous through. We can't send any feedback to you.
                                 """)
                     flag_image_text = gr.Text(label="Feedback", placeholder="What is wrong?")
                     flag_image_button = gr.Button("Report by clicking here", interactive=False)
