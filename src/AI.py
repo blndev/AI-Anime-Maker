@@ -110,6 +110,7 @@ def _load_img2img_model(model=config.get_model(), use_cached_model=True):
         if device == "cuda":
             pipeline.enable_xformers_memory_efficient_attention()
         logger.debug("Pipeline created")
+        IMAGE_TO_IMAGE_PIPELINE = pipeline
         return pipeline
     except Exception as e:
         logger.error("Pipeline could not be created. Error in load_model: %s", str(e))
