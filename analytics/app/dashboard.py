@@ -181,7 +181,7 @@ class Dashboard:
                     )
                 ),
 
-                # Tab 4: Generation Details
+                # Tab 5: Ad Hoc Queries
                 dcc.Tab(
                     label='AdHoc',
                     style=TAB_STYLE,

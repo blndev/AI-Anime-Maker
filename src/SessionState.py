@@ -18,7 +18,7 @@ class SessionState:
     def _ensure_str(self, value) -> str:
         """Validates that types assigned to session are always strings."""
         if not isinstance(value, str):
-            raise TypeError(f"session must be of Type str sein, but {type(value).__name__} was assigned.")
+            raise TypeError(f"session must be of type str, but {type(value).__name__} was assigned.")
         return value
 
     def __init__(self, token: int=0, session: str=None):
@@ -70,4 +70,3 @@ class SessionState:
             return cls.from_dict(d)
         except Exception:
             raise Exception(f"SessionState can't be converted from given value {data}")
-

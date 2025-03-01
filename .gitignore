@@ -3,20 +3,21 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.safetensors
+.local/
+.gradio
 /models/**
 /output/**
 /cache/**
+/logs/**
+MagicMock/
+unittests/tmp/**
 dev.config
-.local/
+local.config
+**.db**
 # C extensions
 *.so
-analytics.db
 *.mmdb
 *.off
-unittests/tmp/**
-.gradio
-local.config
-MagicMock/
 # Distribution / packaging
 .Python
 build/

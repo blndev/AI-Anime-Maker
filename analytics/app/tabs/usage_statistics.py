@@ -145,6 +145,61 @@ class UsageStatisticsTab:
             logger.error(f"Error creating mobile pie chart: {str(e)}")
             raise
 
+    def create_country_generation_rates(self, df):
+        """Create time series chart showing sessions without generations by country (top 10)."""
+        logger.debug("Creating country sessions without generations chart")
+        try:
+            fig = go.Figure()
+            
+            if len(df) == 0:
+                fig.update_layout(
+                    title="Sessions Without Generations by Country (No data available)",
+                    xaxis_title="Date",
+                    yaxis_title="Number of Sessions Without Generations",
+                    template=PLOTLY_TEMPLATE,
+                    **LAYOUT_THEME,
+                    showlegend=False
+                )
+                return fig
+            
+            # Convert timestamp to date
+            df['Date'] = pd.to_datetime(df['Timestamp']).dt.date
+            
+            # Group by date and country, count sessions without generations
+            country_metrics = df.groupby(['Date', 'Country']).agg({
+                'HasStartedGeneration': lambda x: sum(x == 0)  # Count sessions where HasStartedGeneration is 0
+            }).reset_index()
+            
+            # Rename column for clarity
+            country_metrics.rename(columns={'HasStartedGeneration': 'SessionsWithoutGen'}, inplace=True)
+            
+            # Get top 10 countries by total sessions without generations
+            top_countries = df[df['HasStartedGeneration'] == 0].groupby('Country').size().nlargest(10).index
+            
+            # Create a line for each top country
+            for country in top_countries:
+                country_data = country_metrics[country_metrics['Country'] == country]
+                if not country_data.empty:
+                    fig.add_trace(go.Scatter(
+                        x=country_data['Date'],
+                        y=country_data['SessionsWithoutGen'],
+                        name=country,
+                        mode='lines+markers',
+                    ))
+            
+            fig.update_layout(
+                title="Sessions Without Generations by Country (Top 10)",
+                xaxis_title="Date",
+                yaxis_title="Number of Sessions Without Generations",
+                template=PLOTLY_TEMPLATE,
+                **LAYOUT_THEME
+            )
+            
+            return fig
+        except Exception as e:
+            logger.error(f"Error creating country generation rates chart: {str(e)}")
+            raise
+
     def create_generation_status_chart(self, df):
         """Create pie chart showing ratio of users who started/didn't start generations."""
         logger.debug("Creating generation status pie chart")
@@ -322,6 +377,11 @@ class UsageStatisticsTab:
                         dcc.Graph(id='usage_generations', figure=self.create_generation_status_chart(initial_df))
                     ], style={'width': '50%', 'display': 'inline-block'})
                 ])
+            ]),
+
+            # Country Generation Rates
+            html.Div([
+                dcc.Graph(id='usage_country_rates', figure=self.create_country_generation_rates(initial_df))
             ])
         ]
     
@@ -334,7 +394,8 @@ class UsageStatisticsTab:
                 Output('usage_os', 'figure'),
                 Output('usage_browser', 'figure'),
                 Output('usage_mobile', 'figure'),
-                Output('usage_generations', 'figure')
+                Output('usage_generations', 'figure'),
+                Output('usage_country_rates', 'figure')
             ],
             [
                 Input('active-filters-store', 'data'),
@@ -360,7 +421,8 @@ class UsageStatisticsTab:
                     self.create_os_chart(filtered_df, filters_data.get('os')),
                     self.create_browser_chart(filtered_df, filters_data.get('browser')),
                     self.create_mobile_pie(filtered_df),
-                    self.create_generation_status_chart(filtered_df)
+                    self.create_generation_status_chart(filtered_df),
+                    self.create_country_generation_rates(filtered_df)
                 ]
             except Exception as e:
                 logger.error(f"Error updating usage charts: {str(e)}")

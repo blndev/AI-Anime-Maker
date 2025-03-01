@@ -89,6 +89,7 @@ class AdHocQueriesTab:
                 html.Div([
                     html.P(f"Input ID: {image_data['ID']}"),
                     html.P(f"SHA1: {image_data['SHA1']}"),
+                    html.P(f"Session: {image_data['Session']}"),
                     html.P(f"Token received: {image_data['Token']}"),
                     html.P(f"Face Detected: {image_data['Face']}"),
                     html.P(f"Gender: {image_data['GenderText']}"),
@@ -98,6 +99,47 @@ class AdHocQueriesTab:
                     #TODO: sum uploads, sum token received,
                 ])
             ], style={'display': 'flex', 'alignItems': 'start'})
+        ])
+
+    def create_session_images_table(self, session_images_df):
+        """Create a table showing other images from the same session."""
+        if len(session_images_df) == 0:
+            return html.Div("No other images found in this session.")
+        
+        return html.Div([
+            html.H3(f"Other Images in Session ({len(session_images_df)} total)"),
+            html.Table([
+                html.Thead(
+                    html.Tr([
+                        html.Th("Preview", style=TABLE_HEADER_STYLE),
+                        html.Th("ID", style=TABLE_HEADER_STYLE),
+                        html.Th("SHA1", style=TABLE_HEADER_STYLE),
+                        html.Th("Face", style=TABLE_HEADER_STYLE),
+                        html.Th("Gender", style=TABLE_HEADER_STYLE),
+                        html.Th("Age Range", style=TABLE_HEADER_STYLE),
+                        html.Th("Upload Time", style=TABLE_HEADER_STYLE)
+                    ])
+                ),
+                html.Tbody([
+                    html.Tr([
+                        html.Td(
+                            html.Img(
+                                src=os.path.join("/cache", row['CachePath']),
+                                style={'maxWidth': '100px', 'cursor': 'pointer'},
+                                id={'type': 'preview-image', 'index': f"session-{row['ID']}"},
+                                title='Click to enlarge'
+                            ),
+                            style=TABLE_CELL_STYLE
+                        ),
+                        html.Td(row['ID'], style=TABLE_CELL_STYLE),
+                        html.Td(row['SHA1'], style=TABLE_CELL_STYLE),
+                        html.Td(row['Face'], style=TABLE_CELL_STYLE),
+                        html.Td(row['GenderText'], style=TABLE_CELL_STYLE),
+                        html.Td(f"{row['MinAge']} - {row['MaxAge']}", style=TABLE_CELL_STYLE),
+                        html.Td(pd.to_datetime(row['Timestamp']).strftime('%Y-%m-%d %H:%M:%S'), style=TABLE_CELL_STYLE)
+                    ]) for _, row in session_images_df.iterrows()
+                ])
+            ], style=TABLE_STYLE)
         ])
 
     def create_generations_table(self, generations_df):
@@ -113,6 +155,10 @@ class AdHocQueriesTab:
                         html.Th("Preview", style=TABLE_HEADER_STYLE),
                         html.Th("Style", style=TABLE_HEADER_STYLE),
                         html.Th("Prompt", style=TABLE_HEADER_STYLE),
+                        html.Th("Session", style=TABLE_HEADER_STYLE),
+                        html.Th("Country", style=TABLE_HEADER_STYLE),
+                        html.Th("Language", style=TABLE_HEADER_STYLE),
+                        html.Th("Browser", style=TABLE_HEADER_STYLE),
                         html.Th("Generation Time", style=TABLE_HEADER_STYLE)
                     ])
                 ),
@@ -129,7 +175,11 @@ class AdHocQueriesTab:
                         ),
                         html.Td(row['Style'], style=TABLE_CELL_STYLE),
                         html.Td(row['Prompt'], style=TABLE_CELL_STYLE),
-                        html.Td(pd.to_datetime(row['Timestamp']).strftime('%Y-%m-%d %H:%M:%S'), style=TABLE_CELL_STYLE)
+                        html.Td(row['Session'], style=TABLE_CELL_STYLE),
+                        html.Td(row['Country'], style=TABLE_CELL_STYLE),
+                        html.Td(row['Language'], style=TABLE_CELL_STYLE),
+                        html.Td(row['Browser'], style=TABLE_CELL_STYLE),
+                       html.Td(pd.to_datetime(row['Timestamp']).strftime('%Y-%m-%d %H:%M:%S'), style=TABLE_CELL_STYLE)
                     ]) for _, row in generations_df.iterrows()
                 ])
             ], style=TABLE_STYLE)
@@ -208,16 +258,19 @@ class AdHocQueriesTab:
                 logger.debug("No search value provided")
                 return "Please enter an Input ID or SHA1 hash.", None
             
-            # Search for the image
-            logger.info(f"Searching for image with ID/SHA1: {search_value}")
-            image_data, generations_df = self.data_manager.get_related_images(search_value)
+            # Search for the image and related data
+            logger.info(f"Searching for image with ID/SHA1/Session: {search_value}")
+            image_data, generations_df, session_images_df = self.data_manager.get_related_images(search_value)
             
             if image_data is None:
                 logger.info("No image found with provided ID/SHA1")
                 return "No image found with the provided ID or SHA1.", None
             
-            logger.info(f"Found image with {len(generations_df)} generations")
+            logger.info(f"Found image with {len(generations_df)} generations and {len(session_images_df)} session images")
             return (
-                self.create_image_details(image_data),
+                html.Div([
+                    self.create_image_details(image_data),
+                    self.create_session_images_table(session_images_df)
+                ]),
                 self.create_generations_table(generations_df)
             )

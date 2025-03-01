@@ -77,7 +77,7 @@ class FaceAnalyzer:
         """ return values are a list of dictionaries. if len=0, then no face was detected"""
         retVal = []
         try:
-            # reduce size if it is a big image to precess it faster
+            # reduce size if it is a big image to process it faster
             max_size = config.get_max_size()
             pil_image.thumbnail((max_size, max_size))
             # correct EXIF-Orientation!! very important

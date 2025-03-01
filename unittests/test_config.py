@@ -130,7 +130,7 @@ class TestConfiguration(unittest.TestCase):
         src_config.current_config.read_dict({})
         self.assertIsNotNone(src_config.current_config)
 
-        self.assertEqual(src_config.get_app_title(), "Funny Image Converter")
+        self.assertEqual(src_config.get_app_title(), "Funny Image Generator")
         self.assertEqual(src_config.get_app_disclaimer(), "")
 
         self.assertEqual(src_config.get_user_message(), "")
@@ -143,8 +143,8 @@ class TestConfiguration(unittest.TestCase):
         self.assertEqual(src_config.is_input_cache_enabled(), False)
 
         self.assertEqual(src_config.is_analytics_enabled(), False)
-        self.assertEqual(src_config.get_analytics_db_path(), "./analytics.db")
-        self.assertEqual(src_config.get_analytics_city_db(), "./GeoLite2-City.mmdb")
+        self.assertEqual(src_config.get_analytics_db_path(), "./analytics/analytics.db")
+        self.assertEqual(src_config.get_analytics_city_db(), "./analytics/GeoLite2-City.mmdb")
 
     def test_token_settings(self):
         """Check section general."""
@@ -170,7 +170,7 @@ class TestConfiguration(unittest.TestCase):
 
         section = self.testconfiguration["Token"]
 
-        self.assertEqual(src_config.is_feature_generation_with_token_enabled(), True)
+        self.assertEqual(src_config.is_feature_generation_with_token_enabled(), False)
         self.assertEqual(src_config.get_token_explanation(), "")
         self.assertEqual(src_config.get_token_for_new_image(), 3)
         self.assertEqual(src_config.get_token_time_lock_for_new_image(), 240)
@@ -186,7 +186,7 @@ class TestConfiguration(unittest.TestCase):
 
         self.assertIsNotNone(src_config.current_config)
         section = self.testconfiguration["UI"]
-        self.assertEqual(src_config.UI_show_stength_slider(), section["show_strength"])
+        self.assertEqual(src_config.UI_show_strength_slider(), section["show_strength"])
         self.assertEqual(src_config.UI_show_steps_slider(), section["show_steps"])
         self.assertEqual(src_config.UI_get_gradio_theme(), section["theme"])
 
@@ -196,7 +196,7 @@ class TestConfiguration(unittest.TestCase):
         src_config.current_config.read_dict({})
         self.assertIsNotNone(src_config.current_config)
 
-        self.assertEqual(src_config.UI_show_stength_slider(), False)
+        self.assertEqual(src_config.UI_show_strength_slider(), False)
         self.assertEqual(src_config.UI_show_steps_slider(), False)
         self.assertEqual(src_config.UI_get_gradio_theme(), "")
 

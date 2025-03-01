@@ -140,15 +140,7 @@ class DataManager:
         try:
             # Get base dataset
             df = self._get_session_data(start_date, end_date)
-            # Add country codes using both country and language
-            df['CountryCode'] = df.apply(
-                lambda x: self.get_country_code_from_country(x['Country'], x['Language']),
-                axis=1
-            )
-            #if we have no countty, we can use the determined country code based on the language
-            df.loc[df['Country'] == "n.a.", "Country"] =  df['CountryCode'].apply(
-                lambda cc: countrycodes.get(cc).name if countrycodes.get(cc) else "n.a."    
-            )
+            self._enhance_country_and_countrycode_by_language(df)
             # translate now the ISO-Code to a country
             #df['Country'].apply(lambda country: iso3166.countries_by_alpha3.get(alpha3=country))
         
@@ -251,6 +243,7 @@ class DataManager:
             SELECT 
                 i.SHA1,
                 COUNT(*) as UploadCount,
+                MIN(i.Session) as Session,
                 MIN(i.ID) as ID,
                 MIN(i.CachePath) as CachePath,
                 MAX(i.Token) as Token,
@@ -292,6 +285,19 @@ class DataManager:
         df["AgeSpan"] = df["MinAge"].astype(str) + " - " + df["MaxAge"].astype(str)
         return df
 
+    def _enhance_country_and_countrycode_by_language(self, df):
+        """if country is not set, we generate a country and code via language"""
+        # Add country codes using both country and language
+        df['CountryCode'] = df.apply(
+            lambda x: self.get_country_code_from_country(x['Country'], x['Language']),
+            axis=1
+        )
+        #if we have no countty, we can use the determined country code based on the language
+        df.loc[df['Country'] == "n.a.", "Country"] =  df['CountryCode'].apply(
+            lambda cc: countrycodes.get(cc).name if countrycodes.get(cc) else "n.a."    
+        )
+        return df
+
     def get_top_used_images(self):
         """Get top 10 images used most for generations from current filtered dataset."""
         logger.debug("Fetching top used images")
@@ -306,6 +312,7 @@ class DataManager:
         WITH ImageGenerations AS (
             SELECT 
                 i.SHA1,
+                MIN(i.Session) as Session,
                 COUNT(DISTINCT g.Id) as GenerationCount,
                 MIN(i.ID) as ID,
                 MIN(i.CachePath) as CachePath,
@@ -352,6 +359,7 @@ class DataManager:
         SELECT 
             i.ID,
             i.SHA1,
+            i.Session,
             i.CachePath,
             i.Token,
             i.Face,
@@ -364,16 +372,46 @@ class DataManager:
         LIMIT 1
         """
 
+        # Query to get other images from the same session
+        session_images_query = """
+        SELECT 
+            i.ID,
+            i.SHA1,
+            i.CachePath,
+            i.Token,
+            i.Face,
+            i.Gender,
+            i.MinAge,
+            i.MaxAge,
+            i.Timestamp
+        FROM tblInput i
+        WHERE i.Session = (
+            SELECT Session FROM tblInput WHERE ID = ? OR SHA1 = ? LIMIT 1
+        )
+        AND i.SHA1 != (
+            SELECT SHA1 FROM tblInput WHERE ID = ? OR SHA1 = ? LIMIT 1
+        )
+        ORDER BY i.Timestamp
+        """
+
         # Query to get all generations using this input
         generations_query = """
-        SELECT 
+        SELECT distinct
             g.Id as GenerationId,
-            g.Style,
+            g.Session as Session,
+            g.Input_SHA1,
+            i.CachePath as InputPath,
+            s.Language as Language,
+            s.Browser as Browser,
+            s.Country as Country,
+            g.Style as Style,
             g.Userprompt as Prompt,
             g.Output as GeneratedImagePath,
-            g.Timestamp
-        FROM tblGenerations g
-        WHERE g.Input_SHA1 = ?
+            g.Timestamp as Timestamp
+        FROM tblGenerations g, tblInput i, tblSessions as s
+        WHERE g.Input_SHA1 = ? 
+        and i.SHA1 = g.Input_SHA1 and i.Session=g.Session
+        and s.Session = g.Session
         ORDER BY g.Timestamp DESC
         """
 
@@ -392,17 +430,26 @@ class DataManager:
                 image_df = pd.read_sql_query(image_query, conn, params=[id_value, search_value])
                 if len(image_df) == 0:
                     logger.info("No image found with provided ID/SHA1")
-                    return None, pd.DataFrame()
+                    return None, pd.DataFrame(), pd.DataFrame()
+        
                 self._enhance_gender_age_face_data(image_df)
                 # Get generations using this image's SHA1
                 logger.debug(f"Querying generations for SHA1: {image_df.iloc[0]['SHA1']}")
                 generations_df = pd.read_sql_query(generations_query, conn, params=[image_df.iloc[0]['SHA1']])
+                if len(generations_df)>0:
+                    self._enhance_country_and_countrycode_by_language(generations_df)
+                logger.info(f"Found {len(generations_df)} generations")
+                # Get other images from the same session
+                logger.debug("Querying other images from the same session")
+                session_images_df = pd.read_sql_query(session_images_query, conn, 
+                    params=[id_value, search_value, id_value, search_value])
+                if len(session_images_df)>0:
+                    self._enhance_gender_age_face_data(session_images_df)
                 
-                logger.info(f"Found image with {len(generations_df)} generations")
-                return image_df.iloc[0], generations_df
+                return image_df.iloc[0], generations_df, session_images_df
         except Exception as e:
-            logger.error(f"Database error in get_image_by_id_or_sha1: {str(e)}")
-            return None, pd.DataFrame()
+            logger.error(f"Database error in get_related_images: {str(e)}")
+            return None, pd.DataFrame(), pd.DataFrame()
 
     def get_image_by_id_or_sha1(self, search_value):
         """Get image details and its generations by input ID or SHA1."""
@@ -632,7 +679,7 @@ class DataManager:
             if code:
                 return code
             else:
-                # fallback, use the first two chars of teh language
+                # fallback, use the first two chars of the language
                 code = language_country_map.get(language[:2])
                 if code:
                     return code

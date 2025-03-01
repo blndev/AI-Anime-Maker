@@ -1,4 +1,6 @@
 import logging
+from logging.handlers import TimedRotatingFileHandler
+import os
 import colorlog
 import src.config as config
 
@@ -44,4 +46,13 @@ def setup_logging():
     logging.getLogger('asyncio').setLevel(logging.WARNING)
     logging.getLogger('matplotlib').setLevel(logging.WARNING)
     
+    log_directory = "logs"
+    if not os.path.exists(log_directory):
+        os.makedirs(log_directory)
+    log_file = os.path.join(log_directory, "app.log")
+    file_handler = TimedRotatingFileHandler(log_file, when="midnight", interval=1, backupCount=7, encoding="utf-8")
+    file_handler.setFormatter(formatter)
+    file_handler.suffix = "%Y-%m-%d"  # filename with date
+    root_logger.addHandler(file_handler)
+
     return root_logger

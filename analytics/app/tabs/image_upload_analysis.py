@@ -92,7 +92,7 @@ class ImageUploadAnalysisTab:
                 x=hourly_data['Hour'],
                 y=hourly_data['SessionCount'],
                 name='New Sessions',
-                line=dict(color='#2ECC71', width=2, dash='dot'),
+                line=dict(color='#2ECC71', width=2),
                 hovertemplate="<br>".join([
                     "Time: %{x}",
                     "New Sessions: %{y}",
@@ -127,6 +127,7 @@ class ImageUploadAnalysisTab:
             hovertemplate="<br>".join([
                 "Input ID: %{x}",
                 "Upload Count: %{y}",
+                "Session: %{customdata[6]}",
                 "SHA1: %{customdata[0]}",
                 "Path: %{customdata[1]}",
                 "Token: %{customdata[2]}",
@@ -134,7 +135,7 @@ class ImageUploadAnalysisTab:
                 "Gender: %{customdata[4]}",
                 "Age: %{customdata[5]}"
             ]),
-            customdata=df[['SHA1', 'CachePath', 'Token', 'Face', 'GenderText', 'AgeSpan']].values
+            customdata=df[['SHA1', 'CachePath', 'Token', 'Face', 'GenderText', 'AgeSpan', 'Session']].values
         )
 
     def create_top_uploaded_images_chart(self, df):
@@ -159,7 +160,7 @@ class ImageUploadAnalysisTab:
             x=df['ID'].astype(str).apply(lambda x: f"ID: {x}"),
             y=df['UploadCount'],
             name='Upload Count',
-            marker_color='#4B89DC'
+            marker_color='#4B89DC' # TODO: move color to styles.py
         ))
 
         self._add_image_details_hover(fig, df)
@@ -373,6 +374,10 @@ class ImageUploadAnalysisTab:
                     html.Div([
                         html.Strong("SHA1: "),
                         html.Span(image_data['SHA1'] if pd.notna(image_data['SHA1']) else 'N/A')
+                    ], style={'margin': '5px 0'}),
+                    html.Div([
+                        html.Strong("Session: "),
+                        html.Span(image_data['Session'] if pd.notna(image_data['Session']) else 'N/A')
                     ], style={'margin': '5px 0'}),
                     html.Div([
                         html.Strong("Token: "),

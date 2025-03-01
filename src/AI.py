@@ -35,9 +35,9 @@ def _load_captioner_model():
     if (IMAGE_TO_TEXT_PIPELINE != None):
         return IMAGE_TO_TEXT_PIPELINE
 
-    # this will load the model. if it is not availabole it will be downloaded from huggingface
-    captioner = pipeline("image-to-text", model="Salesforce/blip-image-captioning-base")
-    return captioner
+    # this will load the model. if it is not available it will be downloaded from huggingface
+    IMAGE_TO_TEXT_PIPELINE = pipeline("image-to-text", model="Salesforce/blip-image-captioning-base")
+    return IMAGE_TO_TEXT_PIPELINE
 
 def _cleanup_captioner():
     global IMAGE_TO_TEXT_PIPELINE
@@ -51,7 +51,7 @@ def _cleanup_captioner():
         torch.cuda.empty_cache()
         #TODO: there must be more to unload
     except Exception as e:
-        logger.error("Erro while unload captioner")
+        logger.error("Error while unloading captioner")
 
 def describe_image(image):
     """describe an image for better inpaint results."""
@@ -71,11 +71,6 @@ def describe_image(image):
         logger.error("Error while creating image description.")
         logger.debug("Exception details:", exc_info=True)
         return ""
-
-if not config.DEBUG:
-    from tqdm import tqdm
-    # Patch tqdm to not display progress bars
-    tqdm.__init__ = lambda *args, **kwargs: None
 
 # cache of the image loaded already
 IMAGE_TO_IMAGE_PIPELINE = None
@@ -115,10 +110,12 @@ def _load_img2img_model(model=config.get_model(), use_cached_model=True):
         if device == "cuda":
             pipeline.enable_xformers_memory_efficient_attention()
         logger.debug("Pipeline created")
+        IMAGE_TO_IMAGE_PIPELINE = pipeline
         return pipeline
     except Exception as e:
         logger.error("Pipeline could not be created. Error in load_model: %s", str(e))
         logger.debug("Exception details:", exc_info=True)
+        _cleanup_img2img_pipeline()
         raise Exception(message="Error while loading the model.\nSee logfile for details.")
 
 def _cleanup_img2img_pipeline():
@@ -189,5 +186,6 @@ def generate_image(image: Image, prompt: str, negative_prompt: str = "", strengt
     except RuntimeError as e:
         logger.error("RuntimeError: %s", str(e))
         logger.debug("Exception details:", exc_info=True)
+        _cleanup_img2img_pipeline()
         raise Exception(message="Error while creating the image. More details in log.")
         #todo: add error count, on 3 errors unload and reload the model
