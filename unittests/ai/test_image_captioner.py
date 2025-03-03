@@ -13,15 +13,18 @@ from src.genai import ImageCaptioner
 @unittest.skipIf(os.getenv("SKIP_GPU") is not None, "Skipping GPU tests")
 class Test_DescribeImage(unittest.TestCase):
 
-    def setUp(self):
-        self.captioner = ImageCaptioner()
+    @classmethod
+    def setUpClass(cls):
+        cls.captioner = ImageCaptioner()
 
-    def tearDown(self):
+    @classmethod
+    def tearDownClass(cls):
         """cleanup test environment."""
-        if self.captioner:
-            self.captioner.unload_pipeline()
-            del self.captioner
-
+        print("tear down class")
+        if cls.captioner:
+            cls.captioner.unload_pipeline()
+            del cls.captioner
+# 
     def test_get_description(self):
         img = Image.open("./unittests/testdata/face_female_age20_nosmile.jpg")
         v = self.captioner.describe_image(img)
