@@ -10,9 +10,9 @@ from src.UI import (
 )
 from PIL import Image
 import numpy as np
-import src.config as config
+#import src.config as config
 from hashlib import sha1
-from datetime import datetime, timedelta
+#from datetime import datetime, timedelta
 
 class TestGradioUI(unittest.TestCase):
     def setUp(self):

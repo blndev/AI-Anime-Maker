@@ -1,0 +1,10 @@
+# This requirements file contains all AI related requirements
+# it is splitted that the testing pipelines without dedictated servers
+# have not to install GB of unused dependencies
+# They can't execute real AI Pipleine test as they don't have GPUs and the models
+diffusers       # for stable diffusion general
+transformers    # for image generation
+accelerate      #for low cpu
+torch           # for gpu support and ai operations
+xformers        # memory optimization
+notebook        # for analytics in jupyter notebooks

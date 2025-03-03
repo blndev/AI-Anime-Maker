@@ -2,9 +2,10 @@ import json
 from typing import Optional
 import uuid
 
+
 class SessionState:
     """Object to handle session state information for the user"""
-    
+
     @property
     def session(self) -> str:
         """Getter for 'session'-Attribut."""
@@ -21,7 +22,7 @@ class SessionState:
             raise TypeError(f"session must be of type str, but {type(value).__name__} was assigned.")
         return value
 
-    def __init__(self, token: int=0, session: str=None):
+    def __init__(self, token: int = 0, session: str = None):
         """State object for storing application data in browser."""
         self.token: int = token        
         self.session: str = str(uuid.uuid4()) if session==None else session
@@ -29,12 +30,11 @@ class SessionState:
     def __str__(self) -> str:
         """String representation for logging."""
         # gradio is using the (str) function to save the state instead of the repr
-        return repr(self) # f"SessionState(token={self.token}, session={self.session})"
+        return repr(self)  # f"SessionState(token={self.token}, session={self.session})"
 
     def __repr__(self) -> str:
         """Return a string representation of the SessionState."""
         return json.dumps(self.to_dict())
-        #return f"SessionState(token={self.token}, session='{self.session}')"
 
     @classmethod
     def to_gradio_state(self) -> str:
@@ -66,7 +66,7 @@ class SessionState:
         if not isinstance(data, str):
             data = repr(data)
         try:
-            d = json.loads(data)    
+            d = json.loads(data)
             return cls.from_dict(d)
         except Exception:
             raise Exception(f"SessionState can't be converted from given value {data}")

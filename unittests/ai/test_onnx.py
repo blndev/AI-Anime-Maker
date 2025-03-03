@@ -7,7 +7,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import src.config as config
 if not config.SKIP_ONNX:
-    import src.onnx_analyzer as src_onnx
+    import src.detectors.FaceAnalyzer as src_onnx
 
 @unittest.skipIf(config.SKIP_ONNX, "Skipping ONNX Model tests")
 class Test_ONNX(unittest.TestCase):

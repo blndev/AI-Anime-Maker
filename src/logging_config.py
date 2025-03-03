@@ -35,6 +35,7 @@ def setup_logging():
     root_logger.addHandler(handler)
 
     # Set the log level based on DEBUG setting
+    # TODO read from config
     root_logger.setLevel(logging.DEBUG if config.DEBUG else logging.INFO)
 
     # Reduce noise from third-party libraries

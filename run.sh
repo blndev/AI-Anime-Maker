@@ -58,6 +58,7 @@ source .venv/bin/activate
 echo "Upgrading Python requirements..."
 pip install --quiet --upgrade pip
 pip install --quiet --require-virtualenv --requirement requirements.txt
+pip install --quiet --require-virtualenv --requirement requirements-ai.txt
 
 # Function to start the main app
 start_main_app() {

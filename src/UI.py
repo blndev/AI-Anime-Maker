@@ -7,9 +7,9 @@ from datetime import datetime, timedelta
 import logging
 
 import src.config as config
-import src.utils as utils
+import src.utils.fileIO as utils
 import src.analytics as analytics
-import src.AI as AI
+import src.genai.AI as AI
 from src.SessionState import SessionState
 
 # Set up module logger
@@ -21,7 +21,7 @@ if config.SKIP_ONNX or not config.is_feature_generation_with_token_enabled():
         return []
 else:
     logger.info("Activating ONNX functions")
-    from src.onnx_analyzer import FaceAnalyzer
+    from src.detectors.FaceAnalyzer import FaceAnalyzer
     _face_analyzer = None
     def analyze_faces(pil_image):
         global _face_analyzer

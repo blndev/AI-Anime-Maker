@@ -9,10 +9,11 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import src.config as config
-import src.AI as src_GenAI
+import src.genai.AI as src_GenAI
 
 #skip_genai = os.getenv("SKIP_GENAI") == "1"
 
+@unittest.skipIf(os.getenv("SKIP_GPU") is not None, "Skipping GPU tests")
 class Test_GenAI(unittest.TestCase):
 
     def setUp(self):

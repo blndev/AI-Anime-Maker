@@ -3,14 +3,13 @@ from unittest.mock import patch, MagicMock
 import pandas as pd
 import os
 import sys
-from datetime import datetime
-import pytz
 
-import logging
-logger = logging.getLogger(__name__)
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from analytics.app.data_manager import DataManager
 
+#TODO: create a test database in memory or in filesystem first
+@unittest.skip("create a test database first via init analytics and generate_testdata")
 class TestDataManager(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures before each test method."""
