@@ -9,7 +9,7 @@ import logging
 import src.config as config
 import src.utils.fileIO as utils
 import src.analytics as analytics
-import src.genai.ConvertImage2ImageByStyle as ConvertImage2ImageByStyle
+from src.genai import ConvertImage2ImageByStyle, ImageCaptioner
 from src.SessionState import SessionState
 
 # Set up module logger
@@ -32,7 +32,8 @@ else:
 # will be filled while interface is loading
 style_details = {}
 
-AIHandler = ConvertImage2ImageByStyle()
+_AIHandler = ConvertImage2ImageByStyle()
+_ImageCaptioner = ImageCaptioner()
 
 def action_session_initialized(request: gr.Request, session_state: SessionState):
     """Initialize analytics session when app loads.
@@ -215,7 +216,7 @@ def action_describe_image(image):
     # Fallback
     value = "please describe your image here"    
     try:
-        value = AIHandler.describe_image(image)
+        value = _ImageCaptioner.describe_image(image)
         logger.debug("Image description: %s", value)
     except Exception:
         pass
@@ -225,7 +226,7 @@ def action_reload_model(model):
     if config.SKIP_AI: return
     logger.warning("Reloading model %s", model)
     try:
-        AIHandler.change_text2img_model(model=model)
+        _AIHandler.change_text2img_model(model=model)
         gr.Info(message=f"Model {model} loaded.", title="Model changed")
     except Exception as e:
         gr.Error(message=e.message)
@@ -251,7 +252,7 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
             return wrap_generate_image_response(session_state, None)
 
         logger.debug("Starting image generation")
-        if image_description == None or image_description == "": image_description = AIHandler.describe_image(image)
+        if image_description == None or image_description == "": image_description = _ImageCaptioner.describe_image(image)
 
         sd = style_details.get(style)
         if sd == None:
@@ -281,7 +282,7 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
             time.sleep(5)
         else:
             # Generate new picture
-            result_image = AIHandler.generate_image(
+            result_image = _AIHandler.generate_image(
                 image = image,
                 prompt=prompt, 
                 negative_prompt=sd["negative_prompt"],
