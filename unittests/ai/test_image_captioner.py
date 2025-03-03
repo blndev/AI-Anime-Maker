@@ -46,9 +46,33 @@ class Test_DescribeImage(unittest.TestCase):
         # self.assertIn("woman", v)
 
     def test_parallel_access(self):
+        import threading
+
         img1 = Image.open("./unittests/testdata/face_female_age20_nosmile.jpg")
         img2 = Image.open("./unittests/testdata/face_male_age30_nosmile.jpg")
         img3 = Image.open("./unittests/testdata/face_female_age90_smile.jpg")
-        #implement 3 threads executing the captioner.describe_image at the same time
-        # no error should occure, all functions shoould return an non empty result
 
+        results = [None, None, None]
+        exceptions = [None, None, None]
+
+        def run_describe_image(index, image):
+            try:
+                results[index] = self.captioner.describe_image(image)
+            except Exception as e:
+                exceptions[index] = e
+
+        threads = [
+            threading.Thread(target=run_describe_image, args=(0, img1)),
+            threading.Thread(target=run_describe_image, args=(1, img2)),
+            threading.Thread(target=run_describe_image, args=(2, img3))
+        ]
+
+        for thread in threads:
+            thread.start()
+
+        for thread in threads:
+            thread.join()
+
+        for i in range(3):
+            self.assertIsNone(exceptions[i], f"Thread {i} raised an exception: {exceptions[i]}")
+            self.assertIsNot(results[i], "", f"Thread {i} returned an empty description")
