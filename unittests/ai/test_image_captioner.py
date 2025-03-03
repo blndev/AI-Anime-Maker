@@ -39,3 +39,16 @@ class Test_DescribeImage(unittest.TestCase):
         v = self.captioner.describe_image(img)
         self.assertIs(v, "")
         # self.assertIn("woman", v)
+
+    def test_singleton(self):
+        c = ImageCaptioner()
+        self.assertEqual(self.captioner, c, "there should be only one instance to save ressources")
+        # self.assertIn("woman", v)
+
+    def test_parallel_access(self):
+        img1 = Image.open("./unittests/testdata/face_female_age20_nosmile.jpg")
+        img2 = Image.open("./unittests/testdata/face_male_age30_nosmile.jpg")
+        img3 = Image.open("./unittests/testdata/face_female_age90_smile.jpg")
+        #implement 3 threads executing the captioner.describe_image at the same time
+        # no error should occure, all functions shoould return an non empty result
+
