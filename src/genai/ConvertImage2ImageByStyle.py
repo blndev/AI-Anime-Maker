@@ -2,16 +2,10 @@ import gc
 import importlib
 from PIL import Image
 import logging
-import src.config as config #to find standard model (shold be handed over in init)
+import src.config as config  # TODO: to find standard model (shold be handed over in init)
 
 # Set up module logger
 logger = logging.getLogger(__name__)
-
-# import gradio as gr
-# import torch
-# from transformers import pipeline  # for captioning
-# from xformers.ops import MemoryEfficientAttentionFlashAttentionOp
-# from diffusers import StableDiffusionPipeline, StableDiffusionImg2ImgPipeline
 
 
 class ConvertImage2ImageByStyle:
@@ -24,7 +18,8 @@ class ConvertImage2ImageByStyle:
 
         try:
             transformers = importlib.import_module("transformers")
-            self.transformers_pipeline = transformers.pipeline
+            self.transformers_pipeline = getattr(transformers, 'pipeline')
+            #self.transformers_pipeline = transformers.pipeline
         except ModuleNotFoundError:
             logger.critical("Torch is not available")
 
@@ -51,10 +46,17 @@ class ConvertImage2ImageByStyle:
 
         logger.info("Loading image-to-text pipline")
         # this will load the model. if it is not available it will be downloaded from huggingface
+        # https://huggingface.co/Salesforce/blip-image-captioning-base
+        # https://huggingface.co/docs/transformers/main_classes/pipelines#transformers.pipeline.task
+
+        # processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+        # model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base").to("cuda")
+
         self.IMAGE_TO_TEXT_PIPELINE = self.transformers_pipeline(
-            "image-to-text",
-            model="Salesforce/blip-image-captioning-base"
-            )
+            task="image-to-text",
+            model="Salesforce/blip-image-captioning-base",
+            use_fast=True
+        )
         return self.IMAGE_TO_TEXT_PIPELINE
 
     def _cleanup_captioner(self):
@@ -79,7 +81,7 @@ class ConvertImage2ImageByStyle:
 
         try:
             if captioner:
-                value = captioner(image)
+                value = captioner(image, "a photo of")
                 return value[0]['generated_text']
             else:
                 return ""

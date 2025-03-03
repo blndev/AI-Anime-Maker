@@ -9,7 +9,7 @@ import logging
 import src.config as config
 import src.utils.fileIO as utils
 import src.analytics as analytics
-import src.genai.AI as AI
+import src.genai.ConvertImage2ImageByStyle as ConvertImage2ImageByStyle
 from src.SessionState import SessionState
 
 # Set up module logger
@@ -32,7 +32,7 @@ else:
 # will be filled while interface is loading
 style_details = {}
 
-AIHandler = AI.ConvertImage2ImageByStyle()
+AIHandler = ConvertImage2ImageByStyle()
 
 def action_session_initialized(request: gr.Request, session_state: SessionState):
     """Initialize analytics session when app loads.
