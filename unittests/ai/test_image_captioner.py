@@ -26,7 +26,20 @@ class Test_DescribeImage(unittest.TestCase):
             self.AIPipeline._cleanup_captioner()
             del self.AIPipeline
 
-    def get_description(self):
+    def test_get_description(self):
         img = Image.open("./unittests/testdata/face_female_age20_nosmile.jpg")
         v = self.AIPipeline.describe_image(img)
-        self.assertIsNot(v, "", "no description")
+        self.assertIsNot(v, "", "no description, but description expected")
+        self.assertIn("woman", v)
+
+    def test_non_pil_image(self):
+        img = bytearray()
+        v = self.AIPipeline.describe_image(img)
+        self.assertIs(v, "", "empty description expected")
+        #self.assertIn("woman", v)
+
+    def test_empty_image(self):
+        img = None
+        v = self.AIPipeline.describe_image(img)
+        self.assertIs(v, "")
+        #self.assertIn("woman", v)

@@ -71,8 +71,15 @@ class ConvertImage2ImageByStyle:
         except Exception:
             logger.error("Error while unloading captioner")
 
-    def describe_image(self, image):
+    def describe_image(self, image: Image):
         """describe an image for better inpaint results."""
+        if not image:
+            return ""
+        
+        if not isinstance(image, Image.Image):
+            logger.warning(f"type of image is {type(image)}")
+            return ""
+
         try:
             captioner = self._load_captioner_model()
         except Exception:
@@ -81,7 +88,7 @@ class ConvertImage2ImageByStyle:
 
         try:
             if captioner:
-                value = captioner(image, "a photo of")
+                value = captioner(image)
                 return value[0]['generated_text']
             else:
                 return ""
