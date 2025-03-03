@@ -1,13 +1,15 @@
+# Main App
 gradio          # main UI
-geoip2          # for analytics to determine country and city
-user-agents     # to parse user agents and split into 
+colorlog        # Colored logging output
 Pillow          # PIL images
 numpy           # Image Manipulation (SKIP_AI)
-insightface     # Face recognition for tokens
-opencv-python   # Face recognition for tokens
-onnxruntime     # Face recognition CPU based (required for onnx models), use only if you not have a gpu
-onnxruntime-gpu # Face recognition GPU based (required for onnx models)
-colorlog        # Colored logging output
+
+# Analytics
+geoip2          # for analytics to determine country and city
+user-agents     # to parse user agents and split into 
+
+# Analytics Dashboard
 dash            # Analytics dashboard - Routing and Callbacks
 plotly          # Analytics Dashboard - Diagrams Framework - uses dash
 iso3166         # Translation from country code to country and vice versa
+fake_useragent  # Used to generate Testdata for analytics
