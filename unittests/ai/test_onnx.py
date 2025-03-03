@@ -5,45 +5,35 @@ import os
 
 # Übergeordnetes Verzeichnis zum Suchpfad hinzufügen
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from .testimages import images_by_group
 import src.config as config
-if not config.SKIP_ONNX:
-    import src.detectors.FaceAnalyzer as src_onnx
 
 @unittest.skipIf(config.SKIP_ONNX, "Skipping ONNX Model tests")
 class Test_ONNX(unittest.TestCase):
 
-    images = {}
+    import src.detectors.FaceAnalyzer as src_onnx
+    images = images_by_group
+
+    @classmethod
+    def setUpClass(cls):
+        config.read_configuration()
+        cls.img_no_face = Image.new("RGB", (256, 256), color="blue")
+        cls.FaceAnalyzer = cls.src_onnx.FaceAnalyzer()
+
+    @classmethod
+    def tearDownClass(cls):
+        """cleanup test environment."""
+        print("tear down class")
+        if cls.FaceAnalyzer:
+            del cls.FaceAnalyzer
 
     def setUp(self):
-        #to prevent that wrong config is loaded from another test, we have to re read the file
-        config.read_configuration()
-        self.img_no_face = Image.new("RGB", (256, 256), color="blue")
-        self.images = {
-            'male':
-            {
-                40:
-                {
-                    'nosmile':  Image.open("./unittests/testdata/face_male_age30_nosmile.jpg")
-                }
-            },
-            'female':
-            {
-                20:
-                {
-                    'nosmile':  Image.open("./unittests/testdata/face_female_age20_nosmile.jpg"),
-                    'smile':  Image.open("./unittests/testdata/face_female_age20_smile.jpg")
-                }
-            }
-
-
-        }
-        # self.img_face = Image.open(
-        # "https://user-images.githubusercontent.com/64628244/81032727-8381d880-8eae-11ea-84a2-34380601088c.jpg")
-
-        self.FaceAnalyzer = src_onnx.FaceAnalyzer()
+        """before each test case"""
+        pass
 
     def tearDown(self):
-        """Remove Database file."""
+        """after each test case."""
+        pass
 
     def test_has_no_face(self):
         """check that the image has a face"""
