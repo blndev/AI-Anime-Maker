@@ -11,7 +11,7 @@ import src.config as config  # TODO: to find standard model (shold be handed ove
 # Set up module logger
 logger = logging.getLogger(__name__)
 
-#@singleton
+@singleton
 class ConvertImage2ImageByStyle(BaseGenAIHandler):
     def __init__(self, default_model: str, max_size: int = 1024):
         logger.info("Initialize ConvertImage2ImageByStyle")
@@ -33,6 +33,7 @@ class ConvertImage2ImageByStyle(BaseGenAIHandler):
         except ModuleNotFoundError:
             logger.critical("Diffusers Modul is not available")
 
+        self.lock = threading.Lock()
         self.max_image_size = max_size
         self.default_model = default_model
         self.device = "cuda" if self.torch.cuda.is_available() else "cpu"
@@ -40,7 +41,7 @@ class ConvertImage2ImageByStyle(BaseGenAIHandler):
     def __del__(self):
         logger.info("free memory used for ConvertImage2ImageByStyle pipeline")
         self.unload_img2img_pipeline()
-        
+
     def check_safety(self, x_image):
         """Support function to check if the image is NSFW."""
         return x_image, False
@@ -56,45 +57,45 @@ class ConvertImage2ImageByStyle(BaseGenAIHandler):
         try:
             # TODO V3: support SDXL or FLux
             logger.debug(f"Loading img2img model {model}")
+            with self.lock:
+                pipeline = None
+                if model.endswith("safetensors"):
+                    logger.info(f"Using 'from_single_file' to load model {model} from local folder")
+                    pipeline = self.StableDiffusionImg2ImgPipeline.from_single_file(
+                        model,
+                        torch_dtype=self.torch.float16 if self.device == "cuda" else self.torch.float32,
+                        safety_checker=None,
+                        requires_safety_checker=False,
+                        use_safetensors=True
+                    )
+                else:
+                    logger.info(f"Using 'from_pretrained' option to load model {model} from hugging face")
+                    pipeline = self.StableDiffusionImg2ImgPipeline.from_pretrained(
+                        model,
+                        torch_dtype=self.torch.float16 if self.device == "cuda" else self.torch.float32,
+                        safety_checker=None,
+                        requires_safety_checker=False
+                    )
 
-            pipeline = None
-            if model.endswith("safetensors"):
-                logger.info(f"Using 'from_single_file' to load model {model} from local folder")
-                pipeline = self.StableDiffusionImg2ImgPipeline.from_single_file(
-                    model,
-                    torch_dtype=self.torch.float16 if self.device == "cuda" else self.torch.float32,
-                    safety_checker=None,
-                    requires_safety_checker=False,
-                    use_safetensors=True
-                )
-            else:
-                logger.info(f"Using 'from_pretrained' option to load model {model} from hugging face")
-                pipeline = self.StableDiffusionImg2ImgPipeline.from_pretrained(
-                    model,
-                    torch_dtype=self.torch.float16 if self.device == "cuda" else self.torch.float32,
-                    safety_checker=None,
-                    requires_safety_checker=False
-                )
-
-            logger.debug("diffuser initiated")
-            pipeline = pipeline.to(self.device)
-            if self.device == "cuda":
-                pipeline.enable_xformers_memory_efficient_attention()
-            logger.debug("ConvertImage2ImageByStyle-Pipeline created")
-            self._cached_img2img_pipeline = pipeline
-            return pipeline
+                logger.debug("diffuser initiated")
+                pipeline = pipeline.to(self.device)
+                if self.device == "cuda":
+                    pipeline.enable_xformers_memory_efficient_attention()
+                logger.debug("ConvertImage2ImageByStyle-Pipeline created")
+                self._cached_img2img_pipeline = pipeline
+                return pipeline
         except Exception as e:
             logger.error("Img2Img Pipeline could not be created. Error in load_model: %s", str(e))
             logger.debug("Exception details:", e)
-            self.unload_img2img_pipeline()
             raise Exception(message="Error while loading the pipline for image conversion.\nSee logfile for details.")
 
     def unload_img2img_pipeline(self):
         try:
             logger.info("Unload image captioner")
             if self._cached_img2img_pipeline:
-                del self._cached_img2img_pipeline
-                self._cached_img2img_pipeline = None
+                with self.lock:
+                    del self._cached_img2img_pipeline
+                    self._cached_img2img_pipeline = None
             gc.collect()
             self.torch.cuda.empty_cache()
         except Exception:
@@ -122,14 +123,14 @@ class ConvertImage2ImageByStyle(BaseGenAIHandler):
             if image is None:
                 raise ValueError("no image provided")
 
-            if strength<0.1 or strength>1:
+            if strength < 0.1 or strength > 1:
                 raise ValueError("strength must be >0 and <1")
 
-            if steps<=0 or steps>=100:
+            if steps <= 0 or steps >= 100:
                 raise ValueError("steps must be >0 and <100")
 
             if not prompt:
-                prompt=""
+                prompt = ""
 
             logger.debug("starting image generation")
             model = self._load_img2img_model()
@@ -145,15 +146,16 @@ class ConvertImage2ImageByStyle(BaseGenAIHandler):
 
             logger.debug("Strength: %f, Steps: %d", strength, steps)
 
-            # Generate new picture
-            result_image = model(
-                prompt=prompt,
-                negative_prompt=negative_prompt,
-                num_inference_steps=steps,
-                image=image,
-                mask_image=mask,
-                strength=strength,
-            ).images[0]
+            with self.lock:
+                # Generate new picture
+                result_image = model(
+                    prompt=prompt,
+                    negative_prompt=negative_prompt,
+                    num_inference_steps=steps,
+                    image=image,
+                    mask_image=mask,
+                    strength=strength,
+                ).images[0]
 
             return result_image
 
