@@ -1,9 +1,6 @@
 import queue
 import unittest
-from unittest.mock import MagicMock
-import uuid
 import threading
-from PIL import Image, ImageDraw, ImageFont
 
 # Add parent Path to search path for python modules
 import sys
@@ -11,7 +8,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import src.config as config
-import src.genai as src_GenAI
+from src.genai import ConvertImage2ImageByStyle
 import src.utils.fileIO as fileIO
 from unittests.testdata.testimages import images
 
@@ -23,7 +20,7 @@ class Test_ConvertImage2ImageByStyle(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.AIPipeline = src_GenAI.ConvertImage2ImageByStyle(config.get_model())
+        cls.AIPipeline = ConvertImage2ImageByStyle(config.get_model())
         config.read_configuration()
         for descr, img in images.items():
             cls.single_image = img
