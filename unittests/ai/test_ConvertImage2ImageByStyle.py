@@ -1,3 +1,4 @@
+import queue
 import unittest
 from unittest.mock import MagicMock
 import uuid, threading
@@ -80,12 +81,17 @@ class Test_ConvertImage2ImageByStyle(unittest.TestCase):
     def test_generate_images_in_threads(self):
         """Check image generation for all available images in separate threads"""
 
+        error_queue = queue.Queue()  # Queue for Errors
+
         def generate_and_validate(img, descr):
-            result_image = self.AIPipeline.generate_image(image=img, prompt=descr)
-            self.assertIsNotNone(result_image)
-            fileIO.save_image_as_file(result_image, "./testresults/")
-            self.assertEqual(result_image.width, img.width, "width wrong")
-            self.assertEqual(result_image.height, img.height, "height wrong")
+            try:
+                result_image = self.AIPipeline.generate_image(image=img, prompt=descr)
+                self.assertIsNotNone(result_image)
+                fileIO.save_image_as_file(result_image, "./testresults/")
+                self.assertEqual(result_image.width, img.width, "width wrong")
+                self.assertEqual(result_image.height, img.height, "height wrong")
+            except Exception as e:
+                error_queue.put(f"Error in thread for image {descr}: {e}")  # Fehler in die Queue legen
 
         threads = []
         for descr, img in images.items():
@@ -97,3 +103,8 @@ class Test_ConvertImage2ImageByStyle(unittest.TestCase):
 
         for thread in threads:
             thread.join()
+
+        # Check if there was at least one error
+        if not error_queue.empty():
+            error = error_queue.get()  # Get the error
+            self.fail(error)  # Fail the test
