@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import MagicMock
-import uuid
+import uuid, threading
 from PIL import Image, ImageDraw, ImageFont
 
 # Add parent Path to search path for python modules
@@ -76,3 +76,24 @@ class Test_ConvertImage2ImageByStyle(unittest.TestCase):
             self.AIPipeline.generate_image(image=img, prompt=descr, steps=110)
         with self.assertRaises(ValueError):
             self.AIPipeline.generate_image(image=img, prompt=descr, steps=0)
+
+    def test_generate_images_in_threads(self):
+        """Check image generation for all available images in separate threads"""
+
+        def generate_and_validate(img, descr):
+            result_image = self.AIPipeline.generate_image(image=img, prompt=descr)
+            self.assertIsNotNone(result_image)
+            fileIO.save_image_as_file(result_image, "./testresults/")
+            self.assertEqual(result_image.width, img.width, "width wrong")
+            self.assertEqual(result_image.height, img.height, "height wrong")
+
+        threads = []
+        for descr, img in images.items():
+            thread = threading.Thread(target=generate_and_validate, args=(img, descr))
+            threads.append(thread)
+
+        for thread in threads:
+            thread.start()
+
+        for thread in threads:
+            thread.join()
