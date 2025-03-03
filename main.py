@@ -49,6 +49,7 @@ if __name__ == "__main__":
                 utils.download_file_if_not_existing(url=config.get_model_url(), local_path=model)
 
         try:
+            #TODO: move to onnx class init
             utils.download_file_if_not_existing(config.get_modelurl_onnx_age_googlenet(),
                                                 local_path=config.get_modelfile_onnx_age_googlenet())
             utils.download_file_if_not_existing(config.get_modelurl_onnx_gender_googlenet(
