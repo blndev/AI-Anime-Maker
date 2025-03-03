@@ -160,9 +160,8 @@ class ConvertImage2ImageByStyle(BaseGenAIHandler):
         except RuntimeError as e:
             logger.error("Error while genrating Image: %s", str(e))
             self.unload_img2img_pipeline()
-            msg = e.message
-            raise ImageGenerationException(message=f"Error while creating the image. {msg}")
-        
+            raise ImageGenerationException(message=f"Error while creating the image. {e}")
+
     def generate_images(self, count: int) -> List[Image.Image]:
         """Generate a list of images."""
         pass
