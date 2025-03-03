@@ -1,7 +1,8 @@
 import queue
 import unittest
 from unittest.mock import MagicMock
-import uuid, threading
+import uuid
+import threading
 from PIL import Image, ImageDraw, ImageFont
 
 # Add parent Path to search path for python modules
@@ -78,7 +79,7 @@ class Test_ConvertImage2ImageByStyle(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.AIPipeline.generate_image(image=img, prompt=descr, steps=0)
 
-    def test_generate_images_in_threads(self):
+    def test_parallel_access_to_generate_images(self):
         """Check image generation for all available images in separate threads"""
 
         error_queue = queue.Queue()  # Queue for Errors
