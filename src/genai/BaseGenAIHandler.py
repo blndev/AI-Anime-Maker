@@ -18,3 +18,11 @@ class BaseGenAIHandler(ABC):
     def ui_elements(self) -> dict:
         """Return a dictionary of UI elements and their required status."""
         pass
+
+
+class ImageGenerationException(Exception):
+    """Exception which can be raised if the image generation process failed."""
+    def __init__(self, message, cause=None):
+        super().__init__(message)
+        self.message = message
+        self.cause = cause

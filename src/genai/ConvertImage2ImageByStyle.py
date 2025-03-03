@@ -4,7 +4,7 @@ from typing import List
 from PIL import Image
 import logging
 from src.utils.singleton import singleton
-from .BaseGenAIHandler import BaseGenAIHandler
+from .BaseGenAIHandler import BaseGenAIHandler, ImageGenerationException
 import threading
 import src.config as config  # TODO: to find standard model (shold be handed over in init)
 
@@ -160,7 +160,7 @@ class ConvertImage2ImageByStyle(BaseGenAIHandler):
         except RuntimeError as e:
             logger.error("Error while genrating Image: %s", str(e))
             self.unload_img2img_pipeline()
-            raise Exception(message="Error while creating the image. More details in log.")
+            raise ImageGenerationException(message=f"Error while creating the image. {e.message}")
         
     def generate_images(self, count: int) -> List[Image.Image]:
         """Generate a list of images."""
