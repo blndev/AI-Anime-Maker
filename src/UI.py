@@ -32,7 +32,7 @@ else:
 # will be filled while interface is loading
 style_details = {}
 
-_AIHandler = ConvertImage2ImageByStyle()
+_AIHandler = ConvertImage2ImageByStyle(config.get_model(), max_size=config.get_max_size())
 _ImageCaptioner = ImageCaptioner()
 
 def action_session_initialized(request: gr.Request, session_state: SessionState):
@@ -226,7 +226,7 @@ def action_reload_model(model):
     if config.SKIP_AI: return
     logger.warning("Reloading model %s", model)
     try:
-        _AIHandler.change_text2img_model(model=model)
+        _AIHandler.change_img2img_model(model=model)
         gr.Info(message=f"Model {model} loaded.", title="Model changed")
     except Exception as e:
         gr.Error(message=e.message)
