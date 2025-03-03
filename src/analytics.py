@@ -116,7 +116,6 @@ def start() -> bool:
     Returns:
         bool: True if initialization was successful, False otherwise
     """
-    if not config.is_analytics_enabled(): return True
     try:
         logger.info("Checking analytics database...")
         if not _create_tables():
