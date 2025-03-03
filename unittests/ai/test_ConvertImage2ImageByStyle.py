@@ -11,13 +11,13 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import src.config as config
 import src.genai as src_GenAI
 import src.utils.fileIO as fileIO
-from .testimages import images
+from unittests.testdata.testimages import images
 
-#skip_genai = os.getenv("SKIP_GENAI") == "1"
+# skip_genai = os.getenv("SKIP_GENAI") == "1"
+
 
 @unittest.skipIf(os.getenv("SKIP_GPU") is not None, "Skipping GPU tests")
 class Test_ConvertImage2ImageByStyle(unittest.TestCase):
-
 
     @classmethod
     def setUpClass(cls):
@@ -26,7 +26,6 @@ class Test_ConvertImage2ImageByStyle(unittest.TestCase):
         for descr, img in images.items():
             cls.single_image = img
             cls.single_image_descr = descr
-
 
     @classmethod
     def tearDownClass(cls):
@@ -48,7 +47,7 @@ class Test_ConvertImage2ImageByStyle(unittest.TestCase):
     def test_generate_image_without_input_image(self):
         """Check image generation without input"""
         with self.assertRaises(ValueError):
-            self.AIPipeline.generate_image(image=None,prompt="12345")
+            self.AIPipeline.generate_image(image=None, prompt="12345")
 
     def test_generate_image_without_prompt(self):
         """Check image generation without prompt"""
@@ -65,16 +64,15 @@ class Test_ConvertImage2ImageByStyle(unittest.TestCase):
         img = self.single_image
         descr = self.single_image_descr
         with self.assertRaises(ValueError):
-            self.AIPipeline.generate_image(image=img,prompt=descr, strength=-1)
+            self.AIPipeline.generate_image(image=img, prompt=descr, strength=-1)
         with self.assertRaises(ValueError):
-            self.AIPipeline.generate_image(image=img,prompt=descr, strength=2)
+            self.AIPipeline.generate_image(image=img, prompt=descr, strength=2)
 
     def test_generate_image_steps_invalid(self):
         """Check image generation with invalid steps"""
         img = self.single_image
         descr = self.single_image_descr
         with self.assertRaises(ValueError):
-            self.AIPipeline.generate_image(image=img,prompt=descr, steps=110)
+            self.AIPipeline.generate_image(image=img, prompt=descr, steps=110)
         with self.assertRaises(ValueError):
-            self.AIPipeline.generate_image(image=img,prompt=descr, steps=0)
-
+            self.AIPipeline.generate_image(image=img, prompt=descr, steps=0)

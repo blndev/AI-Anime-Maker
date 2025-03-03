@@ -14,6 +14,11 @@ images_by_group = {
         {
             'nosmile': Image.open("./unittests/testdata/face_female_age20_nosmile.jpg"),
             'smile': Image.open("./unittests/testdata/face_female_age20_smile.jpg")
+        },
+        90:
+        {
+            'nosmile': Image.open("./unittests/testdata/face_female_age90_nosmile.jpg"),
+            'smile': Image.open("./unittests/testdata/face_female_age90_smile.jpg")
         }
     }
 

@@ -11,7 +11,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import src.config as config
 import src.genai as src_GenAI
 
-#skip_genai = os.getenv("SKIP_GENAI") == "1"
+# skip_genai = os.getenv("SKIP_GENAI") == "1"
+
 
 @unittest.skipIf(os.getenv("SKIP_GPU") is not None, "Skipping GPU tests")
 class Test_ConvertImage2ImageByStyle_with_mocked_pipeline(unittest.TestCase):
@@ -22,6 +23,7 @@ class Test_ConvertImage2ImageByStyle_with_mocked_pipeline(unittest.TestCase):
 
         self.AIPipeline = src_GenAI.ConvertImage2ImageByStyle(config.get_model())
         # mock image generation pipeline because generation itself is not testable
+
         def mock_img_to_img_pipeline(
                 image: Image,
                 mask_image: Image,
