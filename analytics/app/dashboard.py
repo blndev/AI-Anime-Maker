@@ -277,12 +277,3 @@ class Dashboard:
             return filters
         
         logger.debug("Dashboard callback registration complete")
-
-# Create dashboard instance for external use
-dashboard = Dashboard()
-app = dashboard.app
-server = app.server
-
-if __name__ == '__main__':
-    logger.info("Starting Analytics Dashboard server")
-    app.run_server(debug=True)

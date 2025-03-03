@@ -6,7 +6,7 @@ Run this script to start the analytics visualization server.
 import os
 import sys
 import logging
-from analytics.app import app
+from analytics.app import Dashboard
 
 # Set up logging
 logging.basicConfig(
@@ -26,6 +26,10 @@ def main():
         logger.info("Starting Analytics Dashboard")
         logger.info(f"Server will run on port {port}")
         logger.info(f"Debug mode: {debug}")
+
+        # Create dashboard instance for external use
+        dashboard = Dashboard()
+        app = dashboard.app
 
         app.run_server(
             host='127.0.0.1',  # Make server accessible externally
