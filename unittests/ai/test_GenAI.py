@@ -20,6 +20,7 @@ class Test_GenAI(unittest.TestCase):
         """."""
         config.read_configuration()
 
+        self.AIPipeline = src_GenAI.ConvertImage2ImageByStyle()
         # mock image generation pipeline because generation itself is not testable
         def mock_img_to_img_pipeline(
                 image: Image,
@@ -54,7 +55,7 @@ class Test_GenAI(unittest.TestCase):
             font = None
         draw.text((50, 100), "NSFW", fill="red", font=font)
 
-        result_image, is_nsfw = src_GenAI.check_safety(img)
+        result_image, is_nsfw = self.AIPipeline.check_safety(img)
         self.assertFalse(is_nsfw)
         self.assertEqual(result_image, img)
 
@@ -77,17 +78,17 @@ class Test_GenAI(unittest.TestCase):
             return mock_image_to_text_pipeline
 
         # assign mockups
-        src_GenAI.IMAGE_TO_TEXT_PIPELINE = mock_image_to_text_pipeline
-        org_func = src_GenAI._load_captioner_model
-        src_GenAI._load_captioner_model = mockup_load_captioner_model
+        self.AIPipeline.IMAGE_TO_TEXT_PIPELINE = mock_image_to_text_pipeline
+        org_func = self.AIPipeline._load_captioner_model
+        self.AIPipeline._load_captioner_model = mockup_load_captioner_model
 
         try:
             # execute the test
-            value = src_GenAI.describe_image(srcImg)  # image)
+            value = self.AIPipeline.describe_image(srcImg)  # image)
             self.assertIsNotNone(value)
             self.assertEqual(value, mockup_imageDescription)
         finally:
-            src_GenAI._load_captioner_model = org_func
+            self.AIPipeline._load_captioner_model = org_func
 
     @unittest.skipIf(config.SKIP_AI, "Skipping GPU tests")
     def test_describe_image_with_vison_model(self):
@@ -96,7 +97,7 @@ class Test_GenAI(unittest.TestCase):
         srcImg = Image.new("L", (1024, 1024), 255)
 
         # execute the test
-        value = src_GenAI.describe_image(srcImg) 
+        value = self.AIPipeline.describe_image(srcImg) 
         self.assertIsNotNone(value)
         self.assertNotEqual(value, "")
         print("generated description text", value)
@@ -110,24 +111,24 @@ class Test_GenAI(unittest.TestCase):
             self.assertEqual(model, modelname)
             self.assertFalse(use_cached_model)
             return self.img2img_pipeline
-        org_func = src_GenAI._load_img2img_model
-        src_GenAI._load_img2img_model = mockup_load_img2img_model
+        org_func = self.AIPipeline._load_img2img_model
+        self.AIPipeline._load_img2img_model = mockup_load_img2img_model
         try:
             # execute test
-            src_GenAI.change_text2img_model(modelname)
+            self.AIPipeline.change_text2img_model(modelname)
         finally:
-            src_GenAI._load_img2img_model = org_func
+            self.AIPipeline._load_img2img_model = org_func
 
     @unittest.skipIf(config.SKIP_AI, "Skipping GPU tests")
     def test_generate_image(self):
         """Check image generation"""
         # add a fake generator
-        src_GenAI.IMAGE_TO_IMAGE_PIPELINE = self.img2img_pipeline
+        self.AIPipeline.IMAGE_TO_IMAGE_PIPELINE = self.img2img_pipeline
         img = Image.new("L", (config.get_max_size()*2, config.get_max_size()*2), 255)
 
         # execute test
         # self.assertRaises(src_AI.generate_image(image=None,prompt=""), "no image provided")
-        result_image = src_GenAI.generate_image(
+        result_image = self.AIPipeline.generate_image(
             image=img,
             prompt="create a image")
         self.assertIsNotNone(result_image)
