@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import logging
 
 import src.config as config
+from src.genai.ImageGenerationParameters import Image2ImageParameters
 import src.utils.fileIO as utils
 import src.analytics as analytics
 from src.genai import ConvertImage2ImageByStyle, ImageCaptioner
@@ -231,7 +232,163 @@ def action_reload_model(model):
     except Exception as e:
         gr.Error(message=e.message)
 
+
+# def _create_generation_parameters(self) -> Union[Image2ImageParameters, Text2ImageParameters]:
+#     """Create appropriate parameter object based on current generator"""
+#     ui_requirements = self.generator.ui_elements()
+    
+#     if isinstance(self.generator, (ConvertImage2ImageByStyle, ConvertImage2ImageSimple)):
+#         return Image2ImageParameters(
+#             input_image=self._get_ui_value('input_image', None),
+#             prompt=self._get_ui_value('prompt', ""),
+#             negative_prompt=self._get_ui_value('negative_prompt', ""),
+#             strength=float(self._get_ui_value('strength', 0.5)),
+#             steps=int(self._get_ui_value('steps', 60)),
+#             mask_image=self._get_ui_value('mask_image', None)
+#         )
+#     elif isinstance(self.generator, Text2ImageGenerator):
+#         return Text2ImageParameters(
+#             prompt=self._get_ui_value('prompt', ""),
+#             negative_prompt=self._get_ui_value('negative_prompt', ""),
+#             steps=int(self._get_ui_value('steps', 60)),
+#             width=int(self._get_ui_value('width', 512)),
+#             height=int(self._get_ui_value('height', 512))
+#         )
+#     else:
+#         raise ValueError("Unsupported generator type")
+    
+# def action_generate_image_future(self):
+#     """Generate an image based on the current settings"""
+#     try:
+#         if not self.generator:
+#             raise Exception("No Generator selected")
+
+#         # Create and validate parameters
+#         params = self._create_generation_parameters()
+#         params.validate()
+
+#         # Update status
+#         self.status_text.set("generating image...")
+#         self.update()
+
+#         # Generate the image
+#         result = self.generator.generate_image(params)
+
+#         # Handle the result
+#         if result:
+#             self.result_image = result
+#             self.show_result()
+#             self.status_text.set("ready")
+#         else:
+#             self.status_text.set("generation failed")
+
+#     except Exception as e:
+#         self.status_text.set(f"Error: {str(e)}")
+#         logger.error("Error in generate_image: %s", str(e))
+
 def action_generate_image(request: gr.Request, image, style, strength, steps, image_description, gradio_state):
+    """Convert the entire input image to the selected style."""
+    global style_details
+    session_state = SessionState.from_gradio_state(gradio_state)
+    #setting token always to 10 if the feature is disabled saved a lot of "if feature enabled .." statements
+    if session_state.token == None: session_state.token = 0 
+    if not config.is_feature_generation_with_token_enabled(): session_state.token = 10
+
+    try:
+        if config.is_feature_generation_with_token_enabled() and session_state.token<=0:
+            gr.Warning("You have not enough token to start a generation. Upload a new image for new token!")
+            return wrap_generate_image_response(session_state, image)
+        if image is None: 
+            gr.Error("Start of Generation without image!")
+            return wrap_generate_image_response(session_state, None)
+        # API Users don't have a request object (by documentation)
+        if request is None: 
+            logger.warning("No request object. API usage?")
+            return wrap_generate_image_response(session_state, None)
+
+        logger.debug("Starting image generation")
+        if image_description == None or image_description == "": image_description = _ImageCaptioner.describe_image(image)
+
+        sd = style_details.get(style)
+        if sd == None:
+            sd = {
+                "prompt": "",
+                "negative_prompt": config.get_style_negative_prompt(99),#99 means you will get back the default overall negative prompt if style 99 does not exist
+                "strength": config.get_default_strength(),
+                "steps": config.get_default_steps()
+            }
+            # add to gloabel list for caching
+            style_details[style] = sd
+
+        prompt = f"{sd["prompt"]}: {image_description}"
+        
+        logger.info(f"GENERATE - {session_state.session} - {style}: {image_description}")
+
+        # must be before resizing, otherwise hash will not be same as from source image
+        # or adapt the source image saving with thumbnail property
+        image_sha1 = sha1(image.tobytes()).hexdigest()
+
+        # use always the sliders for strength and steps if they are enabled
+        if not config.UI_show_strength_slider(): strength = sd["strength"]
+        if not config.UI_show_steps_slider(): steps = sd["steps"]
+
+        if config.SKIP_AI:
+            result_image = utils.image_convert_to_sepia(image)
+            time.sleep(5)
+        else:
+            params = Image2ImageParameters(
+                input_image=image,
+                prompt=prompt,
+                negative_prompt=sd["negative_prompt"],
+                strength=strength,
+                steps=steps,
+                mask_image=None
+            )
+            result_image = _AIHandler.generate_image(params)
+            # # Generate new picture
+            # result_image = _AIHandler.generate_image(
+            #     image = image,
+            #     prompt=prompt, 
+            #     negative_prompt=sd["negative_prompt"],
+            #     steps=steps, 
+            #     strength=strength,
+            #     )
+        
+        # save generated file if enabled
+        fn=None
+        if config.is_save_output_enabled():
+            folder_path=config.get_output_folder()
+            folder_path = os.path.join(folder_path, datetime.now().strftime("%Y%m%d"))
+            fn = utils.save_image_with_timestamp(
+                image=result_image,
+                folder_path=folder_path,
+                reference=f"{image_sha1}-{style}",
+                ignore_errors=True)
+
+        if config.is_analytics_enabled():
+            if config.is_save_output_enabled() and fn:
+                rel_path = os.path.relpath(fn, config.get_output_folder())
+            else:
+                rel_path = None
+            analytics.save_generation_details(
+                session_state.session,
+                sha1=image_sha1,
+                style=style,
+                prompt=image_description,
+                output_filename=rel_path
+                )
+        session_state.token -= 1
+        if session_state.token <= 0: gr.Warning("You running out of Token.\n\nUpload a new image to continue.")
+        #make it smaller (WebP to JPG)
+        result_image = result_image.convert("RGB") 
+        return wrap_generate_image_response(session_state, result_image)
+    except RuntimeError as e:
+        logger.error("RuntimeError: %s", str(e))
+        logger.debug("Exception details:", exc_info=True)
+        gr.Error(e)
+        return wrap_generate_image_response(session_state, None)
+    
+def action_generate_image_org(request: gr.Request, image, style, strength, steps, image_description, gradio_state):
     """Convert the entire input image to the selected style."""
     global style_details
     session_state = SessionState.from_gradio_state(gradio_state)
