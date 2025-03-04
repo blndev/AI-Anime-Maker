@@ -12,14 +12,14 @@ import src.config as config
 @unittest.skipIf(config.SKIP_ONNX, "Skipping ONNX Model tests")
 class Test_ONNX(unittest.TestCase):
 
-    import src.detectors.FaceAnalyzer as src_onnx
+    import src.detectors.FaceAnalyzer as srcFaceAnalyzer
     images = images_by_group
 
     @classmethod
     def setUpClass(cls):
         config.read_configuration()
         cls.img_no_face = Image.new("RGB", (256, 256), color="blue")
-        cls.FaceAnalyzer = cls.src_onnx.FaceAnalyzer()
+        cls.FaceAnalyzer = cls.srcFaceAnalyzer()
 
     @classmethod
     def tearDownClass(cls):
@@ -66,8 +66,9 @@ class Test_ONNX(unittest.TestCase):
                     image = self.images[gender][age][expression]
                     v = self.FaceAnalyzer.get_gender_and_age_from_image(image)
                     self.assertNotEqual(len(v), 0, f"No face deteted on {id}")
-                    self.assertLessEqual(v[0]["maxAge"], age + 15, id)
-                    self.assertLessEqual(age - 10, v[0]["minAge"], id)
+                    detected_span=v[0]["age"]
+                    self.assertLessEqual(age, v[0]["maxAge"], f"Max Age failed for '{id}' - detected: {detected_span}")
+                    self.assertLessEqual(v[0]["minAge"], age, f"Min Age failed for '{id}' - detected: {detected_span}")
 
     def test_is_female(self):
         """check that all images which shoudl be female are female, ignore false posistives"""

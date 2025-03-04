@@ -1,11 +1,16 @@
 from PIL import Image
 
+# TODO: need one image per group
 images_by_group = {
     'male':
     {
         40:
         {
-            'nosmile': Image.open("./unittests/testdata/face_male_age30_nosmile.jpg")
+            'nosmile': Image.open("./unittests/testdata/face_male_age40_nosmile.jpg")
+        },
+        90:
+        {
+            'nosmile': Image.open("./unittests/testdata/face_male_age90_nosmile.jpg")
         }
     },
     'female':
@@ -13,11 +18,17 @@ images_by_group = {
         20:
         {
             'nosmile': Image.open("./unittests/testdata/face_female_age20_nosmile.jpg"),
-            'smile': Image.open("./unittests/testdata/face_female_age20_smile.jpg")
         },
-        90:
+        25:
         {
-            'nosmile': Image.open("./unittests/testdata/face_female_age90_nosmile.jpg"),
+            'smile': Image.open("./unittests/testdata/face_female_age25_smile.jpg")
+        },
+        100:
+        {
+            'nosmile': Image.open("./unittests/testdata/face_female_age90_nosmile.jpg")
+        },
+        80:
+        {
             'smile': Image.open("./unittests/testdata/face_female_age90_smile.jpg")
         }
     }

@@ -56,9 +56,10 @@ class FaceAnalyzer:
         # based on the build flags) when instantiating InferenceSession.
         # For example, if NVIDIA GPU is available and ORT Python package is built with CUDA, then call API as following:
         # ort.InferenceSession(path/to/model, providers=['CUDAExecutionProvider'])
-        ageList = ['(0-2)', '(4-6)', '(8-12)', '(15-20)', '(25-32)', '(38-43)', '(48-53)', '(60-100)']
-        maxAgeList = [2, 6, 12, 20, 32, 43, 53, 100]
-        minAgeList = [0, 4, 8, 15, 25, 38, 48, 60]
+        ageList = ['(80-110)', '(4-6)', '(8-12)', '(15-20)', '(25-32)', '(38-43)', '(48-53)', '(60-100)']
+        # TODO use string split function and int(value)
+        maxAgeList = [110, 6, 12, 20, 32, 43, 53, 100]
+        minAgeList = [80, 4, 8, 15, 25, 38, 48, 60]
 
         ages = self._run_classifier(self.age_classifier, face_only_image)
 
