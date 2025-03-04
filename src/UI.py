@@ -161,6 +161,7 @@ def action_handle_input_file(request: gr.Request, image: PIL.Image, gradio_state
     session_state.token += new_token
 
     if config.is_analytics_enabled():
+        # TODO: if analytics is enabled, save output is disabled, we get a conflict in cache_path_and_filename
         analytics.save_input_image_details(
             session=session_state.session, 
             sha1=image_sha1, 
