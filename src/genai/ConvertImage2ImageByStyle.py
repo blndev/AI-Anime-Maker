@@ -108,45 +108,6 @@ class ConvertImage2ImageByStyle(BaseGenAIHandler):
             logger.debug("Exception details: {e}")
             raise (f"Loading new img2img model '{model}' failed", e)
 
-    def generate_image_off(self, params: Image2ImageParameters) -> Image.Image:
-        """Convert the input image using AI style transfer"""
-        with self.generation_lock:
-            try:
-                # Validate parameters
-                params.validate()
-
-                logger.debug("starting image generation")
-
-                image = params.input_image
-                image.thumbnail((self.max_image_size, self.max_image_size))
-
-                # Create default mask if none provided
-                mask = params.mask_image or Image.new("L", image.size, 255)
-
-                logger.debug("Strength: %f, Steps: %d", 
-                           params.strength, params.steps)
-
-                model = self._load_img2img_model()
-                if not model:
-                    logger.error("No model loaded")
-                    raise Exception(message="No model loaded. Generation not available")
-
-                result_image = model(
-                    prompt=params.prompt,
-                    negative_prompt=params.negative_prompt,
-                    num_inference_steps=params.steps,
-                    image=image,
-                    mask_image=mask,
-                    strength=params.strength,
-                ).images[0]
-
-                return result_image
-
-            except RuntimeError as e:
-                logger.error("Error while generating Image: %s", str(e))
-                self.unload_img2img_pipeline()
-                raise ImageGenerationException(message=f"Error while creating the image. {e}")
-            
     def generate_image_org(self,
                        image: Image,
                        prompt: str,
