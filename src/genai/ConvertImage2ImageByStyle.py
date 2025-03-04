@@ -187,7 +187,7 @@ class ConvertImage2ImageByStyle(BaseGenAIHandler):
                     prompt=params.prompt,
                     negative_prompt=params.negative_prompt,
                     num_inference_steps=params.steps,
-                    image=image,
+                    image=[image]*count,
                     mask_image=mask,
                     strength=params.strength,
                     num_images_per_prompt=count,
