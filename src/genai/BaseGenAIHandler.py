@@ -14,7 +14,10 @@ class BaseGenAIHandler(ABC):
     def generate_image(self, params: GenerationParameters) -> Image:
         """Generate a single image by calling generate_images with count 1."""
         images = self.generate_images(params=params, count=1)
-        return images[0] if images else None
+        if images:
+            return images[0]
+        else:
+            return None
 
     @abstractmethod
     def ui_elements(self) -> dict:

@@ -345,16 +345,8 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
                 steps=steps,
                 mask_image=None
             )
-            result_image = _AIHandler.generate_image(params)
-            # # Generate new picture
-            # result_image = _AIHandler.generate_image(
-            #     image = image,
-            #     prompt=prompt, 
-            #     negative_prompt=sd["negative_prompt"],
-            #     steps=steps, 
-            #     strength=strength,
-            #     )
-        
+            result_image = _AIHandler.generate_images(params, count=1)
+       
         # save generated file if enabled
         fn=None
         if config.is_save_output_enabled():
@@ -381,7 +373,8 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
         session_state.token -= 1
         if session_state.token <= 0: gr.Warning("You running out of Token.\n\nUpload a new image to continue.")
         #make it smaller (WebP to JPG)
-        result_image = result_image.convert("RGB") 
+        #TODO: move to Pipeline
+        #result_image = result_image.convert("RGB") 
         return wrap_generate_image_response(session_state, result_image)
     except RuntimeError as e:
         logger.error("RuntimeError: %s", str(e))
