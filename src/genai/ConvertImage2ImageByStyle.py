@@ -190,7 +190,7 @@ class ConvertImage2ImageByStyle(BaseGenAIHandler):
                     image=image,
                     mask_image=mask,
                     strength=params.strength,
-                    batch_size=count,
+                    num_images_per_prompt=count,
                 ).images
 
                 return result_image
