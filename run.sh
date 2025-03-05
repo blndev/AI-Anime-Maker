@@ -1,5 +1,16 @@
 #!/bin/bash
 
+# Check if Git is installed
+if ! command -v git &>/dev/null; then
+    echo "Error: Git is not installed on your system."
+    echo "Please install Git first:"
+    echo "  - For Ubuntu/Debian: sudo apt-get install git"
+    echo "  - For CentOS/RHEL: sudo yum install git"
+    echo "  - For macOS: brew install git"
+    echo "  - For Windows: Download from https://git-scm.com/downloads"
+    exit 1
+fi
+
 # Check if it's a Git repository
 if ! git rev-parse --is-inside-work-tree &>/dev/null; then
     echo "Not a Git repository. Auto-update not possible."
@@ -13,23 +24,32 @@ else
     if [ -z "$latest_tag" ]; then
         echo "No version tags (starting with V) found on server, could not check for updates."
     else
+        # Get current commit hash
+        current_commit=$(git rev-parse HEAD)
+        # Get commit hash of the latest tag
+        tag_commit=$(git rev-parse "$latest_tag^{}")
+
         # Get tag creation date
         tag_date=$(git log -1 --format=%ai "$latest_tag")
         echo "Latest version: $latest_tag"
         echo "Created on: $tag_date"
 
-        # Ask for confirmation
-        read -p "Do you want to proceed and update to this version? (y/n) " answer
-        if [[ $answer == "y" || $answer == "Y" ]]; then
-            # Switch to the latest tag
-            git checkout "$latest_tag"
-
-            # Optional: Ensure the latest updates from the remote repository
-            git pull origin "$latest_tag"
-
-            echo "Updated to version $latest_tag successfully."
+        if [ "$current_commit" = "$tag_commit" ]; then
+            echo "Already running the latest version ($latest_tag)"
         else
-            echo "Continuing with current version..."
+            # Ask for confirmation
+            read -p "Do you want to proceed and update to this version? (y/n) " answer
+            if [[ $answer == "y" || $answer == "Y" ]]; then
+                # Switch to the latest tag
+                git checkout "$latest_tag"
+
+                # Optional: Ensure the latest updates from the remote repository
+                git pull origin "$latest_tag"
+
+                echo "Updated to version $latest_tag successfully."
+            else
+                echo "Continuing with current version..."
+            fi
         fi
     fi
 fi
