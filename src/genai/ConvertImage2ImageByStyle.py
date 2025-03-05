@@ -69,6 +69,7 @@ class ConvertImage2ImageByStyle(BaseGenAIHandler):
                 logger.info(f"Using 'from_pretrained' option to load model {model} from hugging face")
                 pipeline = self.StableDiffusionImg2ImgPipeline.from_pretrained(
                     model,
+                    cache_dir = config.get_model_folder(), # TODO: check if we remove config reference 
                     torch_dtype=self.torch.float16 if self.device == "cuda" else self.torch.float32,
                     safety_checker=None,
                     requires_safety_checker=False
@@ -84,7 +85,7 @@ class ConvertImage2ImageByStyle(BaseGenAIHandler):
         except Exception as e:
             logger.error("Img2Img Pipeline could not be created. Error in load_model: %s", str(e))
             logger.debug("Exception details:", e)
-            raise Exception(message="Error while loading the pipeline for image conversion.\nSee logfile for details.")
+            raise Exception("Error while loading the pipeline for image conversion.\nSee logfile for details.")
 
     def unload_img2img_pipeline(self):
         try:
@@ -141,7 +142,7 @@ class ConvertImage2ImageByStyle(BaseGenAIHandler):
                 model = self._load_img2img_model()
                 if not model:
                     logger.error("No model loaded")
-                    raise Exception(message="No model loaded. Generation not available")
+                    raise Exception("No model loaded. Generation not available")
 
                 result_image = model(
                     prompt=prompt,
@@ -181,7 +182,7 @@ class ConvertImage2ImageByStyle(BaseGenAIHandler):
                 model = self._load_img2img_model()
                 if not model:
                     logger.error("No model loaded")
-                    raise Exception(message="No model loaded. Generation not available")
+                    raise Exception("No model loaded. Generation not available")
 
                 result_image = model(
                     prompt=params.prompt,
