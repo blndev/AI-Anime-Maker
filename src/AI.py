@@ -13,7 +13,7 @@ if not config.SKIP_AI:
     import torch
     from transformers import pipeline  # for captioning
     from xformers.ops import MemoryEfficientAttentionFlashAttentionOp
-    from diffusers import StableDiffusionPipeline, StableDiffusionImg2ImgPipeline
+    from diffusers import StableDiffusionImg2ImgPipeline, StableDiffusionXLImg2ImgPipeline
     device = "cuda" if torch.cuda.is_available() else "cpu"
     logger.info("Running on %s", device)
 
@@ -55,6 +55,7 @@ def _cleanup_captioner():
 
 def describe_image(image):
     """describe an image for better inpaint results."""
+    captioner = None
     try:
         captioner = _load_captioner_model()
     except Exception:
@@ -89,21 +90,41 @@ def _load_img2img_model(model=config.get_model(), use_cached_model=True):
         logger.debug("Creating pipeline for model %s", model)
 
         pipeline = None
-        if model.endswith("safetensors"):
-            logger.debug("Using 'from_single_file' to load model from local folder")
-            pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
-                model,
-                torch_dtype=torch.float16 if device == "cuda" else torch.float32,
-                safety_checker=None, requires_safety_checker=False,
-                use_safetensors=True
-                # revision="fp16" if device == "cuda" else "",
-            )
+
+        if "SDXL" in model:
+            if model.endswith("safetensors"):
+                logger.debug("Using 'from_single_file' to load model from local folder")
+                pipeline = StableDiffusionXLImg2ImgPipeline.from_single_file(
+                    model,
+                    cache_dir="/home/me/ai/stablediffusion/models/checkpoints/HuggingFace_Auto",
+                    torch_dtype=torch.float16 if device == "cuda" else torch.float32,
+                    safety_checker=None, requires_safety_checker=False,
+                    use_safetensors=True
+                    # revision="fp16" if device == "cuda" else "",
+                )
+            else:
+                logger.debug("Using 'from_pretrained' option to load model from hugging face")
+                pipeline = StableDiffusionXLImg2ImgPipeline.from_pretrained(
+                    model,
+                    torch_dtype=torch.float16 if device == "cuda" else torch.float32,
+                    safety_checker=None, requires_safety_checker=False)
         else:
-            logger.debug("Using 'from_pretrained' option to load model from hugging face")
-            pipeline = StableDiffusionImg2ImgPipeline.from_pretrained(
-                model,
-                torch_dtype=torch.float16 if device == "cuda" else torch.float32,
-                safety_checker=None, requires_safety_checker=False)
+            if model.endswith("safetensors"):
+                logger.debug("Using 'from_single_file' to load model from local folder")
+                pipeline = StableDiffusionImg2ImgPipeline.from_single_file(
+                    model,
+                    cache_dir="/home/me/ai/stablediffusion/models/checkpoints/HuggingFace_Auto",
+                    torch_dtype=torch.float16 if device == "cuda" else torch.float32,
+                    safety_checker=None, requires_safety_checker=False,
+                    use_safetensors=True
+                    # revision="fp16" if device == "cuda" else "",
+                )
+            else:
+                logger.debug("Using 'from_pretrained' option to load model from hugging face")
+                pipeline = StableDiffusionImg2ImgPipeline.from_pretrained(
+                    model,
+                    torch_dtype=torch.float16 if device == "cuda" else torch.float32,
+                    safety_checker=None, requires_safety_checker=False)
 
         logger.debug("Pipeline initiated")
         pipeline = pipeline.to(device)
