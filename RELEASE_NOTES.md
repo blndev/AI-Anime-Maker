@@ -1,4 +1,16 @@
 # Release Notes
+## Version 1.2.1 - 2025-08-18
+
+### New Features
+- support for SDXL Models integrated (need string "SDXL" in path)
+
+### Improvements
+- User Feedback can be turned off
+- Strength of Prompt usage simplified and moved below prompt
+- "Start" Button is automatically disabled if a job is started, even in a queue
+- "Token" renamed to "Credits"
+- enhanced standard Styles (mainly for SDXL Models)
+
 
 ## Version 1.2 - 2025-02-28
 
