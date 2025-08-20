@@ -30,7 +30,10 @@ class ConvertImage2ImageByStyle(BaseGenAIHandler):
 
         try:
             diffusers = importlib.import_module("diffusers")
-            self.StableDiffusionImg2ImgPipeline = diffusers.StableDiffusionImg2ImgPipeline
+            if "xl" in default_model.lower():
+                self.StableDiffusionImg2ImgPipeline = diffusers.StableDiffusionXLImg2ImgPipeline
+            else:
+                self.StableDiffusionImg2ImgPipeline = diffusers.StableDiffusionImg2ImgPipeline
         except ModuleNotFoundError:
             logger.critical("Diffusers Modul is not available")
 
@@ -55,6 +58,7 @@ class ConvertImage2ImageByStyle(BaseGenAIHandler):
 
         try:
             logger.debug(f"Loading img2img model {model}")
+
             pipeline = None
             if model.endswith("safetensors"):
                 logger.info(f"Using 'from_single_file' to load model {model} from local folder")
