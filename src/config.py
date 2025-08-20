@@ -155,6 +155,10 @@ def get_token_bonus_for_cuteness():
 #-----------------------------------------------------------------
 # section UI
 #-----------------------------------------------------------------
+def UI_show_feedback_area():
+    """Check if the feedback area should be shown in the UI"""
+    return get_boolean_config_value("UI","allow_feedback", False)
+
 def UI_show_strength_slider():
     """Check if the strength adjustment slider should be shown in the UI"""
     return get_boolean_config_value("UI","show_strength", False)

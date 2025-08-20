@@ -118,7 +118,7 @@ def action_handle_input_file(request: gr.Request, image: PIL.Image, gradio_state
             face_bonus = config.get_token_bonus_for_face()
             if face_bonus>0: 
                 new_token += face_bonus
-                gr.Info(f"{face_bonus} Bonus token added for an Image with a Face!")
+                gr.Info(f"{face_bonus} Bonus credits added for an Image with a Face!")
 
             # we have that bonus in a variable as we want to give it only once
             token_for_cuteness = config.get_token_bonus_for_cuteness()
@@ -134,7 +134,7 @@ def action_handle_input_file(request: gr.Request, image: PIL.Image, gradio_state
                     if token_for_smiling>0:
                         logger.debug("Bonus: smiling")
                         new_token+=token_for_smiling
-                        gr.Info(f"{token_for_smiling} special Bonus token added!")
+                        gr.Info(f"{token_for_smiling} special Bonus credits added!")
                         token_for_smiling = 0 #apply only once per image
                 elif face["isMale"]:
                     gender |= 1
@@ -142,7 +142,7 @@ def action_handle_input_file(request: gr.Request, image: PIL.Image, gradio_state
                 if token_for_cuteness>0 and (face["maxAge"]<20 or face["minAge"]>60):
                     logger.debug("Bonus: cuteness")
                     new_token+=token_for_cuteness
-                    gr.Info(f"{token_for_cuteness} special Bonus token added!")
+                    gr.Info(f"{token_for_cuteness} special Bonus credits added!")
                     token_for_cuteness = 0 #allow bonus only once per upload
 
         # save the hash to prevent reuse
@@ -155,9 +155,9 @@ def action_handle_input_file(request: gr.Request, image: PIL.Image, gradio_state
         }
 
     if config.is_feature_generation_with_token_enabled() and new_token>0:
-        gr.Info(f"Total new Token: {new_token}")
+        gr.Info(f"Total new Credits: {new_token}")
 
-    logger.info(f"UPLOAD ID {image_sha1} received {new_token} token total.")
+    logger.info(f"UPLOAD ID {image_sha1} received {new_token} credits total.")
     session_state.token += new_token
 
     if config.is_analytics_enabled():
@@ -191,8 +191,8 @@ def check_same_upload_in_block_time(image_sha1):
             analyzation_required = False
             if config.is_feature_generation_with_token_enabled():
                 gr.Warning(
-                    f"""This image signature was already used to gain token.
-                    New token for it will be provided after {dt.strftime("%d.%m.%Y - %H:%M")}""")
+                    f"""This image signature was already used to gain credits.
+                    New credits for it will be provided after {dt.strftime("%d.%m.%Y - %H:%M")}""")
             gender=last_upload["gender"]
             min_age=last_upload["min_age"]
             max_age=last_upload["max_age"]
@@ -297,7 +297,7 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
 
     try:
         if config.is_feature_generation_with_token_enabled() and session_state.token<=0:
-            gr.Warning("You have not enough token to start a generation. Upload a new image for new token!")
+            gr.Warning("You have not enough credits to start a generation. Upload a new image to get new credits!", duration=0)
             return wrap_generate_image_response(session_state, image)
         if image is None: 
             gr.Error("Start of Generation without image!")
@@ -307,6 +307,7 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
             logger.warning("No request object. API usage?")
             return wrap_generate_image_response(session_state, None)
 
+        strength = strength/100  # we use values 1 - 100 in UI instead of 0.1--1
         logger.debug("Starting image generation")
         if image_description == None or image_description == "": image_description = _ImageCaptioner.describe_image(image)
 
@@ -321,7 +322,7 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
             # add to gloabel list for caching
             style_details[style] = sd
 
-        prompt = f"{sd["prompt"]}: {image_description}"
+        prompt = str(sd["prompt"]).replace("{prompt}", str(image_description))
         
         logger.info(f"GENERATE - {session_state.session} - {style}: {image_description}")
 
@@ -371,7 +372,7 @@ def action_generate_image(request: gr.Request, image, style, strength, steps, im
                 output_filename=rel_path
                 )
         session_state.token -= 1
-        if session_state.token <= 0: gr.Warning("You running out of Token.\n\nUpload a new image to continue.")
+        if session_state.token <= 0: gr.Warning("You running out of Credits.\n\nUpload a new image to continue.", duration=30)
         #make it smaller (WebP to JPG)
         #TODO: move to Pipeline
         #result_image = result_image.convert("RGB") 
@@ -458,14 +459,25 @@ def create_gradio_interface():
                 token_counter = gr.Number(visible=False, value=0)
                 token_label = gr.Text(
                     show_label=False,
-                    value=f"Current Token: 0",
+                    value=f"Available Credits: 0",
                     info=config.get_token_explanation())
         with gr.Row():
             with gr.Column():
                 image_input = gr.Image(label="Input", type="pil", height=512)
                 #describe_button = gr.Button("Describe your Image", interactive=False)
                 with gr.Column(visible=False) as area_description:
-                    text_description = gr.Textbox(label="change the image description for better results", show_label=True, max_length=90, submit_btn="↻")
+                    text_description = gr.Textbox(label="Prompt", info="change the image description for better results", show_label=True, max_length=150, max_lines=3, submit_btn="↻")
+                    strength_slider = gr.Slider(label="Prompt importance",
+                                                info="Low value = close to original picture, high value = more randomized",
+                                                minimum=1,
+                                                maximum=100,
+                                                value=config.get_default_strength()*100,
+                                                step=5,  
+                                                visible=config.UI_show_strength_slider())
+                    steps_slider = gr.Slider(label="Steps", 
+                                             info="Higher value for better result, but longer wait time",
+                                             minimum=10, maximum=100, value=config.get_default_steps(),
+                                             step=5, visible=config.UI_show_steps_slider())
 
                 styles = []
                 for i in range(1,config.get_style_count()+1):
@@ -487,7 +499,7 @@ def create_gradio_interface():
                     show_download_button=True
                     )
                 start_button = gr.Button("Start Creation", interactive=False, variant="primary")
-                with gr.Column():
+                with gr.Column(visible=config.UI_show_feedback_area()):
                     gr.Markdown(value="""
 ### Important Information
 
@@ -498,12 +510,9 @@ As all communication is anonymous through. We can't send any feedback to you.
                                 """)
                     flag_image_text = gr.Text(label="Feedback", placeholder="What is wrong?")
                     flag_image_button = gr.Button("Report by clicking here", interactive=False)
-
-                strength_slider = gr.Slider(label="Strength", minimum=0.1, maximum=1, value=config.get_default_strength(), step=0.1,  visible=config.UI_show_strength_slider())
-                steps_slider = gr.Slider(label="Steps", minimum=10, maximum=100, value=config.get_default_steps(), step=5, visible=config.UI_show_steps_slider())
         
         def helper_display_token(token):
-            return f"Current Token: {token}"
+            return f"Available credits: {token}"
         
         @app.load(inputs=[local_storage], outputs=[local_storage, token_counter])
         def load_from_local_storage(request: gr.Request, gradio_state):
@@ -544,6 +553,9 @@ As all communication is anonymous through. We can't send any feedback to you.
 
         # adapt wrap_generate_image_response if you change output parameters
         start_button.click(
+            fn=lambda: gr.Button(interactive=False),
+            outputs=[start_button],
+        ).then(
             fn=action_generate_image,
             inputs=[image_input, style_dropdown, strength_slider, steps_slider, text_description, local_storage],
             outputs=[output_image, local_storage, start_button, token_counter],
@@ -552,6 +564,9 @@ As all communication is anonymous through. We can't send any feedback to you.
             show_progress="minimal"
             #batch=False,
             #max_batch_size=config.GenAI_get_execution_batch_size(),
+        ).then(
+            fn=lambda: gr.Button(interactive=True),
+            outputs=[start_button],
         )
 
         def action_image_reported(gradio_state, feedback):
